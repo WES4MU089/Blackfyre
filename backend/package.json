@@ -1,0 +1,44 @@
+{
+  "name": "blackfyre-hud-backend",
+  "version": "1.0.0",
+  "description": "Backend API for Blackfyre RPG HUD - Second Life External Overlay System",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "db:cli": "tsx src/cli/db-cli.ts",
+    "db:migrate": "tsx src/cli/migrate.ts",
+    "db:seed": "tsx src/cli/seed.ts",
+    "test": "vitest"
+  },
+  "keywords": [
+    "secondlife",
+    "hud",
+    "rpg",
+    "cef",
+    "overlay"
+  ],
+  "author": "Blackfyre",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "helmet": "^8.0.0",
+    "mariadb": "^3.4.0",
+    "socket.io": "^4.8.1",
+    "uuid": "^11.0.5",
+    "winston": "^3.17.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.13.1",
+    "@types/uuid": "^10.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  }
+}

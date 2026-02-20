@@ -1,0 +1,49 @@
+{
+  "name": "blackfyre-hud",
+  "version": "1.0.0",
+  "description": "Blackfyre RPG HUD Overlay for Second Life",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "dev:test": "electron-vite dev -- --user-data-dir=%APPDATA%/blackfyre-hud-test",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "pack": "electron-vite build && set CSC_LINK=../certs/blackfyre.pfx&& electron-builder --win portable",
+    "pack:unsigned": "electron-vite build && set CSC_IDENTITY_AUTO_DISCOVERY=false&& electron-builder --win portable",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "build": {
+    "appId": "com.blackfyre.hud",
+    "productName": "Dragon's Dominion",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "out/**/*",
+      "resources/tray-icon.png",
+      "resources/images/art/appIcon.png",
+      "!node_modules/**/*"
+    ],
+    "win": {
+      "target": "portable",
+      "icon": "resources/images/art/appIcon.png"
+    },
+    "portable": {
+      "artifactName": "DragonsDominion-${version}-portable.exe"
+    }
+  },
+  "dependencies": {
+    "pinia": "^2.3.0",
+    "socket.io-client": "^4.8.1",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "electron": "^33.3.1",
+    "electron-builder": "^26.7.0",
+    "electron-vite": "^5.0.0",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.0"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "types": ["electron-vite/client"],
+    "paths": {
+      "@/*": ["./src/renderer/*"],
+      "@res/*": ["./resources/*"]
+    }
+  },
+  "include": ["src/renderer/**/*.ts", "src/renderer/**/*.d.ts", "src/renderer/**/*.vue"]
+}

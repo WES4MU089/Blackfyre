@@ -1,0 +1,67 @@
+/* === HUD Layout Positioning === */
+
+.hud-container {
+  flex: 1;
+  pointer-events: none;
+  padding: var(--hud-padding);
+  display: grid;
+  grid-template-rows: auto 1fr;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas:
+    "char-info    .           notifications"
+    "chat         .           notifications";
+}
+
+/* All HUD elements need pointer-events restored */
+.hud-container > * {
+  pointer-events: auto;
+}
+
+/* Top-Left: Character Info */
+.hud-area-char-info {
+  grid-area: char-info;
+  align-self: start;
+  justify-self: start;
+}
+
+/* Right: Notifications */
+.hud-area-notifications {
+  grid-area: notifications;
+  align-self: start;
+  justify-self: end;
+  max-width: 350px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+/* Left-Center: Chat Panel */
+.hud-area-chat {
+  grid-area: chat;
+  align-self: start;
+  justify-self: start;
+  min-width: 42px;
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto;
+  z-index: 10;
+}
+
+/* Bottom-Left area for status effects */
+.hud-area-effects {
+  grid-area: chat;
+  align-self: end;
+  justify-self: start;
+}
+
+/* When a DraggableArea has a custom position (position: fixed via inline style),
+   it breaks out of grid flow. These overrides ensure it works. */
+.hud-container > .has-custom-position {
+  grid-area: unset;
+}
+
+/* Layout edit mode: dim background to help visualize widget placement */
+.hud-container.layout-edit-active {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: var(--radius-sm);
+}

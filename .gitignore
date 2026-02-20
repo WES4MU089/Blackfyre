@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+out/
+*.tsbuildinfo
+
+# Environment files (contain secrets)
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Certificates / private keys
+certs/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.swp
+*.swo
+
+# Test coverage
+coverage/
+
+# Temp files
+*.tmp
+*.temp
+nul
+
+# Large binary assets (not needed in repo)
+*.vsix
+*.pfx
+*.exe
+*.msi
+*.psd
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Image assets that shouldn't be in git (large PNGs)
+Icon Sheet.png
+Icon Sheet2.png
+9c0a6d15-6c9f-4877-bc08-2d5d3676f841.png
