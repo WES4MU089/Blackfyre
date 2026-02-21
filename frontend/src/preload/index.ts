@@ -20,6 +20,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setAutoClickThrough: (interactive: boolean, seq: number) =>
     ipcRenderer.send('hud:set-auto-clickthrough', { interactive, seq }),
 
+  // HUD Visibility
+  onHudVisibilityChanged: (callback: (visible: boolean) => void) => {
+    ipcRenderer.on('hud:visibility-changed', (_event, visible) => callback(visible))
+  },
+
   // HUD Layout
   saveHudLayout: (positions: Record<string, { x: number; y: number; width?: number; height?: number }>) =>
     ipcRenderer.invoke('hud:save-layout', positions),

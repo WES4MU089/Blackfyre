@@ -6,7 +6,7 @@ import { useHudStore } from '@/stores/hud'
 import { useCreationStore } from '@/stores/creation'
 import { useSocket } from '@/composables/useSocket'
 import { useItemDrag } from '@/composables/useItemDrag'
-import { startAutoClickThrough, stopAutoClickThrough } from '@/composables/useAutoClickThrough'
+import { startAutoClickThrough, stopAutoClickThrough, resetAutoClickThrough } from '@/composables/useAutoClickThrough'
 import TopBar from '@/components/hud/TopBar.vue'
 import CharacterInfo from '@/components/hud/CharacterInfo.vue'
 import StatusEffects from '@/components/hud/StatusEffects.vue'
@@ -76,6 +76,11 @@ onMounted(async () => {
   // Listen for layout edit mode toggle from main process (F4)
   window.electronAPI.onLayoutEditModeChanged((enabled) => {
     hudStore.setLayoutEditMode(enabled)
+  })
+
+  // Reset click-through state when HUD is re-shown (F3)
+  window.electronAPI.onHudVisibilityChanged((_visible) => {
+    resetAutoClickThrough()
   })
 
   // Load saved HUD positions

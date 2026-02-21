@@ -95,3 +95,18 @@ export function stopAutoClickThrough(): void {
     clickThroughTimer = null
   }
 }
+
+/**
+ * Reset internal state after the HUD is re-shown.
+ * The main process resets lastAutoSeq to 0 and sets the window interactive,
+ * so we reset seq to match and mark ourselves as interactive to stay in sync.
+ */
+export function resetAutoClickThrough(): void {
+  if (clickThroughTimer !== null) {
+    clearTimeout(clickThroughTimer)
+    clickThroughTimer = null
+  }
+  isOverInteractive = true
+  seq = 0
+  mouseDown = false
+}

@@ -14,6 +14,9 @@ export interface ElectronAPI {
   // HUD — auto click-through
   setAutoClickThrough: (interactive: boolean, seq: number) => void
 
+  // HUD Visibility
+  onHudVisibilityChanged: (callback: (visible: boolean) => void) => void
+
   // HUD Layout
   saveHudLayout: (positions: Record<string, { x: number; y: number; width?: number; height?: number }>) => Promise<void>
   loadHudLayout: () => Promise<Record<string, { x: number; y: number; width?: number; height?: number }> | null>

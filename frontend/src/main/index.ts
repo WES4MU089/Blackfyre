@@ -221,7 +221,7 @@ function createHudWindow(): void {
 function createTray(): void {
   // Load tray icon: try file first, fall back to inline base64
   let icon: Electron.NativeImage
-  const iconPath = join(__dirname, '../../resources/tray-icon.png')
+  const iconPath = join(__dirname, '../../resources/images/art/appIcon.png')
   if (existsSync(iconPath)) {
     icon = nativeImage.createFromPath(iconPath)
   } else {
@@ -311,8 +311,14 @@ function registerGlobalShortcuts(): void {
         hudWindow.hide()
       } else {
         intentionalHide = false
+        // Reset click-through seq so renderer messages aren't rejected
+        lastAutoSeq = 0
+        // Start interactive so the HUD is clickable when shown
+        hudWindow.setIgnoreMouseEvents(false)
         hudWindow.show()
         assertHudOnTop()
+        // Notify renderer so it can reset auto click-through state
+        hudWindow.webContents.send('hud:visibility-changed', true)
       }
     }
   })
