@@ -26,6 +26,8 @@ import NPCDialog from '@/components/npc/NPCDialog.vue'
 import ShopPanel from '@/components/shop/ShopPanel.vue'
 import RetainerPanel from '@/components/retainers/RetainerPanel.vue'
 import RetainerHire from '@/components/retainers/RetainerHire.vue'
+import AdminPanel from '@/components/admin/AdminPanel.vue'
+import { useAdminStore } from '@/stores/admin'
 import { useCombatStore } from '@/stores/combat'
 import { useNpcDialogStore } from '@/stores/npcDialog'
 import { useShopStore } from '@/stores/shop'
@@ -40,6 +42,7 @@ const combatStore = useCombatStore()
 const npcDialogStore = useNpcDialogStore()
 const shopStore = useShopStore()
 const chatStore = useChatStore()
+const adminStore = useAdminStore()
 const { connect } = useSocket()
 const { isDragging: isItemDragging, cancelDrag } = useItemDrag()
 
@@ -146,13 +149,14 @@ onMounted(async () => {
     <RetainerHire v-if="characterStore.isHiringRetainer" />
 
     <!-- System panel overlay -->
-    <div v-if="hudStore.openSystemPanels.size > 0 || combatStore.activeView !== 'none'" class="hud-system-overlay">
+    <div v-if="hudStore.openSystemPanels.size > 0 || combatStore.activeView !== 'none' || adminStore.isOpen" class="hud-system-overlay">
       <InventoryPanel v-if="hudStore.isPanelOpen('inventory')" />
       <CharacterPanel v-if="hudStore.isPanelOpen('character')" />
       <WikiPanel v-if="hudStore.isPanelOpen('wiki')" />
       <RetainerPanel v-if="hudStore.isPanelOpen('retainers')" />
       <CombatLobby v-if="hudStore.isPanelOpen('combat') && combatStore.activeView !== 'combat'" />
       <CombatSession v-if="combatStore.activeView === 'combat'" />
+      <AdminPanel v-if="adminStore.isOpen" />
     </div>
 
     <!-- Drag ghost (follows cursor during item drag) -->

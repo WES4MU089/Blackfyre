@@ -15,6 +15,9 @@ import { retainersRouter } from './routes/retainers.js';
 import { ailmentsRouter } from './routes/ailments.js';
 import { craftingRouter } from './routes/crafting.js';
 import { shopRouter } from './routes/shop.js';
+import { housesRouter } from './routes/houses.js';
+import { applicationsRouter } from './routes/applications.js';
+import { staffApplicationsRouter } from './routes/staff-applications.js';
 
 export const apiRouter = Router();
 
@@ -40,6 +43,9 @@ apiRouter.get('/', (_req: Request, res: Response) => {
       '/api/ailments',
       '/api/crafting',
       '/api/shop',
+      '/api/houses',
+      '/api/applications',
+      '/api/staff/applications',
     ],
   });
 });
@@ -61,3 +67,6 @@ apiRouter.use('/retainers', retainersRouter);
 apiRouter.use('/ailments', ailmentsRouter);
 apiRouter.use('/crafting', craftingRouter);
 apiRouter.use('/shop', shopRouter);
+apiRouter.use('/houses', housesRouter);
+apiRouter.use('/applications', applicationsRouter);
+apiRouter.use('/staff/applications', staffApplicationsRouter);

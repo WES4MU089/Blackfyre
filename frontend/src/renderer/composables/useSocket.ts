@@ -11,6 +11,8 @@ import {
 import { useNpcDialogStore, type DialogPayload } from '@/stores/npcDialog'
 import { useAilmentsStore } from '@/stores/ailments'
 import { useShopStore, type ShopOpenPayload } from '@/stores/shop'
+import { useAuthStore } from '@/stores/auth'
+import { useAdminStore } from '@/stores/admin'
 import { BACKEND_URL } from '@/config'
 
 const SOCKET_URL = BACKEND_URL
@@ -59,9 +61,23 @@ export function useSocket() {
       hudStore.setConnected(false)
     })
 
-    // Auth response
-    socket.on('player:authenticated', (data: { playerId: number }) => {
+    // Auth response — populate permissions for staff features
+    socket.on('player:authenticated', (data: {
+      playerId: number
+      roleName?: string | null
+      permissions?: string[]
+      isSuperAdmin?: boolean
+    }) => {
       console.log('Player authenticated:', data.playerId)
+      const authStore = useAuthStore()
+      if (authStore.user) {
+        authStore.user = {
+          ...authStore.user,
+          roleName: data.roleName ?? null,
+          permissions: data.permissions ?? [],
+          isSuperAdmin: data.isSuperAdmin ?? false,
+        }
+      }
       hudStore.addNotification('success', 'Connected', 'Authenticated with server')
     })
 
@@ -69,13 +85,22 @@ export function useSocket() {
     socket.on('character:loaded', (data: Record<string, unknown>) => {
       characterStore.loadCharacterData(data)
       hudStore.addNotification('info', 'Character Loaded', `Playing as ${characterStore.character?.name ?? 'Unknown'}`)
+      // Prefetch wound/ailment data so Health tab is ready
+      const ailmentsStore = useAilmentsStore()
+      if (characterStore.character?.id) {
+        ailmentsStore.fetchAilments(characterStore.character.id)
+      }
     })
 
     // Characters list (for character switcher + auto-trigger creation)
     socket.on('characters:list', async (data: CharacterListEntry[]) => {
       characterStore.setCharacterList(data)
-      if (data.length === 0) {
-        // Auto-trigger creation wizard if player has no characters
+      // Only count playable characters (not pending/denied/revision)
+      const playableChars = data.filter(c =>
+        !c.application_status || c.application_status === 'none' || c.application_status === 'approved'
+      )
+      if (playableChars.length === 0 && data.length === 0) {
+        // Auto-trigger creation wizard if player has no characters at all
         const creationStore = useCreationStore()
         if (!creationStore.isOpen) {
           creationStore.open()
@@ -84,7 +109,7 @@ export function useSocket() {
       } else if (!characterStore.character) {
         // Auto-select last played character only if no character is active yet
         const lastId = await window.electronAPI.getLastCharacter()
-        if (lastId !== null && data.some(c => c.id === lastId)) {
+        if (lastId !== null && playableChars.some(c => c.id === lastId)) {
           selectCharacter(lastId)
         }
       }
@@ -142,14 +167,22 @@ export function useSocket() {
     })
 
     // Character creation - success response
-    socket.on('character:created', (data: { characterId: number; characterName: string }) => {
+    socket.on('character:created', (data: { characterId: number; characterName: string; applicationStatus?: string; tier?: number }) => {
       const creationStore = useCreationStore()
       creationStore.isSubmitting = false
       creationStore.close()
-      // Auto-select the newly created character
-      socket?.emit('character:select', { characterId: data.characterId })
-      window.electronAPI.setLastCharacter(data.characterId)
-      hudStore.addNotification('success', 'Character Created', `Welcome, ${data.characterName}!`)
+
+      if (data.applicationStatus === 'pending') {
+        // Tier 2/3: application submitted, character not playable yet
+        hudStore.addNotification('info', 'Application Submitted', `${data.characterName} is pending staff review and cannot be played until approved.`)
+        // Refresh character list to show pending badge
+        socket?.emit('characters:list')
+      } else {
+        // Tier 1: auto-select the newly created character
+        socket?.emit('character:select', { characterId: data.characterId })
+        window.electronAPI.setLastCharacter(data.characterId)
+        hudStore.addNotification('success', 'Character Created', `Welcome, ${data.characterName}!`)
+      }
     })
 
     // Character creation - error response
@@ -359,6 +392,40 @@ export function useSocket() {
     // --- Point allocation responses ---
     socket.on('aptitude:updated', (data: { aptitudeKey: string; newValue: number; unspentAptitudePoints: number }) => {
       characterStore.applyAptitudeAllocation(data)
+    })
+
+    // --- Application events ---
+    socket.on('application:updated', (data: {
+      characterId: number
+      characterName: string
+      status: string
+    }) => {
+      // Notify the player about their application status change
+      const statusLabels: Record<string, string> = {
+        approved: 'Your application has been approved!',
+        denied: 'Your application has been denied.',
+        revision: 'Your application requires revision.',
+      }
+      const msg = statusLabels[data.status] ?? `Application status: ${data.status}`
+      const level = data.status === 'approved' ? 'success' : data.status === 'denied' ? 'danger' : 'warning'
+      hudStore.addNotification(level, data.characterName, msg)
+      // Refresh character list to pick up new status
+      socket?.emit('characters:list')
+    })
+
+    socket.on('application:comment', (data: { characterName: string; isPrivate: boolean }) => {
+      if (!data.isPrivate) {
+        hudStore.addNotification('info', data.characterName, 'New comment on your application')
+      }
+    })
+
+    socket.on('application:submitted', (data: { characterName: string; tier: number }) => {
+      // Staff notification — refresh admin queue if open
+      hudStore.addNotification('info', 'New Application', `${data.characterName} (Tier ${data.tier})`)
+      const admin = useAdminStore()
+      if (admin.isOpen) {
+        admin.fetchApplicationQueue()
+      }
     })
 
     // Server errors

@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { config } from '../../config/index.js';
 import { db } from '../../db/connection.js';
 import { logger } from '../../utils/logger.js';
+import { getPlayerPermissions } from '../../utils/permissions.js';
 import crypto from 'crypto';
 
 export const authRouter = Router();
@@ -145,8 +146,19 @@ authRouter.get('/me', async (req: Request, res: Response) => {
     return res.status(401).json({ error: 'Invalid or expired token' });
   }
 
-  const player = await db.queryOne(
-    `SELECT id, discord_id, discord_username, discord_email, is_banned, created_at, last_seen
+  const player = await db.queryOne<{
+    id: number;
+    discord_id: string;
+    discord_username: string;
+    discord_email: string | null;
+    is_banned: boolean;
+    created_at: string;
+    last_seen: string;
+    role_id: number | null;
+    is_super_admin: boolean;
+  }>(
+    `SELECT id, discord_id, discord_username, discord_email, is_banned, created_at, last_seen,
+            role_id, is_super_admin
      FROM players WHERE id = ? AND is_active = 1`,
     [payload.userId]
   );
@@ -155,7 +167,26 @@ authRouter.get('/me', async (req: Request, res: Response) => {
     return res.status(404).json({ error: 'User not found' });
   }
 
-  res.json({ user: player });
+  // Load role name and permissions
+  let roleName: string | null = null;
+  if (player.role_id) {
+    const role = await db.queryOne<{ name: string }>(
+      `SELECT name FROM roles WHERE id = ?`,
+      [player.role_id]
+    );
+    roleName = role?.name ?? null;
+  }
+
+  const permissions = await getPlayerPermissions(player.id);
+
+  res.json({
+    user: {
+      ...player,
+      roleName,
+      permissions: Array.from(permissions),
+      isSuperAdmin: !!player.is_super_admin,
+    },
+  });
 });
 
 // --- JWT Helpers ---

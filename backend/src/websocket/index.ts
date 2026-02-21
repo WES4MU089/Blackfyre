@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { logger } from '../utils/logger.js';
 import { db } from '../db/connection.js';
 import { verifyJWT } from '../api/routes/auth.js';
+import { getPlayerPermissions } from '../utils/permissions.js';
 import { setupChatHandlers } from './chat.js';
 import { setupCreationHandlers } from './creation.js';
 import { setupCombatHandlers } from './combat.js';
@@ -21,6 +22,10 @@ export interface ConnectedPlayer {
   sessionId?: number;
   slUuid?: string;
   region?: string;
+  roleId?: number;
+  roleName?: string;
+  permissions?: Set<string>;
+  isSuperAdmin?: boolean;
 }
 
 // Track connected players
@@ -104,6 +109,7 @@ export function setupWebSocket(io: SocketServer): void {
 
         const characters = await db.query(`
           SELECT c.id, c.name, c.level, c.is_active, c.portrait_url,
+                 c.application_status,
                  cv.health, cv.max_health
           FROM characters c
           LEFT JOIN character_vitals cv ON c.id = cv.character_id
@@ -129,12 +135,17 @@ export function setupWebSocket(io: SocketServer): void {
         }
 
         // Verify character belongs to player (exclude retainers)
-        const character = await db.queryOne<{ id: number; name: string }>(`
-          SELECT id, name FROM characters WHERE id = ? AND player_id = ? AND owner_character_id IS NULL
+        const character = await db.queryOne<{ id: number; name: string; application_status: string }>(`
+          SELECT id, name, application_status FROM characters WHERE id = ? AND player_id = ? AND owner_character_id IS NULL
         `, [characterId, playerInfo.playerId]);
 
         if (!character) {
           return socket.emit('error', { message: 'Character not found' });
+        }
+
+        // Block selection of unapproved characters
+        if (character.application_status !== 'none' && character.application_status !== 'approved') {
+          return socket.emit('error', { message: 'This character is pending application review and cannot be played yet.' });
         }
 
         // Already playing this character — no-op
@@ -341,8 +352,13 @@ export function setupWebSocket(io: SocketServer): void {
         (async () => {
           try {
             // JWT userId maps directly to players.id
-            const player = await db.queryOne<{ id: number; sl_uuid: string | null }>(
-              `SELECT id, sl_uuid FROM players WHERE id = ? AND is_active = 1`,
+            const player = await db.queryOne<{
+              id: number;
+              sl_uuid: string | null;
+              role_id: number | null;
+              is_super_admin: boolean;
+            }>(
+              `SELECT id, sl_uuid, role_id, is_super_admin FROM players WHERE id = ? AND is_active = 1`,
               [payload.userId]
             );
 
@@ -352,21 +368,48 @@ export function setupWebSocket(io: SocketServer): void {
               return;
             }
 
+            // Load role name and permissions
+            let roleName: string | null = null;
+            if (player.role_id) {
+              const role = await db.queryOne<{ name: string }>(
+                `SELECT name FROM roles WHERE id = ?`,
+                [player.role_id]
+              );
+              roleName = role?.name ?? null;
+            }
+            const permissions = await getPlayerPermissions(player.id);
+
             const playerInfo = connectedPlayers.get(socket.id);
             if (playerInfo) {
               playerInfo.playerId = player.id;
               playerInfo.userId = payload.userId;
+              playerInfo.roleId = player.role_id ?? undefined;
+              playerInfo.roleName = roleName ?? undefined;
+              playerInfo.permissions = permissions;
+              playerInfo.isSuperAdmin = !!player.is_super_admin;
               if (player.sl_uuid) {
                 playerInfo.slUuid = player.sl_uuid;
               }
             }
             socket.join(`player:${player.id}`);
-            socket.emit('player:authenticated', { playerId: player.id });
-            logger.info(`Socket authenticated via JWT: playerId=${player.id}, slUuid=${player.sl_uuid || 'not linked'}`);
+
+            // Join staff room if player has any application-related permission
+            if (!!player.is_super_admin || permissions.has('applications.view_queue')) {
+              socket.join('staff:applications');
+            }
+
+            socket.emit('player:authenticated', {
+              playerId: player.id,
+              roleName,
+              permissions: Array.from(permissions),
+              isSuperAdmin: !!player.is_super_admin,
+            });
+            logger.info(`Socket authenticated via JWT: playerId=${player.id}, slUuid=${player.sl_uuid || 'not linked'}, role=${roleName || 'none'}`);
 
             // Auto-send character list
             const characters = await db.query(`
               SELECT c.id, c.name, c.level, c.is_active, c.portrait_url,
+                     c.application_status,
                      cv.health, cv.max_health
               FROM characters c
               LEFT JOIN character_vitals cv ON c.id = cv.character_id

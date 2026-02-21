@@ -11,6 +11,17 @@ const createCharacterSchema = z.object({
   aptitudes: z.record(z.string(), z.number().int().min(1).max(7)),
   name: z.string().min(2).max(100).regex(/^[a-zA-Z\s'-]+$/),
   backstory: z.string().max(5000).optional(),
+  // Lineage / application fields
+  fatherName: z.string().min(1).max(150),
+  motherName: z.string().min(1).max(150),
+  houseId: z.number().int().positive().nullable().optional(),
+  isBastard: z.boolean().optional().default(false),
+  isDragonSeed: z.boolean().optional().default(false),
+  requestedRole: z.enum(['member', 'head_of_house', 'lord_paramount', 'royalty']).optional().default('member'),
+  isFeaturedRole: z.boolean().optional().default(false),
+  hohContact: z.string().max(2000).nullable().optional(),
+  applicationBio: z.string().max(10000).nullable().optional(),
+  publicBio: z.string().max(5000).nullable().optional(),
 });
 
 // Cached templates (loaded once)
@@ -68,6 +79,34 @@ async function loadTemplates(): Promise<ClassTemplate[]> {
 
 const APTITUDE_KEYS = ['prowess', 'fortitude', 'command', 'cunning', 'stewardship', 'presence', 'lore', 'faith'];
 const APTITUDE_TOTAL = 32;
+
+/**
+ * Determine the application tier for a character creation request.
+ * Tier 1: instant (no approval needed)
+ * Tier 2: standard application (requires approval)
+ * Tier 3: featured role application (strict review)
+ */
+function determineApplicationTier(
+  template: ClassTemplate,
+  data: {
+    houseId?: number | null;
+    isBastard: boolean;
+    isDragonSeed: boolean;
+    requestedRole: string;
+    isFeaturedRole: boolean;
+  }
+): 1 | 2 | 3 {
+  // Tier 3: featured role or leadership positions
+  if (data.isFeaturedRole || ['head_of_house', 'lord_paramount', 'royalty'].includes(data.requestedRole)) {
+    return 3;
+  }
+  // Tier 2: noble template, house membership, bastard, or dragon seed
+  if (template.category === 'nobility' || data.houseId || data.isBastard || data.isDragonSeed) {
+    return 2;
+  }
+  // Tier 1: common character, no special flags
+  return 1;
+}
 
 export function setupCreationHandlers(io: SocketServer, socket: Socket): void {
 
@@ -146,12 +185,66 @@ export function setupCreationHandlers(io: SocketServer, socket: Socket): void {
         });
       }
 
+      // ===== HOUSE VALIDATION =====
+      if (parsed.houseId) {
+        const house = await db.queryOne<{ id: number }>(
+          `SELECT id FROM houses WHERE id = ? AND is_extinct = FALSE`,
+          [parsed.houseId]
+        );
+        if (!house) {
+          return socket.emit('character:create:error', {
+            message: 'Selected house not found or is extinct',
+            field: 'houseId',
+          });
+        }
+      }
+
+      // ===== DETERMINE APPLICATION TIER =====
+      const isFeatured = parsed.isFeaturedRole ||
+        ['head_of_house', 'lord_paramount', 'royalty'].includes(parsed.requestedRole);
+      const tier = determineApplicationTier(template, {
+        houseId: parsed.houseId,
+        isBastard: parsed.isBastard,
+        isDragonSeed: parsed.isDragonSeed,
+        requestedRole: parsed.requestedRole,
+        isFeaturedRole: isFeatured,
+      });
+
+      // Tier 2/3 require an application bio
+      if (tier >= 2 && (!parsed.applicationBio || parsed.applicationBio.trim().length === 0)) {
+        return socket.emit('character:create:error', {
+          message: 'An application bio is required for noble or featured characters',
+          field: 'applicationBio',
+        });
+      }
+
+      const applicationStatus = tier === 1 ? 'none' : 'pending';
+
+      // Resolve region_id from house
+      let regionId: number | null = null;
+      if (parsed.houseId) {
+        const houseRegion = await db.queryOne<{ region_id: number | null }>(
+          `SELECT region_id FROM houses WHERE id = ?`,
+          [parsed.houseId]
+        );
+        regionId = houseRegion?.region_id ?? null;
+      }
+
       // ===== CREATE CHARACTER (transaction) =====
       const characterId = await db.transaction(async (conn: { query: (sql: string, params?: unknown[]) => Promise<any> }) => {
-        // 1. Insert character
+        // 1. Insert character with lineage fields
         const result = await conn.query(
-          `INSERT INTO characters (player_id, template_key, name, backstory) VALUES (?, ?, ?, ?)`,
-          [playerInfo.playerId, templateKey, trimmedName, backstory || null]
+          `INSERT INTO characters (
+            player_id, template_key, name, backstory,
+            house_id, region_id, is_bastard, is_dragon_seed,
+            father_name, mother_name, public_bio, application_status
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            playerInfo.playerId, templateKey, trimmedName, backstory || null,
+            parsed.houseId ?? null, regionId, parsed.isBastard, parsed.isDragonSeed,
+            parsed.fatherName.trim(), parsed.motherName.trim(),
+            parsed.publicBio?.trim() || null, applicationStatus,
+          ]
         );
         const charId = Number(result.insertId);
 
@@ -191,7 +284,7 @@ export function setupCreationHandlers(io: SocketServer, socket: Socket): void {
           }
         }
 
-        // 7. Insert starting items from template
+        // 6. Insert starting items from template
         if (template.starting_items && template.starting_items.length > 0) {
           let slotNum = 1;
           for (const item of template.starting_items) {
@@ -209,15 +302,49 @@ export function setupCreationHandlers(io: SocketServer, socket: Socket): void {
           }
         }
 
+        // 7. Create application record for Tier 2/3
+        if (tier >= 2) {
+          await conn.query(
+            `INSERT INTO character_applications (
+              character_id, player_id, house_id,
+              is_bastard, is_dragon_seed,
+              father_name, mother_name,
+              requested_role, is_featured_role,
+              hoh_contact, application_bio, public_bio,
+              status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+            [
+              charId, playerInfo.playerId, parsed.houseId ?? null,
+              parsed.isBastard, parsed.isDragonSeed,
+              parsed.fatherName.trim(), parsed.motherName.trim(),
+              parsed.requestedRole, isFeatured,
+              parsed.hohContact?.trim() || null,
+              parsed.applicationBio!.trim(),
+              parsed.publicBio?.trim() || null,
+            ]
+          );
+        }
+
         return charId;
       });
 
-      logger.info(`Character created: ${trimmedName} (ID: ${characterId}) for player ${playerInfo.playerId} using template ${templateKey}`);
+      logger.info(`Character created: ${trimmedName} (ID: ${characterId}) for player ${playerInfo.playerId} using template ${templateKey} [Tier ${tier}, status: ${applicationStatus}]`);
 
       socket.emit('character:created', {
         characterId,
         characterName: trimmedName,
+        applicationStatus,
+        tier,
       });
+
+      // Notify staff of new Tier 2/3 application
+      if (tier >= 2) {
+        io.to('staff:applications').emit('application:submitted', {
+          characterName: trimmedName,
+          tier,
+          playerId: playerInfo.playerId,
+        });
+      }
 
     } catch (error) {
       if (error instanceof z.ZodError) {

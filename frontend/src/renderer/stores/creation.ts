@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { BACKEND_URL } from '@/config'
 
 export interface ClassTemplate {
   id: number
@@ -16,6 +17,19 @@ export interface ClassTemplate {
   starting_job_grade: number
   starting_items: Array<{ item_key: string; quantity: number }>
   sort_order: number
+}
+
+export interface House {
+  id: number
+  name: string
+  motto: string | null
+  sigil_url: string | null
+  seat: string | null
+  region_id: number | null
+  region_name: string | null
+  is_great_house: boolean
+  is_royal_house: boolean
+  head_character_id: number | null
 }
 
 export type CreationStep = 'template' | 'aptitudes' | 'identity' | 'review'
@@ -55,6 +69,22 @@ export const useCreationStore = defineStore('creation', () => {
   const characterName = ref('')
   const backstory = ref('')
 
+  // Lineage / Application fields
+  const fatherName = ref('')
+  const motherName = ref('')
+  const selectedHouseId = ref<number | null>(null)
+  const isBastard = ref(false)
+  const isDragonSeed = ref(false)
+  const requestedRole = ref<'member' | 'head_of_house' | 'lord_paramount' | 'royalty'>('member')
+  const isFeaturedRole = ref(false)
+  const hohContact = ref('')
+  const applicationBio = ref('')
+  const publicBio = ref('')
+
+  // Houses (loaded from API)
+  const houses = ref<House[]>([])
+  const housesLoaded = ref(false)
+
   // ===== COMPUTED =====
 
   const totalAptitudePoints = computed(() =>
@@ -69,10 +99,32 @@ export const useCreationStore = defineStore('creation', () => {
     STEP_ORDER.indexOf(currentStep.value)
   )
 
+  const selectedHouse = computed(() =>
+    houses.value.find(h => h.id === selectedHouseId.value) ?? null
+  )
+
+  const applicationTier = computed((): 1 | 2 | 3 => {
+    if (!selectedTemplate.value) return 1
+    // Tier 3: featured role or leadership positions
+    if (isFeaturedRole.value || ['head_of_house', 'lord_paramount', 'royalty'].includes(requestedRole.value)) {
+      return 3
+    }
+    // Tier 2: noble template, house membership, bastard, or dragon seed
+    if (selectedTemplate.value.category === 'nobility' || selectedHouseId.value || isBastard.value || isDragonSeed.value) {
+      return 2
+    }
+    return 1
+  })
+
+  const requiresApplication = computed(() => applicationTier.value >= 2)
+
   const stepValidation = computed(() => ({
     template: !!selectedTemplate.value,
     aptitudes: freeAptitudePointsRemaining.value === 0,
-    identity: characterName.value.trim().length >= 2,
+    identity: characterName.value.trim().length >= 2
+      && fatherName.value.trim().length >= 1
+      && motherName.value.trim().length >= 1
+      && (!requiresApplication.value || applicationBio.value.trim().length >= 1),
     review: true,
   }))
 
@@ -98,6 +150,16 @@ export const useCreationStore = defineStore('creation', () => {
     aptitudes.value = {}
     characterName.value = ''
     backstory.value = ''
+    fatherName.value = ''
+    motherName.value = ''
+    selectedHouseId.value = null
+    isBastard.value = false
+    isDragonSeed.value = false
+    requestedRole.value = 'member'
+    isFeaturedRole.value = false
+    hohContact.value = ''
+    applicationBio.value = ''
+    publicBio.value = ''
     isSubmitting.value = false
     submitError.value = null
   }
@@ -166,15 +228,43 @@ export const useCreationStore = defineStore('creation', () => {
     }
   }
 
+  async function fetchHouses(): Promise<void> {
+    if (housesLoaded.value) return
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/houses`)
+      if (res.ok) {
+        const data = await res.json()
+        houses.value = data.houses
+        housesLoaded.value = true
+      }
+    } catch (err) {
+      console.error('Failed to fetch houses:', err)
+    }
+  }
+
   /** Build the payload for character:create */
   function getCreatePayload() {
     if (!selectedTemplate.value) return null
+
+    // Auto-enable featured role for leadership positions
+    const featured = isFeaturedRole.value ||
+      ['head_of_house', 'lord_paramount', 'royalty'].includes(requestedRole.value)
 
     return {
       templateKey: selectedTemplate.value.template_key,
       aptitudes: { ...aptitudes.value },
       name: characterName.value.trim(),
       backstory: backstory.value.trim() || undefined,
+      fatherName: fatherName.value.trim(),
+      motherName: motherName.value.trim(),
+      houseId: selectedHouseId.value,
+      isBastard: isBastard.value,
+      isDragonSeed: isDragonSeed.value,
+      requestedRole: requestedRole.value,
+      isFeaturedRole: featured,
+      hohContact: hohContact.value.trim() || null,
+      applicationBio: applicationBio.value.trim() || null,
+      publicBio: publicBio.value.trim() || null,
     }
   }
 
@@ -189,6 +279,18 @@ export const useCreationStore = defineStore('creation', () => {
     aptitudes,
     characterName,
     backstory,
+    fatherName,
+    motherName,
+    selectedHouseId,
+    isBastard,
+    isDragonSeed,
+    requestedRole,
+    isFeaturedRole,
+    hohContact,
+    applicationBio,
+    publicBio,
+    houses,
+    housesLoaded,
 
     // Computed
     totalAptitudePoints,
@@ -197,6 +299,9 @@ export const useCreationStore = defineStore('creation', () => {
     stepValidation,
     canAdvance,
     templatesByCategory,
+    selectedHouse,
+    applicationTier,
+    requiresApplication,
 
     // Constants
     APTITUDE_KEYS,
@@ -214,6 +319,7 @@ export const useCreationStore = defineStore('creation', () => {
     goToStep,
     nextStep,
     prevStep,
+    fetchHouses,
     getCreatePayload,
   }
 })

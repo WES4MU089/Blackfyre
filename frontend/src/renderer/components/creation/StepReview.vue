@@ -23,6 +23,17 @@ const sortedAptitudes = computed(() =>
     .sort((a, b) => b.value - a.value)
 )
 
+const ROLE_LABELS: Record<string, string> = {
+  member: 'Member',
+  head_of_house: 'Head of House',
+  lord_paramount: 'Lord Paramount',
+  royalty: 'Royalty',
+}
+
+function roleLabel(role: string): string {
+  return ROLE_LABELS[role] ?? role
+}
+
 </script>
 
 <template>
@@ -92,10 +103,73 @@ const sortedAptitudes = computed(() =>
         </div>
       </div>
 
+      <!-- Lineage & House -->
+      <div class="review-section">
+        <button class="section-header" @click="store.goToStep('identity')">
+          <h3 class="section-title">Lineage</h3>
+          <span class="section-edit">edit</span>
+        </button>
+        <div class="lineage-content">
+          <!-- Parentage -->
+          <div class="lineage-row">
+            <span class="lineage-label">Father</span>
+            <span class="lineage-value">{{ store.fatherName || '—' }}</span>
+          </div>
+          <div class="lineage-row">
+            <span class="lineage-label">Mother</span>
+            <span class="lineage-value">{{ store.motherName || '—' }}</span>
+          </div>
+
+          <!-- House -->
+          <div v-if="store.selectedHouse" class="lineage-row">
+            <span class="lineage-label">House</span>
+            <span class="lineage-value">{{ store.selectedHouse.name }}</span>
+          </div>
+          <div v-else class="lineage-row">
+            <span class="lineage-label">House</span>
+            <span class="lineage-value lineage-value--muted">No house</span>
+          </div>
+
+          <!-- Badges -->
+          <div v-if="store.isBastard || store.isDragonSeed" class="lineage-badges">
+            <span v-if="store.isBastard" class="lineage-badge lineage-badge--bastard">Bastard</span>
+            <span v-if="store.isDragonSeed" class="lineage-badge lineage-badge--dragon">Dragon Seed</span>
+          </div>
+
+          <!-- Requested role (if house selected) -->
+          <div v-if="store.selectedHouseId && store.requestedRole !== 'member'" class="lineage-row">
+            <span class="lineage-label">Role</span>
+            <span class="lineage-value lineage-value--role">{{ roleLabel(store.requestedRole) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Application Tier Banner -->
+      <div v-if="store.requiresApplication" class="review-section review-section--tier">
+        <div class="tier-banner" :class="`tier-banner--${store.applicationTier}`">
+          <span class="tier-banner-label">Tier {{ store.applicationTier }} Application</span>
+          <span class="tier-banner-hint">Requires staff approval before play</span>
+        </div>
+        <!-- Application bio preview -->
+        <div v-if="store.applicationBio.trim()" class="tier-bio-preview">
+          <span class="tier-bio-label">Application Bio</span>
+          <p class="tier-bio-text">{{ store.applicationBio }}</p>
+        </div>
+      </div>
+
+      <!-- Public Bio -->
+      <div v-if="store.publicBio.trim()" class="review-section">
+        <button class="section-header" @click="store.goToStep('identity')">
+          <h3 class="section-title">Public Bio</h3>
+          <span class="section-edit">edit</span>
+        </button>
+        <p class="review-backstory">{{ store.publicBio }}</p>
+      </div>
+
       <!-- Backstory -->
       <div v-if="store.backstory.trim()" class="review-section">
         <button class="section-header" @click="store.goToStep('identity')">
-          <h3 class="section-title">Backstory</h3>
+          <h3 class="section-title">Private Backstory</h3>
           <span class="section-edit">edit</span>
         </button>
         <p class="review-backstory">{{ store.backstory }}</p>
@@ -363,6 +437,130 @@ const sortedAptitudes = computed(() =>
   border: 1px solid var(--color-border-dim);
   border-radius: var(--radius-sm);
   text-transform: capitalize;
+}
+
+/* Lineage */
+.lineage-content {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lineage-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.lineage-label {
+  font-family: var(--font-body);
+  font-size: 9px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.lineage-value {
+  font-family: var(--font-display);
+  font-size: var(--font-size-xs);
+  color: var(--color-text);
+  letter-spacing: 0.04em;
+}
+
+.lineage-value--muted {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.lineage-value--role {
+  color: var(--color-gold);
+}
+
+.lineage-badges {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.lineage-badge {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 2px;
+}
+
+.lineage-badge--bastard {
+  color: #c87830;
+  background: rgba(200, 120, 48, 0.12);
+  border: 1px solid rgba(200, 120, 48, 0.3);
+}
+
+.lineage-badge--dragon {
+  color: var(--color-crimson-light);
+  background: rgba(139, 26, 26, 0.12);
+  border: 1px solid rgba(139, 26, 26, 0.3);
+}
+
+/* Application tier */
+.review-section--tier {
+  border-color: rgba(201, 168, 76, 0.3);
+}
+
+.tier-banner {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tier-banner--2 {
+  background: rgba(201, 168, 76, 0.06);
+}
+
+.tier-banner--3 {
+  background: rgba(139, 26, 26, 0.06);
+}
+
+.tier-banner-label {
+  font-family: var(--font-display);
+  font-size: var(--font-size-xs);
+  color: var(--color-gold);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.tier-banner-hint {
+  font-family: var(--font-body);
+  font-size: 9px;
+  color: var(--color-text-muted);
+}
+
+.tier-bio-preview {
+  padding: 6px 12px 10px;
+  border-top: 1px solid var(--color-border-dim);
+}
+
+.tier-bio-label {
+  font-family: var(--font-body);
+  font-size: 9px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.tier-bio-text {
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-dim);
+  line-height: 1.5;
+  margin: 4px 0 0;
+  max-height: 80px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-gold-dim) transparent;
 }
 
 /* Backstory */

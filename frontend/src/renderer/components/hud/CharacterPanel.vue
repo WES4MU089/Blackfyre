@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { useCharacterStore, type EquippedItem, type InventoryItem } from '@/stores/character'
 import { useHudStore } from '@/stores/hud'
 import { useCreationStore } from '@/stores/creation'
+import { useAilmentsStore } from '@/stores/ailments'
 import { useDraggable } from '@/composables/useDraggable'
 import { useSocket } from '@/composables/useSocket'
 import { useItemDrag, type DragPayload } from '@/composables/useItemDrag'
@@ -11,21 +12,31 @@ import AptitudeBar from './AptitudeBar.vue'
 import ItemTooltip from './ItemTooltip.vue'
 import ItemContextMenu from './ItemContextMenu.vue'
 import StatsPanel from './StatsPanel.vue'
+import HealthPanel from './HealthPanel.vue'
 import paperdollImg from '@res/images/art/paperdoll.png'
 
 const characterStore = useCharacterStore()
 const hudStore = useHudStore()
 const creationStore = useCreationStore()
+const ailmentsStore = useAilmentsStore()
 const { selectCharacter, requestCharacterList, requestTemplates, dismissRetainer, allocateAptitude } = useSocket()
 const panelRef = ref<HTMLElement | null>(null)
 const { isDragging, onDragStart } = useDraggable('character', panelRef, { alwaysDraggable: true })
 
-const activeTab = ref<'equipment' | 'retainer'>('equipment')
+const activeTab = ref<'equipment' | 'retainer' | 'health'>('equipment')
 const showStats = ref(false)
+const showHealth = computed(() => activeTab.value === 'health')
 
 function toggleStats() {
   showStats.value = !showStats.value
 }
+
+// Fetch ailments when Health tab is activated
+watch(activeTab, (tab) => {
+  if (tab === 'health' && characterStore.character?.id) {
+    ailmentsStore.fetchAilments(characterStore.character.id)
+  }
+})
 
 /** Character switcher dropdown */
 const showCharacterDropdown = ref(false)
@@ -64,6 +75,16 @@ const otherCharacters = computed(() =>
   characterStore.characterList.filter(c => c.id !== characterStore.character?.id)
 )
 
+function isPlayable(status?: string): boolean {
+  return !status || status === 'none' || status === 'approved'
+}
+
+function statusLabel(status?: string): string | null {
+  if (!status || status === 'none' || status === 'approved') return null
+  const labels: Record<string, string> = { pending: 'Pending', denied: 'Denied', revision: 'Revision' }
+  return labels[status] ?? null
+}
+
 onMounted(() => {
   requestCharacterList()
 })
@@ -96,6 +117,12 @@ const rightAptitudes = computed(() =>
 )
 
 const retainerCount = computed(() => characterStore.retainers.length)
+
+const woundBadgeClass = computed(() => {
+  const sev = ailmentsStore.woundSeverity
+  if (sev === 'healthy' && ailmentsStore.ailments.length === 0) return ''
+  return `health-badge--${sev}`
+})
 
 /** Tier label for display */
 function tierLabel(tier: number): string {
@@ -222,10 +249,15 @@ function close() {
             v-for="c in otherCharacters"
             :key="c.id"
             class="char-dropdown-item"
-            @click="switchCharacter(c.id)"
+            :class="{ 'char-dropdown-item--disabled': !isPlayable(c.application_status) }"
+            :disabled="!isPlayable(c.application_status)"
+            @click="isPlayable(c.application_status) && switchCharacter(c.id)"
           >
             <span class="char-dropdown-name">{{ c.name }}</span>
-            <span class="char-dropdown-level">Lv {{ c.level }}</span>
+            <span v-if="statusLabel(c.application_status)" class="char-dropdown-status" :class="`char-dropdown-status--${c.application_status}`">
+              {{ statusLabel(c.application_status) }}
+            </span>
+            <span v-else class="char-dropdown-level">Lv {{ c.level }}</span>
           </button>
           <div v-if="otherCharacters.length === 0" class="char-dropdown-empty">
             No other characters
@@ -280,6 +312,14 @@ function close() {
       >
         Retainers
         <span class="retainer-count">{{ retainerCount }}/4</span>
+      </button>
+      <button
+        class="char-tab"
+        :class="{ 'char-tab--active': activeTab === 'health' }"
+        @click="activeTab = 'health'"
+      >
+        Health
+        <span v-if="woundBadgeClass" class="health-badge" :class="woundBadgeClass">&bull;</span>
       </button>
     </div>
 
@@ -371,6 +411,35 @@ function close() {
       </div>
     </template>
 
+    <!-- Health tab -->
+    <template v-if="activeTab === 'health'">
+      <div class="health-area">
+        <div v-if="ailmentsStore.woundSeverity === 'healthy' && ailmentsStore.ailments.length === 0" class="health-area-empty">
+          <span class="health-area-empty-text">No wounds or ailments</span>
+          <span class="health-area-empty-hint">See detailed status in the panel to the right</span>
+        </div>
+        <template v-else>
+          <div class="health-summary">
+            <div class="health-summary-row">
+              <span class="health-summary-label">Wound Status</span>
+              <span class="wound-severity-tag" :class="`wound-severity-tag--${ailmentsStore.woundSeverity}`">
+                {{ ailmentsStore.woundSeverity }}
+              </span>
+            </div>
+            <div v-if="ailmentsStore.ailments.length > 0" class="health-summary-row">
+              <span class="health-summary-label">Active Ailments</span>
+              <span class="health-summary-value">{{ ailmentsStore.ailments.length }}</span>
+            </div>
+            <div v-for="a in ailmentsStore.ailments" :key="a.id" class="health-ailment-brief">
+              <span class="health-ailment-name">{{ a.name }}</span>
+              <span class="health-ailment-stage">Stage {{ a.currentStage }}: {{ a.stageName }}</span>
+            </div>
+          </div>
+          <div class="health-area-hint">See detailed timers in the panel to the right</div>
+        </template>
+      </div>
+    </template>
+
     <!-- Retainer tab -->
     <template v-if="activeTab === 'retainer'">
       <div class="retainer-area">
@@ -428,6 +497,11 @@ function close() {
     <!-- Stats side panel -->
     <Transition name="stats-slide">
       <StatsPanel v-if="showStats" />
+    </Transition>
+
+    <!-- Health side panel -->
+    <Transition name="health-slide">
+      <HealthPanel v-if="showHealth" />
     </Transition>
   </div>
 
@@ -663,6 +737,39 @@ function close() {
   font-style: italic;
   padding: 4px 8px;
   text-align: center;
+}
+
+.char-dropdown-item--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.char-dropdown-item--disabled:hover {
+  background: none;
+}
+
+.char-dropdown-status {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 2px;
+}
+
+.char-dropdown-status--pending {
+  color: var(--color-gold);
+  background: rgba(201, 168, 76, 0.15);
+}
+
+.char-dropdown-status--denied {
+  color: var(--color-crimson-light);
+  background: rgba(139, 26, 26, 0.15);
+}
+
+.char-dropdown-status--revision {
+  color: #c87830;
+  background: rgba(200, 120, 48, 0.15);
 }
 
 .char-dropdown-create {
@@ -1133,5 +1240,169 @@ function close() {
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
   font-style: italic;
+}
+
+/* Health slide transition (same as stats-slide) */
+.health-slide-enter-active,
+.health-slide-leave-active {
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+.health-slide-enter-from,
+.health-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-12px);
+}
+
+/* Health tab badge (wound severity dot) */
+.health-badge {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.health-badge--light {
+  color: var(--color-gold);
+}
+
+.health-badge--serious {
+  color: #c87830;
+}
+
+.health-badge--severe {
+  color: var(--color-crimson);
+}
+
+.health-badge--grave {
+  color: #cc2222;
+  animation: badge-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ========= Health tab content ========= */
+.health-area {
+  padding: var(--space-md);
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+}
+
+.health-area-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  min-height: 200px;
+}
+
+.health-area-empty-text {
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.health-area-empty-hint {
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-dim);
+}
+
+.health-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.health-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.health-summary-label {
+  font-family: var(--font-display);
+  font-size: 10px;
+  color: var(--color-text-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.health-summary-value {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text);
+}
+
+.wound-severity-tag {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 1px 6px;
+  border-radius: 2px;
+}
+
+.wound-severity-tag--healthy {
+  color: var(--color-success);
+  background: rgba(45, 138, 78, 0.12);
+}
+
+.wound-severity-tag--light {
+  color: var(--color-gold);
+  background: rgba(201, 168, 76, 0.12);
+}
+
+.wound-severity-tag--serious {
+  color: #c87830;
+  background: rgba(200, 120, 48, 0.12);
+}
+
+.wound-severity-tag--severe {
+  color: var(--color-crimson);
+  background: rgba(139, 26, 26, 0.12);
+}
+
+.wound-severity-tag--grave {
+  color: #cc2222;
+  background: rgba(204, 34, 34, 0.12);
+}
+
+.health-ailment-brief {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 4px 8px;
+  background: var(--color-surface-dark);
+  border: 1px solid var(--color-border-dim);
+  border-radius: var(--radius-sm);
+}
+
+.health-ailment-name {
+  font-family: var(--font-display);
+  font-size: 11px;
+  color: var(--color-text);
+  letter-spacing: 0.04em;
+}
+
+.health-ailment-stage {
+  font-family: var(--font-body);
+  font-size: 9px;
+  color: var(--color-text-muted);
+}
+
+.health-area-hint {
+  margin-top: auto;
+  padding-top: var(--space-md);
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-dim);
+  font-style: italic;
+  text-align: center;
 }
 </style>

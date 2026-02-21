@@ -140,6 +140,7 @@ export interface CharacterListEntry {
   portrait_url?: string
   health?: number
   max_health?: number
+  application_status?: string
 }
 
 export const useCharacterStore = defineStore('character', () => {

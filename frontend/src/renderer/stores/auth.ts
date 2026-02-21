@@ -11,12 +11,28 @@ export const useAuthStore = defineStore('auth', () => {
     discordId: string
     discordUsername: string
     slAccountId?: number
+    roleName?: string | null
+    permissions?: string[]
+    isSuperAdmin?: boolean
   } | null>(null)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
   const backendOnline = ref(false)
 
   const isAuthenticated = computed(() => !!token.value && !!user.value)
+
+  const isSuperAdmin = computed(() => !!user.value?.isSuperAdmin)
+
+  const permissions = computed(() => new Set(user.value?.permissions ?? []))
+
+  function hasPermission(key: string): boolean {
+    if (isSuperAdmin.value) return true
+    return permissions.value.has(key)
+  }
+
+  const isStaff = computed(() =>
+    isSuperAdmin.value || (user.value?.permissions?.length ?? 0) > 0
+  )
 
   async function checkBackendHealth(): Promise<boolean> {
     try {
@@ -96,6 +112,10 @@ export const useAuthStore = defineStore('auth', () => {
     error,
     backendOnline,
     isAuthenticated,
+    isSuperAdmin,
+    permissions,
+    isStaff,
+    hasPermission,
     checkBackendHealth,
     loadStoredToken,
     startDiscordLogin,

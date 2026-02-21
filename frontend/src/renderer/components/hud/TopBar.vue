@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { useHudStore } from '@/stores/hud'
+import { useAuthStore } from '@/stores/auth'
+import { useAdminStore } from '@/stores/admin'
 import { useWesterosClock } from '@/composables/useWesterosClock'
 import characterIcon from '@res/images/icons/character.png'
 import combatIcon from '@res/images/icons/combat.png'
@@ -17,7 +19,17 @@ interface SystemTab {
 }
 
 const hudStore = useHudStore()
+const authStore = useAuthStore()
+const adminStore = useAdminStore()
 const { time } = useWesterosClock()
+
+function toggleAdminPanel() {
+  if (adminStore.isOpen) {
+    adminStore.closePanel()
+  } else {
+    adminStore.openPanel()
+  }
+}
 
 const leftSystems: SystemTab[] = [
   { id: 'character', label: 'Character', icon: characterIcon, tooltip: 'Character & Stats' },
@@ -86,6 +98,22 @@ const rightSystems: SystemTab[] = [
           <img :src="sys.icon" :alt="sys.label" class="system-icon-img" />
         </div>
         <span class="system-label">{{ sys.label }}</span>
+      </button>
+
+      <!-- Staff panel button (only visible for staff) -->
+      <button
+        v-if="authStore.isStaff"
+        class="system-btn staff-btn"
+        :class="{ active: adminStore.isOpen }"
+        title="Staff Panel"
+        @click="toggleAdminPanel"
+      >
+        <div class="system-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        <span class="system-label">Staff</span>
       </button>
     </div>
 
@@ -243,6 +271,21 @@ const rightSystems: SystemTab[] = [
   letter-spacing: 0.08em;
   transition: color var(--transition-fast);
   line-height: 1;
+}
+
+/* Staff button uses inline SVG instead of img */
+.staff-btn .system-icon svg {
+  color: var(--color-text-dim);
+  transition: all var(--transition-fast);
+}
+
+.staff-btn:hover .system-icon svg {
+  color: var(--color-gold);
+}
+
+.staff-btn.active .system-icon svg {
+  color: var(--color-gold);
+  filter: drop-shadow(0 0 3px rgba(201, 168, 76, 0.4));
 }
 
 /* Center title group */
