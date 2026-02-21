@@ -340,63 +340,54 @@ export function setupWebSocket(io: SocketServer): void {
       if (payload) {
         (async () => {
           try {
-            // Look up verified SL account linked to this Discord user
-            const slAccount = await db.queryOne<{ SLUUID: string }>(
-              `SELECT SLUUID FROM SLAccount WHERE UserId = ? AND IsVerified = TRUE AND IsDeleted = FALSE LIMIT 1`,
+            // JWT userId maps directly to players.id
+            const player = await db.queryOne<{ id: number; sl_uuid: string | null }>(
+              `SELECT id, sl_uuid FROM players WHERE id = ? AND is_active = 1`,
               [payload.userId]
             );
 
-            if (slAccount) {
-              // Look up the player record by SL UUID
-              const player = await db.queryOne<{ id: number }>(
-                `SELECT id FROM players WHERE sl_uuid = ?`,
-                [slAccount.SLUUID]
-              );
+            if (!player) {
+              logger.warn(`JWT userId=${payload.userId} has no matching player record`);
+              socket.disconnect(true);
+              return;
+            }
 
-              if (player) {
-                const playerInfo = connectedPlayers.get(socket.id);
-                if (playerInfo) {
-                  playerInfo.playerId = player.id;
-                  playerInfo.slUuid = slAccount.SLUUID;
-                }
-                socket.join(`player:${player.id}`);
-                socket.emit('player:authenticated', { playerId: player.id });
-                logger.info(`Socket authenticated via JWT: userId=${payload.userId}, playerId=${player.id}, slUuid=${slAccount.SLUUID}`);
-
-                // Auto-send character list now that auth is complete.
-                // The client requests this on connect but the handler may fire
-                // before playerId is set — this ensures it always arrives.
-                const characters = await db.query(`
-                  SELECT c.id, c.name, c.level, c.is_active, c.portrait_url,
-                         cv.health, cv.max_health
-                  FROM characters c
-                  LEFT JOIN character_vitals cv ON c.id = cv.character_id
-                  WHERE c.player_id = ? AND c.owner_character_id IS NULL
-                  ORDER BY c.created_at DESC
-                `, [player.id]);
-                socket.emit('characters:list', characters);
-              } else {
-                logger.warn(`SL account found (${slAccount.SLUUID}) but no matching player record`);
+            const playerInfo = connectedPlayers.get(socket.id);
+            if (playerInfo) {
+              playerInfo.playerId = player.id;
+              playerInfo.userId = payload.userId;
+              if (player.sl_uuid) {
+                playerInfo.slUuid = player.sl_uuid;
               }
-            } else {
-              // No verified SL account — generate a linking code
-              const code = crypto.randomBytes(3).toString('hex').toUpperCase(); // 6-char hex
-              const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+            }
+            socket.join(`player:${player.id}`);
+            socket.emit('player:authenticated', { playerId: player.id });
+            logger.info(`Socket authenticated via JWT: playerId=${player.id}, slUuid=${player.sl_uuid || 'not linked'}`);
+
+            // Auto-send character list
+            const characters = await db.query(`
+              SELECT c.id, c.name, c.level, c.is_active, c.portrait_url,
+                     cv.health, cv.max_health
+              FROM characters c
+              LEFT JOIN character_vitals cv ON c.id = cv.character_id
+              WHERE c.player_id = ? AND c.owner_character_id IS NULL
+              ORDER BY c.created_at DESC
+            `, [player.id]);
+            socket.emit('characters:list', characters);
+
+            if (!player.sl_uuid) {
+              // No SL account linked — generate a linking code
+              const code = crypto.randomBytes(3).toString('hex').toUpperCase();
+              const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
               await db.execute(
-                `UPDATE user SET SLVerificationCode = ?, SLVerificationCodeExpiresAt = ? WHERE Id = ?`,
-                [code, expiresAt, payload.userId]
+                `UPDATE players SET sl_verification_code = ?, sl_verification_expires_at = ? WHERE id = ?`,
+                [code, expiresAt, player.id]
               );
 
-              // Store userId on the ConnectedPlayer so verify-sl can find this socket
-              const playerInfo = connectedPlayers.get(socket.id);
-              if (playerInfo) {
-                playerInfo.userId = payload.userId;
-              }
               socket.join(`user:${payload.userId}`);
-
               socket.emit('sl:link-required', { code, expiresAt: expiresAt.toISOString() });
-              logger.info(`SL linking code generated for userId=${payload.userId}: ${code}`);
+              logger.info(`SL linking code generated for playerId=${player.id}: ${code}`);
             }
           } catch (error) {
             logger.error('Socket JWT auth lookup failed:', error);

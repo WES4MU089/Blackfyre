@@ -352,46 +352,23 @@ playersRouter.post('/keepalive', async (req: Request, res: Response) => {
 
 // SL Account Linking — generate verification code (called from Electron HUD)
 const linkSLSchema = z.object({
-  user_id: z.number(),
-  sl_uuid: z.string(),
-  sl_username: z.string().min(1).max(100),
-  sl_legacy_name: z.string().max(100).optional(),
+  player_id: z.number(),
 });
 
 playersRouter.post('/link-sl', async (req: Request, res: Response) => {
   try {
     const data = linkSLSchema.parse(req.body);
 
-    // Generate 8-character verification code
-    const code = Math.random().toString(36).substring(2, 10).toUpperCase();
+    // Generate 6-character verification code
+    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
-    // Check if SL account already linked to another user
-    const existing = await db.queryOne<{ Id: number; UserId: number }>(
-      `SELECT Id, UserId FROM SLAccount WHERE SLUUID = ? AND IsDeleted = FALSE`,
-      [data.sl_uuid]
+    await db.execute(
+      `UPDATE players SET sl_verification_code = ?, sl_verification_expires_at = ? WHERE id = ?`,
+      [code, expiresAt, data.player_id]
     );
 
-    if (existing && existing.UserId !== data.user_id) {
-      return res.status(409).json({ error: 'SL account already linked to another user' });
-    }
-
-    if (existing) {
-      // Update existing record with new verification code
-      await db.execute(
-        `UPDATE SLAccount SET VerificationCode = ?, VerificationExpiresAt = ?, SLUsername = ? WHERE Id = ?`,
-        [code, expiresAt, data.sl_username, existing.Id]
-      );
-    } else {
-      // Create new SL account link
-      await db.insert(
-        `INSERT INTO SLAccount (UserId, SLUUID, SLUsername, SLLegacyName, VerificationCode, VerificationExpiresAt)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [data.user_id, data.sl_uuid, data.sl_username, data.sl_legacy_name || null, code, expiresAt]
-      );
-    }
-
-    logger.info(`SL link code generated for user ${data.user_id}: ${code}`);
+    logger.info(`SL link code generated for player ${data.player_id}: ${code}`);
     res.json({ code, expiresAt: expiresAt.toISOString() });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -414,100 +391,55 @@ playersRouter.post('/verify-sl', async (req: Request, res: Response) => {
   try {
     const { sl_uuid, verification_code } = verifySLSchema.parse(req.body);
 
-    // First check: code stored on user table (new linking flow from Electron HUD)
-    const user = await db.queryOne<{ Id: number }>(
-      `SELECT Id FROM user WHERE SLVerificationCode = ? AND SLVerificationCodeExpiresAt > NOW() AND IsDeleted = 0`,
+    // Find the player with this verification code
+    const player = await db.queryOne<{ id: number }>(
+      `SELECT id FROM players
+       WHERE sl_verification_code = ? AND sl_verification_expires_at > NOW() AND is_active = 1`,
       [verification_code.toUpperCase()]
     );
 
-    if (user) {
-      // Create verified SLAccount linking this user to the SL avatar
-      const existingSL = await db.queryOne<{ Id: number }>(
-        `SELECT Id FROM SLAccount WHERE SLUUID = ? AND IsDeleted = FALSE`,
-        [sl_uuid]
-      );
-
-      if (existingSL) {
-        // Update existing record
-        await db.execute(
-          `UPDATE SLAccount SET UserId = ?, IsVerified = TRUE, VerifiedAt = NOW(), VerificationCode = NULL WHERE Id = ?`,
-          [user.Id, existingSL.Id]
-        );
-      } else {
-        // Get display name from the LSL login record
-        const slPlayer = await db.queryOne<{ sl_name: string }>(
-          `SELECT sl_name FROM players WHERE sl_uuid = ?`,
-          [sl_uuid]
-        );
-
-        await db.insert(
-          `INSERT INTO SLAccount (UserId, SLUUID, SLUsername, IsVerified, VerifiedAt, IsPrimary)
-           VALUES (?, ?, ?, TRUE, NOW(), TRUE)`,
-          [user.Id, sl_uuid, slPlayer?.sl_name || 'Unknown']
-        );
-      }
-
-      // Ensure a players record exists for this SL UUID
-      let player = await db.queryOne<{ id: number }>(
-        `SELECT id FROM players WHERE sl_uuid = ?`,
-        [sl_uuid]
-      );
-
-      if (!player) {
-        const id = await db.insert(
-          `INSERT INTO players (sl_uuid, sl_name, last_seen) VALUES (?, ?, NOW())`,
-          [sl_uuid, 'Unknown']
-        );
-        player = { id };
-      }
-
-      // Clear the verification code
-      await db.execute(
-        `UPDATE user SET SLVerificationCode = NULL, SLVerificationCodeExpiresAt = NULL WHERE Id = ?`,
-        [user.Id]
-      );
-
-      // Update the connected socket with the new identity
-      const io = getIO();
-      if (io) {
-        for (const [_socketId, cp] of connectedPlayers) {
-          if (cp.userId === user.Id) {
-            cp.playerId = player.id;
-            cp.slUuid = sl_uuid;
-            // Find the actual socket to join rooms and emit events
-            const sock = io.sockets.sockets.get(cp.socketId);
-            if (sock) {
-              sock.join(`player:${player.id}`);
-              sock.emit('sl:linked', { playerId: player.id, slUuid: sl_uuid });
-            }
-            break;
-          }
-        }
-      }
-
-      logger.info(`SL account linked via code: ${sl_uuid} -> userId ${user.Id}, playerId ${player.id}`);
-      res.json({ success: true, user_id: user.Id });
-      return;
-    }
-
-    // Fallback: check SLAccount table (legacy flow)
-    const account = await db.queryOne<{ Id: number; UserId: number }>(
-      `SELECT Id, UserId FROM SLAccount
-       WHERE SLUUID = ? AND VerificationCode = ? AND VerificationExpiresAt > NOW() AND IsDeleted = FALSE`,
-      [sl_uuid, verification_code]
-    );
-
-    if (!account) {
+    if (!player) {
       return res.status(400).json({ error: 'Invalid or expired verification code' });
     }
 
+    // Link the SL UUID to this player and clear the verification code
     await db.execute(
-      `UPDATE SLAccount SET IsVerified = TRUE, VerifiedAt = NOW(), VerificationCode = NULL WHERE Id = ?`,
-      [account.Id]
+      `UPDATE players SET sl_uuid = ?, sl_verification_code = NULL, sl_verification_expires_at = NULL WHERE id = ?`,
+      [sl_uuid, player.id]
     );
 
-    logger.info(`SL account verified (legacy): ${sl_uuid} -> user ${account.UserId}`);
-    res.json({ success: true, user_id: account.UserId });
+    // Get display name from the SL HUD login record (if it exists as a separate row)
+    const slRecord = await db.queryOne<{ id: number; sl_name: string }>(
+      `SELECT id, sl_name FROM players WHERE sl_uuid = ? AND id != ?`,
+      [sl_uuid, player.id]
+    );
+
+    if (slRecord) {
+      // Merge: copy sl_name to the Discord player, then remove the orphan SL-only row
+      await db.execute(`UPDATE players SET sl_name = ? WHERE id = ?`, [slRecord.sl_name, player.id]);
+      // Reassign any characters owned by the old SL-only player record
+      await db.execute(`UPDATE characters SET player_id = ? WHERE player_id = ?`, [player.id, slRecord.id]);
+      await db.execute(`DELETE FROM players WHERE id = ?`, [slRecord.id]);
+      logger.info(`Merged SL player record ${slRecord.id} into Discord player ${player.id}`);
+    }
+
+    // Update the connected socket with the new SL identity
+    const io = getIO();
+    if (io) {
+      for (const [_socketId, cp] of connectedPlayers) {
+        if (cp.playerId === player.id) {
+          cp.slUuid = sl_uuid;
+          const sock = io.sockets.sockets.get(cp.socketId);
+          if (sock) {
+            sock.emit('sl:linked', { playerId: player.id, slUuid: sl_uuid });
+          }
+          break;
+        }
+      }
+    }
+
+    logger.info(`SL account linked: ${sl_uuid} -> playerId ${player.id}`);
+    res.json({ success: true, player_id: player.id });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: 'Validation error', details: error.errors });
