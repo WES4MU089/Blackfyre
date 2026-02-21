@@ -274,6 +274,8 @@ function updateTrayMenu(): void {
           hudWindow.close()
           hudWindow = null
         }
+        lastAutoSeq = 0
+        layoutEditMode = false
         if (!loginWindow) {
           createLoginWindow()
         }
@@ -403,6 +405,8 @@ ipcMain.on('auth:login-success', () => {
     loginWindow.close()
     loginWindow = null
   }
+  lastAutoSeq = 0
+  layoutEditMode = false
   createHudWindow()
   updateTrayMenu()
 })
