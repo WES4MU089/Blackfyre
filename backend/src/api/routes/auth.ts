@@ -79,62 +79,46 @@ authRouter.get('/discord/callback', async (req: Request, res: Response) => {
       avatar?: string;
     };
 
-    // Find or create user in database (PascalCase `user` table)
-    let user = await db.queryOne<{ Id: number; DiscordId: string; DiscordUsername: string }>(
-      'SELECT Id, DiscordId, DiscordUsername FROM user WHERE DiscordId = ?',
+    // Find or create player in database
+    let player = await db.queryOne<{ id: number; discord_id: string; discord_username: string }>(
+      'SELECT id, discord_id, discord_username FROM players WHERE discord_id = ?',
       [discordUser.id]
     );
 
-    const tokenExpiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
-
-    if (!user) {
-      // Create new user
+    if (!player) {
+      // Create new player
       const id = await db.insert(
-        `INSERT INTO user (DiscordId, DiscordUsername, DiscordDiscriminator, DiscordEmail, DiscordAvatarHash, DiscordAccessToken, DiscordRefreshToken, DiscordTokenExpiresAt, LastLoginAt)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        `INSERT INTO players (discord_id, discord_username, discord_email, sl_name)
+         VALUES (?, ?, ?, ?)`,
         [
           discordUser.id,
           discordUser.username,
-          discordUser.discriminator || null,
           discordUser.email || null,
-          discordUser.avatar || null,
-          tokenData.access_token,
-          tokenData.refresh_token,
-          tokenExpiresAt,
+          discordUser.username,
         ]
       );
-      user = { Id: id, DiscordId: discordUser.id, DiscordUsername: discordUser.username };
-      logger.info(`New user created via Discord: ${discordUser.username} (${id})`);
+      player = { id, discord_id: discordUser.id, discord_username: discordUser.username };
+      logger.info(`New player created via Discord: ${discordUser.username} (${id})`);
     } else {
-      // Update existing user
+      // Update existing player
       await db.execute(
-        `UPDATE user SET
-          DiscordUsername = ?,
-          DiscordDiscriminator = ?,
-          DiscordEmail = ?,
-          DiscordAvatarHash = ?,
-          DiscordAccessToken = ?,
-          DiscordRefreshToken = ?,
-          DiscordTokenExpiresAt = ?,
-          LastLoginAt = NOW()
-        WHERE Id = ?`,
+        `UPDATE players SET
+          discord_username = ?,
+          discord_email = ?,
+          last_seen = NOW()
+        WHERE id = ?`,
         [
           discordUser.username,
-          discordUser.discriminator || null,
           discordUser.email || null,
-          discordUser.avatar || null,
-          tokenData.access_token,
-          tokenData.refresh_token,
-          tokenExpiresAt,
-          user.Id,
+          player.id,
         ]
       );
-      logger.info(`User logged in via Discord: ${discordUser.username} (${user.Id})`);
+      logger.info(`Player logged in via Discord: ${discordUser.username} (${player.id})`);
     }
 
     // Generate JWT token
     const jwt = generateJWT({
-      userId: user.Id,
+      userId: player.id,
       discordId: discordUser.id,
       discordUsername: discordUser.username,
     });
@@ -161,17 +145,17 @@ authRouter.get('/me', async (req: Request, res: Response) => {
     return res.status(401).json({ error: 'Invalid or expired token' });
   }
 
-  const user = await db.queryOne(
-    `SELECT Id, DiscordId, DiscordUsername, DiscordEmail, DiscordAvatarHash, IsBanned, CreatedAt, LastLoginAt
-     FROM user WHERE Id = ? AND IsDeleted = 0`,
+  const player = await db.queryOne(
+    `SELECT id, discord_id, discord_username, discord_email, is_banned, created_at, last_seen
+     FROM players WHERE id = ? AND is_active = 1`,
     [payload.userId]
   );
 
-  if (!user) {
+  if (!player) {
     return res.status(404).json({ error: 'User not found' });
   }
 
-  res.json({ user });
+  res.json({ user: player });
 });
 
 // --- JWT Helpers ---
