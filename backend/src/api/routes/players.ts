@@ -402,26 +402,26 @@ playersRouter.post('/verify-sl', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid or expired verification code' });
     }
 
-    // Link the SL UUID to this player and clear the verification code
-    await db.execute(
-      `UPDATE players SET sl_uuid = ?, sl_verification_code = NULL, sl_verification_expires_at = NULL WHERE id = ?`,
-      [sl_uuid, player.id]
-    );
-
-    // Get display name from the SL HUD login record (if it exists as a separate row)
+    // Check if an SL-only player row already exists with this UUID (created by inworld HUD login)
     const slRecord = await db.queryOne<{ id: number; sl_name: string }>(
       `SELECT id, sl_name FROM players WHERE sl_uuid = ? AND id != ?`,
       [sl_uuid, player.id]
     );
 
     if (slRecord) {
-      // Merge: copy sl_name to the Discord player, then remove the orphan SL-only row
+      // Merge: copy sl_name to the Discord player, reassign characters, delete orphan row
       await db.execute(`UPDATE players SET sl_name = ? WHERE id = ?`, [slRecord.sl_name, player.id]);
-      // Reassign any characters owned by the old SL-only player record
       await db.execute(`UPDATE characters SET player_id = ? WHERE player_id = ?`, [player.id, slRecord.id]);
+      await db.execute(`UPDATE hud_settings SET player_id = ? WHERE player_id = ?`, [player.id, slRecord.id]);
       await db.execute(`DELETE FROM players WHERE id = ?`, [slRecord.id]);
       logger.info(`Merged SL player record ${slRecord.id} into Discord player ${player.id}`);
     }
+
+    // Now link the SL UUID to this player and clear the verification code
+    await db.execute(
+      `UPDATE players SET sl_uuid = ?, sl_verification_code = NULL, sl_verification_expires_at = NULL WHERE id = ?`,
+      [sl_uuid, player.id]
+    );
 
     // Update the connected socket with the new SL identity
     const io = getIO();
