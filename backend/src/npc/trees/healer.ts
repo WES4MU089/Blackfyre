@@ -35,7 +35,7 @@ export const healerTree: DialogTree = {
           id: 'heal',
           text: 'Yes, heal me.',
           action: 'heal',
-          conditions: ['health_not_full', 'has_cash:50'],
+          conditions: ['needs_healing', 'has_cash:50'],
           conditionFailNodeId: 'condition_fail', // engine resolves dynamically
         },
         { id: 'decline', text: "That's too rich for my blood.", nextNodeId: 'farewell' },

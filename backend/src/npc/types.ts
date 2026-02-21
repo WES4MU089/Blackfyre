@@ -44,6 +44,7 @@ export interface DialogContext {
   inventorySlotsFree: number;
   level: number;
   xpSegments: number;
+  woundSeverity: string;
 }
 
 // ── Active session (in-memory) ─────────────────────────────────

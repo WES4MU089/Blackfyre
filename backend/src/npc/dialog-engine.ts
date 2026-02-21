@@ -67,8 +67,8 @@ export async function loadContext(characterId: number): Promise<DialogContext> {
     'SELECT COUNT(*) AS cnt FROM character_inventory WHERE character_id = ?',
     [characterId],
   );
-  const charData = await db.queryOne<{ level: number; xp_segments: number }>(
-    'SELECT level, xp_segments FROM characters WHERE id = ?',
+  const charData = await db.queryOne<{ level: number; xp_segments: number; wound_severity: string }>(
+    'SELECT level, xp_segments, wound_severity FROM characters WHERE id = ?',
     [characterId],
   );
 
@@ -80,6 +80,7 @@ export async function loadContext(characterId: number): Promise<DialogContext> {
     inventorySlotsFree: 25 - Number(occupied?.cnt ?? 0),
     level: charData?.level ?? 1,
     xpSegments: Number(charData?.xp_segments ?? 0),
+    woundSeverity: charData?.wound_severity ?? 'healthy',
   };
 }
 
@@ -193,6 +194,8 @@ function checkConditions(conditions: string[], ctx: DialogContext): string | nul
   for (const cond of conditions) {
     if (cond === 'health_not_full') {
       if (ctx.currentHealth >= ctx.maxHealth) return 'health_not_full';
+    } else if (cond === 'needs_healing') {
+      if (ctx.currentHealth >= ctx.maxHealth && ctx.woundSeverity === 'healthy') return 'needs_healing';
     } else if (cond.startsWith('has_cash:')) {
       const amount = parseInt(cond.split(':')[1], 10);
       if (ctx.cash < amount) return cond;
@@ -208,6 +211,7 @@ function checkConditions(conditions: string[], ctx: DialogContext): string | nul
  */
 function resolveFailNode(failedCondition: string, option: DialogOption): string {
   if (failedCondition === 'health_not_full') return 'already_healed';
+  if (failedCondition === 'needs_healing') return 'already_healed';
   if (failedCondition.startsWith('has_cash:')) return 'insufficient_gold';
   if (failedCondition === 'has_inventory_space') return 'inventory_full';
   return option.conditionFailNodeId ?? 'farewell';
@@ -228,6 +232,16 @@ const actionHandlers: Record<
       // Restore health to max
       await conn.query(
         'UPDATE character_vitals SET health = max_health WHERE character_id = ?',
+        [characterId],
+      );
+      // Clear wound severity and timers
+      await conn.query(
+        `UPDATE characters SET wound_severity = 'healthy', wound_received_at = NULL, wound_heals_at = NULL WHERE id = ?`,
+        [characterId],
+      );
+      // Clear any active ailments (infections from wounds)
+      await conn.query(
+        'DELETE FROM character_ailments WHERE character_id = ?',
         [characterId],
       );
       // Deduct 50 stars (copper)
@@ -258,7 +272,7 @@ const actionHandlers: Record<
     // Refresh context
     session.context = await loadContext(characterId);
 
-    logger.info(`Healer: character ${characterId} healed to full (50 stars deducted)`);
+    logger.info(`Healer: character ${characterId} healed to full, wounds cleared (50 stars deducted)`);
 
     return { nextNodeId: 'healed' };
   },
