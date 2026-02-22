@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { db } from '../../db/connection.js';
 import { logger } from '../../utils/logger.js';
 import { logAuditAction } from '../../utils/audit.js';
-import { requireAuth, requireSuperAdmin } from '../middleware/auth.js';
+import { requireAuth, requireSuperAdmin, requirePermission } from '../middleware/auth.js';
 
 export const sysadminRouter = Router();
 
@@ -245,6 +245,9 @@ sysadminRouter.patch('/players/:id', async (req: Request, res: Response) => {
 });
 
 // ─── Database Tools ───────────────────────────────────────────────────────────
+
+// Database routes require system.database_access permission
+sysadminRouter.use('/database', requirePermission('system.database_access'));
 
 // GET /database/schema — list all tables with column info
 sysadminRouter.get('/database/schema', async (_req: Request, res: Response) => {

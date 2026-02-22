@@ -117,19 +117,19 @@ const router = createRouter({
       path: '/sysadmin/database',
       name: 'sysadmin-database',
       component: () => import('@/views/sysadmin/SchemaViewer.vue'),
-      meta: { requiresAuth: true, requiresSuperAdmin: true },
+      meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'system.database_access' },
     },
     {
       path: '/sysadmin/database/migrations',
       name: 'sysadmin-migrations',
       component: () => import('@/views/sysadmin/MigrationRunner.vue'),
-      meta: { requiresAuth: true, requiresSuperAdmin: true },
+      meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'system.database_access' },
     },
     {
       path: '/sysadmin/database/query',
       name: 'sysadmin-query',
       component: () => import('@/views/sysadmin/QueryConsole.vue'),
-      meta: { requiresAuth: true, requiresSuperAdmin: true },
+      meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'system.database_access' },
     },
 
     // Catch-all

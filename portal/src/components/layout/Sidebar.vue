@@ -27,9 +27,9 @@ const auth = useAuthStore()
       <router-link to="/sysadmin/roles" class="sidebar-link">Roles</router-link>
       <router-link to="/sysadmin/players" class="sidebar-link">Players</router-link>
       <router-link to="/sysadmin/audit-log" class="sidebar-link">Audit Log</router-link>
-      <router-link to="/sysadmin/database" class="sidebar-link">Schema</router-link>
-      <router-link to="/sysadmin/database/migrations" class="sidebar-link">Migrations</router-link>
-      <router-link to="/sysadmin/database/query" class="sidebar-link">Query Console</router-link>
+      <router-link v-if="auth.hasPermission('system.database_access')" to="/sysadmin/database" class="sidebar-link">Schema</router-link>
+      <router-link v-if="auth.hasPermission('system.database_access')" to="/sysadmin/database/migrations" class="sidebar-link">Migrations</router-link>
+      <router-link v-if="auth.hasPermission('system.database_access')" to="/sysadmin/database/query" class="sidebar-link">Query Console</router-link>
     </div>
   </aside>
 </template>
