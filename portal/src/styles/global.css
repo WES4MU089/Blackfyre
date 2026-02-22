@@ -15,7 +15,7 @@ body {
   font-family: var(--font-body);
   font-size: var(--font-size-md);
   color: var(--color-text);
-  background: var(--color-surface-solid) url('/bgold.png') center center / cover no-repeat fixed;
+  background: linear-gradient(rgba(8, 6, 12, 0.7), rgba(8, 6, 12, 0.7)), url('/bgold.png') center center / cover no-repeat fixed;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
