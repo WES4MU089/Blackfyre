@@ -10,6 +10,7 @@ export const useAuthStore = defineStore('auth', () => {
     id: number
     discordId: string
     discordUsername: string
+    slName?: string | null
     slAccountId?: number
     roleName?: string | null
     permissions?: string[]

@@ -31,7 +31,10 @@ async function handleAccept(): Promise<void> {
   if (success) {
     emit('accepted')
   } else {
-    errorMsg.value = 'Failed to record acceptance. Please try again.'
+    // Documents may have been re-fetched with newer versions — reset checkboxes
+    tosAgreed.value = false
+    privacyAgreed.value = false
+    errorMsg.value = 'Terms have been updated. Please review and accept the latest versions.'
   }
 }
 </script>

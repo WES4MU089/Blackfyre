@@ -146,13 +146,14 @@ authRouter.get('/me', async (req: Request, res: Response) => {
     id: number;
     discord_id: string;
     discord_username: string;
+    sl_name: string | null;
     is_banned: boolean;
     created_at: string;
     last_seen: string;
     role_id: number | null;
     is_super_admin: boolean;
   }>(
-    `SELECT id, discord_id, discord_username, is_banned, created_at, last_seen,
+    `SELECT id, discord_id, discord_username, sl_name, is_banned, created_at, last_seen,
             role_id, is_super_admin
      FROM players WHERE id = ? AND is_active = 1`,
     [payload.userId]

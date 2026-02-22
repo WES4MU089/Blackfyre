@@ -143,7 +143,11 @@ export const useLauncherStore = defineStore('launcher', () => {
           privacyVersion: privacyDocument.value.version,
         }),
       })
-      if (!res.ok) return false
+      if (!res.ok) {
+        // Re-fetch documents in case versions changed server-side
+        await fetchTosDocuments()
+        return false
+      }
       tosAccepted.value = true
       return true
     } catch {

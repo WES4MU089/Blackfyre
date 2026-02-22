@@ -101,21 +101,9 @@ onMounted(async () => {
     <div v-else class="launcher-content">
       <!-- Welcome -->
       <div class="launcher-header">
-        <div class="launcher-icon">
-          <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-            <defs>
-              <linearGradient id="flame-grad" x1="0" y1="1" x2="1" y2="0">
-                <stop offset="0%" stop-color="#8b1a1a" />
-                <stop offset="100%" stop-color="#c9a84c" />
-              </linearGradient>
-            </defs>
-            <path d="M20 4c0 0-8 8-8 16a8 8 0 0016 0c0-4-2-8-4-10 0 4-2 6-4 6s-4-4 0-12z"
-                  fill="url(#flame-grad)" />
-          </svg>
-        </div>
         <h1 class="launcher-title">Dragon's Dominion</h1>
         <div class="launcher-welcome">
-          Welcome, <span class="player-name">{{ authStore.user?.discordUsername || 'Adventurer' }}</span>
+          Welcome, <span class="player-name">{{ authStore.user?.slName || authStore.user?.discordUsername || 'Adventurer' }}</span>
         </div>
       </div>
 
@@ -306,10 +294,6 @@ onMounted(async () => {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-}
-
-.launcher-icon {
-  filter: drop-shadow(0 0 12px rgba(201, 168, 76, 0.4));
 }
 
 .launcher-title {

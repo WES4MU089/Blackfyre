@@ -3,7 +3,7 @@
  * Update PRIVACY_VERSION when content changes to trigger re-acceptance.
  */
 
-export const PRIVACY_VERSION = '1.1';
+export const PRIVACY_VERSION = '1.2';
 export const PRIVACY_LAST_UPDATED = '2026-02-22';
 
 export const PRIVACY_CONTENT = `PRIVACY POLICY
@@ -18,7 +18,7 @@ We collect only the information necessary to provide and operate the Service:
 
 a) Discord Account Data: When you authenticate via Discord OAuth, we receive and store your Discord user ID and username. This information is used solely for account identification and authentication. We do not request or store your Discord email address.
 
-b) Second Life Avatar Data: If you link your Second Life account, we store your avatar UUID and display name to enable in-game integration between the HUD overlay and the Second Life environment.
+b) Second Life Avatar Data: If you link your Second Life account, we store your avatar UUID and display name to enable in-game integration between the HUD overlay and the Second Life environment. While the HUD client and the in-world sync object are both active, we also receive and process your avatar's current region name and position coordinates for gameplay purposes such as location-based mechanics and proximity detection. This data is transmitted in real time and is not permanently stored.
 
 c) Character and Game Data: Information you provide while using the Service, including character names, backstories, aptitude selections, inventory states, and other game-related data that you create or modify during gameplay.
 
@@ -40,7 +40,7 @@ d) We do NOT collect browsing history, search history, or information about othe
 
 e) We do NOT collect hardware specifications, operating system details, or device fingerprints.
 
-f) The client application communicates exclusively with our game server. It does not contact any third-party services, advertising networks, or data brokers.
+f) The client application communicates exclusively with our game server. Our server also receives HTTP requests from in-world Second Life scripts to enable gameplay integration. Neither the client nor the server contacts any third-party advertising networks, analytics services, or data brokers.
 
 3. HOW WE USE YOUR INFORMATION
 

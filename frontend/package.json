@@ -1,6 +1,6 @@
 {
   "name": "blackfyre-hud",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Blackfyre RPG HUD Overlay for Second Life",
   "main": "./out/main/index.js",
   "scripts": {
@@ -8,9 +8,8 @@
     "dev:test": "electron-vite dev -- --user-data-dir=%APPDATA%/blackfyre-hud-test",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
-    "pack": "electron-vite build && set CSC_LINK=../certs/blackfyre.pfx&& electron-builder --win nsis",
-    "pack:unsigned": "electron-vite build && set CSC_IDENTITY_AUTO_DISCOVERY=false&& electron-builder --win nsis",
-    "pack:portable": "electron-vite build && set CSC_LINK=../certs/blackfyre.pfx&& electron-builder --win portable",
+    "pack": "node build-signed.js",
+    "pack:unsigned": "electron-vite build && electron-builder --win nsis -c.win.azureSignOptions=null",
     "postinstall": "electron-builder install-app-deps"
   },
   "build": {
@@ -26,12 +25,18 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "resources/images/art/appIcon.png"
+      "icon": "resources/images/art/appIcon.png",
+      "azureSignOptions": {
+        "endpoint": "https://eus.codesigning.azure.net",
+        "certificateProfileName": "DD-SL",
+        "codeSigningAccountName": "DragonsDominion",
+        "publisherName": "William Saunders"
+      }
     },
     "nsis": {
-      "oneClick": true,
+      "oneClick": false,
       "perMachine": false,
-      "allowToChangeInstallationDirectory": false,
+      "allowToChangeInstallationDirectory": true,
       "artifactName": "DragonsDominion-${version}-setup.exe"
     },
     "publish": {
