@@ -234,11 +234,15 @@ staffCombatLogRouter.get(
         [sessionId]
       );
 
-      // Parse JSON fields
+      // Parse JSON fields (driver may auto-parse JSON columns, so handle both)
       const parsedActions = actions.map(a => ({
         ...a,
-        roll_data: a.roll_data ? JSON.parse(a.roll_data as string) : null,
-        status_effects_applied: a.status_effects_applied ? JSON.parse(a.status_effects_applied as string) : [],
+        roll_data: a.roll_data
+          ? (typeof a.roll_data === 'string' ? JSON.parse(a.roll_data) : a.roll_data)
+          : null,
+        status_effects_applied: a.status_effects_applied
+          ? (typeof a.status_effects_applied === 'string' ? JSON.parse(a.status_effects_applied) : a.status_effects_applied)
+          : [],
       }));
 
       res.json({ session, combatants, actions: parsedActions });
