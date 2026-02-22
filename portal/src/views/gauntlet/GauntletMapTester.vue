@@ -85,9 +85,9 @@ let lastFrameTime = 0
 
 // Settings
 const baseSpeed = ref(120) // pixels per second
-const unitRadius = ref(12)
-const visibilityRadius = ref(150)
-const influenceRadius = ref(60)
+const unitRadius = ref(6)
+const visibilityRadius = ref(75)
+const influenceRadius = ref(30)
 const showGrid = ref(false)
 
 // Mouse hover info
