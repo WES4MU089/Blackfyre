@@ -112,6 +112,7 @@ export const useLauncherStore = defineStore('launcher', () => {
       tosChecked.value = true
     } catch {
       tosAccepted.value = false
+      tosChecked.value = true
     }
   }
 
