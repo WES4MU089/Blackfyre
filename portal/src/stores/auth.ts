@@ -73,15 +73,16 @@ export const useAuthStore = defineStore('auth', () => {
       if (!res.ok) return false
 
       const data = await res.json()
+      const u = data.user
       setAuth(callbackToken, {
-        id: data.id,
-        discordId: data.discordId,
-        discordUsername: data.discordUsername,
-        slName: data.sl_name || null,
-        createdAt: data.created_at || null,
-        roleName: data.roleName || null,
-        permissions: data.permissions || [],
-        isSuperAdmin: data.isSuperAdmin || false,
+        id: u.id,
+        discordId: u.discord_id,
+        discordUsername: u.discord_username,
+        slName: u.sl_name || null,
+        createdAt: u.created_at || null,
+        roleName: u.roleName || null,
+        permissions: u.permissions || [],
+        isSuperAdmin: u.isSuperAdmin || false,
       })
       return true
     } catch {

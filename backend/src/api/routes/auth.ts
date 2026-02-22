@@ -10,14 +10,19 @@ export const authRouter = Router();
 const DISCORD_API = 'https://discord.com/api/v10';
 
 // Generate Discord OAuth2 URL and redirect
-authRouter.get('/discord', (_req: Request, res: Response) => {
+authRouter.get('/discord', (req: Request, res: Response) => {
   const { clientId, redirectUri } = config.discord;
 
   if (!clientId) {
     return res.status(500).json({ error: 'Discord OAuth not configured' });
   }
 
-  const state = crypto.randomBytes(16).toString('hex');
+  // Encode the redirect target into the state parameter so the callback knows
+  // whether to redirect to the Electron app or the web portal.
+  const nonce = crypto.randomBytes(16).toString('hex');
+  const redirectTarget = req.query.redirect === 'portal' ? 'portal' : 'app';
+  const state = `${nonce}:${redirectTarget}`;
+
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
@@ -31,11 +36,16 @@ authRouter.get('/discord', (_req: Request, res: Response) => {
 
 // Handle Discord OAuth2 callback
 authRouter.get('/discord/callback', async (req: Request, res: Response) => {
-  const { code } = req.query;
+  const { code, state } = req.query;
 
   if (!code || typeof code !== 'string') {
     return res.status(400).json({ error: 'Missing authorization code' });
   }
+
+  // Parse redirect target from state (format: "nonce:target")
+  const redirectTarget = typeof state === 'string' && state.includes(':')
+    ? state.split(':')[1]
+    : 'app';
 
   try {
     // Exchange code for access token
@@ -120,8 +130,14 @@ authRouter.get('/discord/callback', async (req: Request, res: Response) => {
       discordUsername: discordUser.username,
     });
 
-    // Redirect to Electron app via custom protocol
-    res.redirect(`blackfyre://auth?token=${jwt}`);
+    // Redirect to the appropriate client
+    if (redirectTarget === 'portal') {
+      // Web portal — redirect back to the portal with the token
+      res.redirect(`/portal?token=${jwt}`);
+    } else {
+      // Electron app — custom protocol
+      res.redirect(`blackfyre://auth?token=${jwt}`);
+    }
   } catch (err) {
     logger.error('Discord OAuth callback error:', err);
     res.status(500).json({ error: 'Authentication failed' });
