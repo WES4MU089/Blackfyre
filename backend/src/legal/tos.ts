@@ -3,7 +3,7 @@
  * Update TOS_VERSION when content changes to trigger re-acceptance.
  */
 
-export const TOS_VERSION = '1.1';
+export const TOS_VERSION = '1.2';
 export const TOS_LAST_UPDATED = '2026-02-22';
 
 export const TOS_CONTENT = `TERMS OF SERVICE
@@ -57,10 +57,9 @@ c) You represent that any content you submit does not infringe upon the intellec
 a) Dragon's Dominion is a fan-made roleplay project inspired by the literary works of George R.R. Martin, including "A Song of Ice and Fire" and related materials. All elements from these works — including but not limited to character names, house names, locations, lore, and world-building concepts — are the intellectual property of George R.R. Martin and/or their respective rights holders. We claim no ownership of these elements.
 b) This Service is not affiliated with, endorsed by, licensed by, or in any way officially connected with George R.R. Martin, his publishers, HBO, Warner Bros. Discovery, or any of their subsidiaries or affiliates.
 c) The Service is operated as a non-commercial, fan-created roleplay experience. No profit is derived from the use of George R.R. Martin's intellectual property.
-d) The original software, design, graphics, game mechanics, and documentation created specifically for Dragon's Dominion are the property of the Dragon's Dominion project team and are protected by applicable intellectual property laws.
-e) "Dragon's Dominion" and "Blackfyre" (as used in reference to this Service) are our service marks. You may not use these marks without our prior written consent.
-f) Second Life is a trademark of Linden Research, Inc. We are not affiliated with, endorsed by, or sponsored by Linden Research, Inc.
-g) Discord is a trademark of Discord, Inc. We are not affiliated with, endorsed by, or sponsored by Discord, Inc.
+d) The original source code, application software, graphical assets, and user interface designs created specifically for Dragon's Dominion are the property of the Dragon's Dominion project team and are protected by applicable intellectual property laws.
+e) Second Life is a trademark of Linden Research, Inc. We are not affiliated with, endorsed by, or sponsored by Linden Research, Inc.
+f) Discord is a trademark of Discord, Inc. We are not affiliated with, endorsed by, or sponsored by Discord, Inc.
 
 8. ACCOUNT SUSPENSION AND TERMINATION
 
