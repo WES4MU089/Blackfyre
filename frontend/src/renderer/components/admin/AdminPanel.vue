@@ -1,19 +1,46 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useAdminStore } from '@/stores/admin'
+import { useAuthStore } from '@/stores/auth'
 import { useDraggable } from '@/composables/useDraggable'
 import { useResizable } from '@/composables/useResizable'
 import { useHudStore } from '@/stores/hud'
 import ApplicationQueue from './ApplicationQueue.vue'
 import ApplicationReview from './ApplicationReview.vue'
+import FamilyTreeAdmin from './FamilyTreeAdmin.vue'
+import OrganizationAdmin from './OrganizationAdmin.vue'
+import FactionAdmin from './FactionAdmin.vue'
+import AuditLogViewer from './AuditLogViewer.vue'
+
+type AdminTab = 'applications' | 'family-trees' | 'organizations' | 'factions' | 'audit-log'
+
+interface TabDef {
+  id: AdminTab
+  label: string
+  perm?: string
+}
+
+const ALL_TABS: TabDef[] = [
+  { id: 'applications', label: 'Apps' },
+  { id: 'family-trees', label: 'Trees', perm: 'family_tree.approve_suggestions' },
+  { id: 'organizations', label: 'Orgs', perm: 'content.manage_organizations' },
+  { id: 'factions', label: 'Factions', perm: 'content.manage_factions' },
+  { id: 'audit-log', label: 'Audit', perm: 'system.view_audit_log' },
+]
 
 const adminStore = useAdminStore()
+const authStore = useAuthStore()
 const hudStore = useHudStore()
 const panelRef = ref<HTMLElement | null>(null)
+const activeTab = ref<AdminTab>('applications')
 const { isDragging, onDragStart } = useDraggable('admin', panelRef, { alwaysDraggable: true })
 const { isResizing, onResizeStart, currentWidth, currentHeight } = useResizable(
   'admin', panelRef,
-  { minWidth: 360, maxWidth: 900, minHeight: 300, maxHeight: 900 },
+  { minWidth: 400, maxWidth: 1000, minHeight: 300, maxHeight: 900 },
+)
+
+const visibleTabs = computed(() =>
+  ALL_TABS.filter(t => !t.perm || authStore.hasPermission(t.perm))
 )
 
 const panelStyle = computed(() => {
@@ -48,15 +75,29 @@ function close() {
         <button class="admin-close" @click="close" title="Close">&times;</button>
       </div>
 
-      <!-- Tab bar (future: Family Trees, Bio Review) -->
+      <!-- Tab bar -->
       <div class="admin-tabs">
-        <button class="admin-tab admin-tab--active">Applications</button>
+        <button
+          v-for="tab in visibleTabs"
+          :key="tab.id"
+          class="admin-tab"
+          :class="{ 'admin-tab--active': activeTab === tab.id }"
+          @click="activeTab = tab.id"
+        >
+          {{ tab.label }}
+        </button>
       </div>
 
       <!-- Body -->
       <div class="admin-body">
-        <ApplicationQueue v-if="adminStore.activeView === 'queue'" />
-        <ApplicationReview v-if="adminStore.activeView === 'detail'" />
+        <template v-if="activeTab === 'applications'">
+          <ApplicationQueue v-if="adminStore.activeView === 'queue'" />
+          <ApplicationReview v-if="adminStore.activeView === 'detail'" />
+        </template>
+        <FamilyTreeAdmin v-if="activeTab === 'family-trees'" />
+        <OrganizationAdmin v-if="activeTab === 'organizations'" />
+        <FactionAdmin v-if="activeTab === 'factions'" />
+        <AuditLogViewer v-if="activeTab === 'audit-log'" />
       </div>
 
       <!-- Resize handle -->
@@ -153,6 +194,7 @@ function close() {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   transition: all var(--transition-fast);
+  white-space: nowrap;
 }
 
 .admin-tab:hover {

@@ -2,6 +2,7 @@
 import { useHudStore } from '@/stores/hud'
 import { useAuthStore } from '@/stores/auth'
 import { useAdminStore } from '@/stores/admin'
+import { useSocialStore } from '@/stores/social'
 import { useWesterosClock } from '@/composables/useWesterosClock'
 import characterIcon from '@res/images/icons/character.png'
 import combatIcon from '@res/images/icons/combat.png'
@@ -21,6 +22,7 @@ interface SystemTab {
 const hudStore = useHudStore()
 const authStore = useAuthStore()
 const adminStore = useAdminStore()
+const socialStore = useSocialStore()
 const { time } = useWesterosClock()
 
 function toggleAdminPanel() {
@@ -28,6 +30,14 @@ function toggleAdminPanel() {
     adminStore.closePanel()
   } else {
     adminStore.openPanel()
+  }
+}
+
+function toggleSocialPanel() {
+  if (socialStore.isOpen) {
+    socialStore.closePanel()
+  } else {
+    socialStore.openPanel()
   }
 }
 
@@ -40,7 +50,7 @@ const leftSystems: SystemTab[] = [
 
 const rightSystems: SystemTab[] = [
   { id: 'holdings', label: 'Holdings', icon: holdingsIcon, tooltip: 'Holdings & Land' },
-  { id: 'world', label: 'World', icon: worldIcon, tooltip: 'World Map' },
+  { id: 'social', label: 'Social', icon: worldIcon, tooltip: 'Social Viewer' },
   { id: 'wiki', label: 'Codex', icon: wikiIcon, tooltip: 'Codex' },
   { id: 'settings', label: 'Settings', icon: settingsIcon, tooltip: 'Settings' },
 ]
@@ -90,9 +100,9 @@ const rightSystems: SystemTab[] = [
         v-for="sys in rightSystems"
         :key="sys.id"
         class="system-btn"
-        :class="{ active: hudStore.isPanelOpen(sys.id) }"
+        :class="{ active: sys.id === 'social' ? socialStore.isOpen : hudStore.isPanelOpen(sys.id) }"
         :title="sys.tooltip"
-        @click="hudStore.toggleSystemPanel(sys.id)"
+        @click="sys.id === 'social' ? toggleSocialPanel() : hudStore.toggleSystemPanel(sys.id)"
       >
         <div class="system-icon">
           <img :src="sys.icon" :alt="sys.label" class="system-icon-img" />

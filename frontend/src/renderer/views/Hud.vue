@@ -27,9 +27,11 @@ import ShopPanel from '@/components/shop/ShopPanel.vue'
 import RetainerPanel from '@/components/retainers/RetainerPanel.vue'
 import RetainerHire from '@/components/retainers/RetainerHire.vue'
 import AdminPanel from '@/components/admin/AdminPanel.vue'
+import SocialPanel from '@/components/social/SocialPanel.vue'
 import NotificationPanel from '@/components/hud/NotificationPanel.vue'
 import ApplicationReviewModal from '@/components/hud/ApplicationReviewModal.vue'
 import { useAdminStore } from '@/stores/admin'
+import { useSocialStore } from '@/stores/social'
 import { useNotificationStore } from '@/stores/notifications'
 import { usePlayerApplicationStore } from '@/stores/playerApplication'
 import { useCombatStore } from '@/stores/combat'
@@ -47,6 +49,7 @@ const npcDialogStore = useNpcDialogStore()
 const shopStore = useShopStore()
 const chatStore = useChatStore()
 const adminStore = useAdminStore()
+const socialStore = useSocialStore()
 const notificationStore = useNotificationStore()
 const playerAppStore = usePlayerApplicationStore()
 const { connect } = useSocket()
@@ -161,7 +164,7 @@ onMounted(async () => {
     <NotificationPanel v-if="notificationStore.isOpen" />
 
     <!-- System panel overlay -->
-    <div v-if="hudStore.openSystemPanels.size > 0 || combatStore.activeView !== 'none' || adminStore.isOpen" class="hud-system-overlay">
+    <div v-if="hudStore.openSystemPanels.size > 0 || combatStore.activeView !== 'none' || adminStore.isOpen || socialStore.isOpen" class="hud-system-overlay">
       <InventoryPanel v-if="hudStore.isPanelOpen('inventory')" />
       <CharacterPanel v-if="hudStore.isPanelOpen('character')" />
       <WikiPanel v-if="hudStore.isPanelOpen('wiki')" />
@@ -169,6 +172,7 @@ onMounted(async () => {
       <CombatLobby v-if="hudStore.isPanelOpen('combat') && combatStore.activeView !== 'combat'" />
       <CombatSession v-if="combatStore.activeView === 'combat'" />
       <AdminPanel v-if="adminStore.isOpen" />
+      <SocialPanel v-if="socialStore.isOpen" />
     </div>
 
     <!-- Drag ghost (follows cursor during item drag) -->
