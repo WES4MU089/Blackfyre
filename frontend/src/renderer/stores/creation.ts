@@ -32,6 +32,20 @@ export interface House {
   head_character_id: number | null
 }
 
+export interface Organization {
+  id: number
+  name: string
+  org_type: 'order' | 'guild' | 'company'
+  description: string | null
+  sigil_url: string | null
+  region_id: number | null
+  region_name: string | null
+  leader_character_id: number | null
+  leader_name: string | null
+  requires_approval: boolean
+  member_count: number
+}
+
 export type CreationStep = 'template' | 'aptitudes' | 'identity' | 'review'
 
 const STEP_ORDER: CreationStep[] = ['template', 'aptitudes', 'identity', 'review']
@@ -81,9 +95,16 @@ export const useCreationStore = defineStore('creation', () => {
   const applicationBio = ref('')
   const publicBio = ref('')
 
+  // Organizations
+  const selectedOrganizationId = ref<number | null>(null)
+
   // Houses (loaded from API)
   const houses = ref<House[]>([])
   const housesLoaded = ref(false)
+
+  // Organizations (loaded from API)
+  const organizations = ref<Organization[]>([])
+  const organizationsLoaded = ref(false)
 
   // ===== COMPUTED =====
 
@@ -103,14 +124,33 @@ export const useCreationStore = defineStore('creation', () => {
     houses.value.find(h => h.id === selectedHouseId.value) ?? null
   )
 
+  const selectedOrganization = computed(() =>
+    organizations.value.find(o => o.id === selectedOrganizationId.value) ?? null
+  )
+
+  const organizationsByType = computed(() => {
+    const map: Record<string, Organization[]> = {}
+    for (const o of organizations.value) {
+      if (!map[o.org_type]) map[o.org_type] = []
+      map[o.org_type].push(o)
+    }
+    return map
+  })
+
   const applicationTier = computed((): 1 | 2 | 3 => {
     if (!selectedTemplate.value) return 1
     // Tier 3: featured role or leadership positions
     if (isFeaturedRole.value || ['head_of_house', 'lord_paramount', 'royalty'].includes(requestedRole.value)) {
       return 3
     }
-    // Tier 2: noble template, house membership, bastard, or dragon seed
-    if (selectedTemplate.value.category === 'nobility' || selectedHouseId.value || isBastard.value || isDragonSeed.value) {
+    // Tier 2: noble template, house membership, bastard, dragon seed, or restricted organization
+    if (
+      selectedTemplate.value.category === 'nobility' ||
+      selectedHouseId.value ||
+      isBastard.value ||
+      isDragonSeed.value ||
+      selectedOrganization.value?.requires_approval
+    ) {
       return 2
     }
     return 1
@@ -153,6 +193,7 @@ export const useCreationStore = defineStore('creation', () => {
     fatherName.value = ''
     motherName.value = ''
     selectedHouseId.value = null
+    selectedOrganizationId.value = null
     isBastard.value = false
     isDragonSeed.value = false
     requestedRole.value = 'member'
@@ -242,6 +283,20 @@ export const useCreationStore = defineStore('creation', () => {
     }
   }
 
+  async function fetchOrganizations(): Promise<void> {
+    if (organizationsLoaded.value) return
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/organizations`)
+      if (res.ok) {
+        const data = await res.json()
+        organizations.value = data.organizations
+        organizationsLoaded.value = true
+      }
+    } catch (err) {
+      console.error('Failed to fetch organizations:', err)
+    }
+  }
+
   /** Build the payload for character:create */
   function getCreatePayload() {
     if (!selectedTemplate.value) return null
@@ -265,6 +320,7 @@ export const useCreationStore = defineStore('creation', () => {
       hohContact: hohContact.value.trim() || null,
       applicationBio: applicationBio.value.trim() || null,
       publicBio: publicBio.value.trim() || null,
+      organizationId: selectedOrganizationId.value,
     }
   }
 
@@ -282,6 +338,7 @@ export const useCreationStore = defineStore('creation', () => {
     fatherName,
     motherName,
     selectedHouseId,
+    selectedOrganizationId,
     isBastard,
     isDragonSeed,
     requestedRole,
@@ -291,6 +348,8 @@ export const useCreationStore = defineStore('creation', () => {
     publicBio,
     houses,
     housesLoaded,
+    organizations,
+    organizationsLoaded,
 
     // Computed
     totalAptitudePoints,
@@ -300,6 +359,8 @@ export const useCreationStore = defineStore('creation', () => {
     canAdvance,
     templatesByCategory,
     selectedHouse,
+    selectedOrganization,
+    organizationsByType,
     applicationTier,
     requiresApplication,
 
@@ -320,6 +381,7 @@ export const useCreationStore = defineStore('creation', () => {
     nextStep,
     prevStep,
     fetchHouses,
+    fetchOrganizations,
     getCreatePayload,
   }
 })

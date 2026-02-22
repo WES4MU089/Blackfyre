@@ -21,6 +21,13 @@ import { staffApplicationsRouter } from './routes/staff-applications.js';
 import { notificationsRouter } from './routes/notifications.js';
 import { tosRouter } from './routes/tos.js';
 import { clientRouter } from './routes/client.js';
+import { organizationsRouter } from './routes/organizations.js';
+import { staffOrganizationsRouter } from './routes/staff-organizations.js';
+import { factionsRouter } from './routes/factions.js';
+import { staffFactionsRouter } from './routes/staff-factions.js';
+import { familyTreeRouter } from './routes/family-tree.js';
+import { staffFamilyTreeRouter } from './routes/staff-family-tree.js';
+import { staffAuditLogRouter } from './routes/staff-audit-log.js';
 
 export const apiRouter = Router();
 
@@ -52,6 +59,13 @@ apiRouter.get('/', (_req: Request, res: Response) => {
       '/api/notifications',
       '/api/tos',
       '/api/client',
+      '/api/organizations',
+      '/api/factions',
+      '/api/family-tree',
+      '/api/staff/organizations',
+      '/api/staff/factions',
+      '/api/staff/family-tree',
+      '/api/staff/audit-log',
     ],
   });
 });
@@ -79,3 +93,10 @@ apiRouter.use('/staff/applications', staffApplicationsRouter);
 apiRouter.use('/notifications', notificationsRouter);
 apiRouter.use('/tos', tosRouter);
 apiRouter.use('/client', clientRouter);
+apiRouter.use('/organizations', organizationsRouter);
+apiRouter.use('/factions', factionsRouter);
+apiRouter.use('/family-tree', familyTreeRouter);
+apiRouter.use('/staff/organizations', staffOrganizationsRouter);
+apiRouter.use('/staff/factions', staffFactionsRouter);
+apiRouter.use('/staff/family-tree', staffFamilyTreeRouter);
+apiRouter.use('/staff/audit-log', staffAuditLogRouter);

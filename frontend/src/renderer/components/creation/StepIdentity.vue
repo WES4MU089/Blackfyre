@@ -56,8 +56,15 @@ const showHohContact = computed(() =>
   store.selectedHouse && store.selectedHouse.head_character_id !== null
 )
 
+const ORG_TYPE_LABELS: Record<string, string> = {
+  order: 'Orders',
+  guild: 'Guilds',
+  company: 'Companies',
+}
+
 onMounted(() => {
   store.fetchHouses()
+  store.fetchOrganizations()
 })
 </script>
 
@@ -194,6 +201,33 @@ onMounted(() => {
             : 'Mark this character as a significant narrative role (higher activity expectations)' }}
         </span>
       </label>
+    </div>
+
+    <!-- Organization Affiliation -->
+    <div class="field-section">
+      <label class="field-label" for="org-select">
+        Organization
+        <span class="field-optional">(optional)</span>
+      </label>
+      <select
+        id="org-select"
+        v-model="store.selectedOrganizationId"
+        class="field-input field-select"
+      >
+        <option :value="null">No Organization</option>
+        <optgroup
+          v-for="(orgs, orgType) in store.organizationsByType"
+          :key="orgType"
+          :label="ORG_TYPE_LABELS[orgType] || orgType"
+        >
+          <option v-for="o in orgs" :key="o.id" :value="o.id">
+            {{ o.name }}{{ o.requires_approval ? ' (requires approval)' : '' }}
+          </option>
+        </optgroup>
+      </select>
+      <div v-if="store.selectedOrganization?.requires_approval" class="field-hint" style="color: var(--color-gold);">
+        Joining this organization requires staff approval.
+      </div>
     </div>
 
     <!-- HoH Contact (shown when joining existing house with a head) -->

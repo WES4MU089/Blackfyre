@@ -4,6 +4,7 @@ import { db } from '../../db/connection.js';
 import { logger } from '../../utils/logger.js';
 import { requireAuth, requirePermission } from '../middleware/auth.js';
 import { createNotification } from '../../utils/notifications.js';
+import { logAuditAction } from '../../utils/audit.js';
 
 export const staffApplicationsRouter = Router();
 
@@ -119,6 +120,7 @@ staffApplicationsRouter.patch(
         character_id: number;
         player_id: number;
         house_id: number | null;
+        organization_id: number | null;
         is_bastard: boolean;
         is_dragon_seed: boolean;
         father_name: string;
@@ -127,7 +129,8 @@ staffApplicationsRouter.patch(
         status: string;
         character_name: string;
       }>(
-        `SELECT ca.id, ca.character_id, ca.player_id, ca.house_id, ca.is_bastard, ca.is_dragon_seed,
+        `SELECT ca.id, ca.character_id, ca.player_id, ca.house_id, ca.organization_id,
+                ca.is_bastard, ca.is_dragon_seed,
                 ca.father_name, ca.mother_name, ca.public_bio, ca.status,
                 c.name AS character_name
          FROM character_applications ca
@@ -200,6 +203,64 @@ staffApplicationsRouter.patch(
               application.character_id,
             ]
           );
+
+          // Auto-seed family tree from parent names (Section 6.6.4)
+          if (application.house_id) {
+            for (const parentName of [application.father_name, application.mother_name]) {
+              if (!parentName || parentName.trim().length === 0) continue;
+              const trimmed = parentName.trim();
+
+              // Check if a character with that name exists in the house
+              const existingChar = (await conn.query(
+                `SELECT id FROM characters WHERE LOWER(name) = LOWER(?) AND house_id = ? LIMIT 1`,
+                [trimmed, application.house_id]
+              ) as Array<{ id: number }>)[0];
+
+              let fromCharId: number | null = null;
+              let fromNpcId: number | null = null;
+
+              if (existingChar) {
+                fromCharId = existingChar.id;
+              } else {
+                // Check if an NPC with that name exists in the house
+                const existingNpc = (await conn.query(
+                  `SELECT id FROM family_tree_npcs WHERE LOWER(name) = LOWER(?) AND house_id = ? LIMIT 1`,
+                  [trimmed, application.house_id]
+                ) as Array<{ id: number }>)[0];
+
+                if (existingNpc) {
+                  fromNpcId = existingNpc.id;
+                } else {
+                  // Create a new NPC entry
+                  const npcResult = await conn.query(
+                    `INSERT INTO family_tree_npcs (house_id, name, created_by) VALUES (?, ?, ?)`,
+                    [application.house_id, trimmed, req.player!.id]
+                  );
+                  fromNpcId = Number((npcResult as { insertId: number }).insertId);
+                }
+              }
+
+              // Create a parent edge (pre-approved since the application was reviewed)
+              await conn.query(
+                `INSERT INTO family_tree_edges (house_id, relationship, from_character_id, from_npc_id, to_character_id, to_npc_id, created_by, approved_by, approved_at, status)
+                 VALUES (?, 'parent', ?, ?, ?, NULL, ?, ?, NOW(), 'approved')`,
+                [
+                  application.house_id,
+                  fromCharId, fromNpcId,
+                  application.character_id,
+                  req.player!.id, req.player!.id,
+                ]
+              );
+            }
+          }
+
+          // Add to organization if specified in the application
+          if (application.organization_id) {
+            await conn.query(
+              `INSERT IGNORE INTO organization_members (organization_id, character_id) VALUES (?, ?)`,
+              [application.organization_id, application.character_id]
+            );
+          }
         }
       });
 
@@ -257,6 +318,14 @@ staffApplicationsRouter.patch(
         message: statusMessages[parsed.status] ?? `Application status: ${parsed.status}`,
         metadata: { applicationId: application.id, status: parsed.status },
       }).catch(err => logger.error('Failed to create application notification:', err));
+
+      await logAuditAction({
+        actorId: req.player!.id,
+        actionKey: `application.${parsed.status}`,
+        description: `${parsed.status} application for ${application.character_name}`,
+        targetType: 'application',
+        targetId: application.id,
+      }).catch(err => logger.error('Audit log error:', err));
 
       res.json({ success: true, status: parsed.status });
     } catch (err) {

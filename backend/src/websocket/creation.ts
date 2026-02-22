@@ -22,6 +22,7 @@ const createCharacterSchema = z.object({
   hohContact: z.string().max(2000).nullable().optional(),
   applicationBio: z.string().max(10000).nullable().optional(),
   publicBio: z.string().max(5000).nullable().optional(),
+  organizationId: z.number().int().positive().nullable().optional(),
 });
 
 // Cached templates (loaded once)
@@ -94,14 +95,15 @@ function determineApplicationTier(
     isDragonSeed: boolean;
     requestedRole: string;
     isFeaturedRole: boolean;
+    organizationRequiresApproval?: boolean;
   }
 ): 1 | 2 | 3 {
   // Tier 3: featured role or leadership positions
   if (data.isFeaturedRole || ['head_of_house', 'lord_paramount', 'royalty'].includes(data.requestedRole)) {
     return 3;
   }
-  // Tier 2: noble template, house membership, bastard, or dragon seed
-  if (template.category === 'nobility' || data.houseId || data.isBastard || data.isDragonSeed) {
+  // Tier 2: noble template, house membership, bastard, dragon seed, or restricted organization
+  if (template.category === 'nobility' || data.houseId || data.isBastard || data.isDragonSeed || data.organizationRequiresApproval) {
     return 2;
   }
   // Tier 1: common character, no special flags
@@ -199,6 +201,22 @@ export function setupCreationHandlers(io: SocketServer, socket: Socket): void {
         }
       }
 
+      // ===== ORGANIZATION VALIDATION =====
+      let orgRequiresApproval = false;
+      if (parsed.organizationId) {
+        const org = await db.queryOne<{ id: number; requires_approval: boolean; is_active: boolean }>(
+          `SELECT id, requires_approval, is_active FROM organizations WHERE id = ?`,
+          [parsed.organizationId]
+        );
+        if (!org || !org.is_active) {
+          return socket.emit('character:create:error', {
+            message: 'Selected organization not found or is inactive',
+            field: 'organizationId',
+          });
+        }
+        orgRequiresApproval = !!org.requires_approval;
+      }
+
       // ===== DETERMINE APPLICATION TIER =====
       const isFeatured = parsed.isFeaturedRole ||
         ['head_of_house', 'lord_paramount', 'royalty'].includes(parsed.requestedRole);
@@ -208,6 +226,7 @@ export function setupCreationHandlers(io: SocketServer, socket: Socket): void {
         isDragonSeed: parsed.isDragonSeed,
         requestedRole: parsed.requestedRole,
         isFeaturedRole: isFeatured,
+        organizationRequiresApproval: orgRequiresApproval,
       });
 
       // Tier 2/3 require an application bio
@@ -302,19 +321,28 @@ export function setupCreationHandlers(io: SocketServer, socket: Socket): void {
           }
         }
 
-        // 7. Create application record for Tier 2/3
+        // 7. Add to organization if selected (Tier 1 = immediate, Tier 2/3 = after approval)
+        if (parsed.organizationId && tier === 1) {
+          await conn.query(
+            `INSERT INTO organization_members (organization_id, character_id) VALUES (?, ?)`,
+            [parsed.organizationId, charId]
+          );
+        }
+
+        // 8. Create application record for Tier 2/3
         if (tier >= 2) {
           await conn.query(
             `INSERT INTO character_applications (
-              character_id, player_id, house_id,
+              character_id, player_id, house_id, organization_id,
               is_bastard, is_dragon_seed,
               father_name, mother_name,
               requested_role, is_featured_role,
               hoh_contact, application_bio, public_bio,
               status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
             [
               charId, playerInfo.playerId, parsed.houseId ?? null,
+              parsed.organizationId ?? null,
               parsed.isBastard, parsed.isDragonSeed,
               parsed.fatherName.trim(), parsed.motherName.trim(),
               parsed.requestedRole, isFeatured,
