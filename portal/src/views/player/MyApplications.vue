@@ -54,7 +54,9 @@ function formatDate(iso: string) {
 
 <template>
   <div class="my-apps">
-    <PageHeader title="My Applications" subtitle="Track your character applications" />
+    <PageHeader title="My Applications" subtitle="Track your character applications">
+      <router-link to="/my/applications/new" class="btn-primary" style="padding: 6px 14px; font-size: 12px">+ New Character</router-link>
+    </PageHeader>
 
     <p v-if="loading" class="dim">Loading applications...</p>
     <p v-else-if="error" class="crimson">{{ error }}</p>
@@ -85,7 +87,7 @@ function formatDate(iso: string) {
 
     <div v-else class="empty-state">
       <p class="dim">You have no character applications.</p>
-      <p class="muted">Applications are submitted through the Dragon's Dominion desktop client.</p>
+      <router-link to="/my/applications/new" class="btn-primary" style="margin-top: var(--space-md); display: inline-block">Create Your First Character</router-link>
     </div>
   </div>
 </template>

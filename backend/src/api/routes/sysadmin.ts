@@ -96,14 +96,27 @@ sysadminRouter.post('/roles', async (req: Request, res: Response) => {
 sysadminRouter.patch('/roles/:id', async (req: Request, res: Response) => {
   try {
     const roleId = Number(req.params.id);
+
+    // Fetch current role state for diff
+    const oldRole = await db.queryOne<{ name: string; description: string | null; color: string | null; is_default: boolean; sort_order: number }>(
+      `SELECT name, description, color, is_default, sort_order FROM roles WHERE id = ?`,
+      [roleId]
+    );
+    if (!oldRole) return res.status(404).json({ error: 'Role not found' });
+
     const allowed = ['name', 'description', 'color', 'sort_order', 'is_default'];
     const updates: string[] = [];
     const values: unknown[] = [];
+    const changes: string[] = [];
 
     for (const key of allowed) {
       if (req.body[key] !== undefined) {
         updates.push(`${key} = ?`);
         values.push(req.body[key]);
+        const oldVal = (oldRole as Record<string, unknown>)[key];
+        if (String(oldVal) !== String(req.body[key])) {
+          changes.push(`${key}: ${JSON.stringify(oldVal)} → ${JSON.stringify(req.body[key])}`);
+        }
       }
     }
 
@@ -115,9 +128,10 @@ sysadminRouter.patch('/roles/:id', async (req: Request, res: Response) => {
     await logAuditAction({
       actorId: req.player!.id,
       actionKey: 'role.updated',
-      description: `Updated role #${roleId}`,
+      description: `Updated role "${oldRole.name}" (#${roleId})${changes.length ? ': ' + changes.join(', ') : ''}`,
       targetType: 'role',
       targetId: roleId,
+      metadata: changes.length ? { changes } : undefined,
     }).catch(e => logger.error('Audit error:', e));
 
     res.json({ success: true });
@@ -137,6 +151,23 @@ sysadminRouter.put('/roles/:id/permissions', async (req: Request, res: Response)
       return res.status(400).json({ error: 'permissionIds must be an array' });
     }
 
+    // Fetch role name and current permissions for the diff
+    const role = await db.queryOne<{ name: string }>(`SELECT name FROM roles WHERE id = ?`, [roleId]);
+    if (!role) return res.status(404).json({ error: 'Role not found' });
+
+    const oldPerms = await db.query<{ permission_id: number; key: string }>(
+      `SELECT rp.permission_id, p.\`key\`
+       FROM role_permissions rp
+       JOIN permissions p ON rp.permission_id = p.id
+       WHERE rp.role_id = ?`,
+      [roleId]
+    );
+    const oldPermIds = new Set(oldPerms.map(p => p.permission_id));
+    const newPermIds = new Set(permissionIds);
+
+    const added = permissionIds.filter(id => !oldPermIds.has(id));
+    const removed = [...oldPermIds].filter(id => !newPermIds.has(id));
+
     await db.transaction(async (conn) => {
       await conn.query(`DELETE FROM role_permissions WHERE role_id = ?`, [roleId]);
       for (const pid of permissionIds) {
@@ -144,12 +175,27 @@ sysadminRouter.put('/roles/:id/permissions', async (req: Request, res: Response)
       }
     });
 
+    // Resolve permission keys for added/removed for readable audit
+    let addedKeys: string[] = [];
+    let removedKeys: string[] = [];
+    if (added.length || removed.length) {
+      const allPerms = await db.query<{ id: number; key: string }>(`SELECT id, \`key\` FROM permissions`);
+      const permMap = new Map(allPerms.map(p => [p.id, p.key]));
+      addedKeys = added.map(id => permMap.get(id) || `#${id}`);
+      removedKeys = removed.map(id => permMap.get(id) || `#${id}`);
+    }
+
+    const parts: string[] = [`Set ${permissionIds.length} permissions on role "${role.name}" (#${roleId})`];
+    if (addedKeys.length) parts.push(`+${addedKeys.join(', +')}`);
+    if (removedKeys.length) parts.push(`-${removedKeys.join(', -')}`);
+
     await logAuditAction({
       actorId: req.player!.id,
       actionKey: 'role.permissions_updated',
-      description: `Updated permissions for role #${roleId} (${permissionIds.length} permissions)`,
+      description: parts.join('. '),
       targetType: 'role',
       targetId: roleId,
+      metadata: { total: permissionIds.length, added: addedKeys, removed: removedKeys },
     }).catch(e => logger.error('Audit error:', e));
 
     res.json({ success: true });
@@ -209,14 +255,30 @@ sysadminRouter.get('/players', async (req: Request, res: Response) => {
 sysadminRouter.patch('/players/:id', async (req: Request, res: Response) => {
   try {
     const playerId = Number(req.params.id);
+
+    // Fetch current player state for descriptive audit
+    const oldPlayer = await db.queryOne<{
+      discord_username: string; role_id: number | null; is_banned: boolean;
+      is_active: boolean; is_super_admin: boolean;
+    }>(
+      `SELECT discord_username, role_id, is_banned, is_active, is_super_admin FROM players WHERE id = ?`,
+      [playerId]
+    );
+    if (!oldPlayer) return res.status(404).json({ error: 'Player not found' });
+
     const allowed = ['role_id', 'is_active', 'is_banned', 'ban_reason', 'is_super_admin'];
     const updates: string[] = [];
     const values: unknown[] = [];
+    const changes: string[] = [];
 
     for (const key of allowed) {
       if (req.body[key] !== undefined) {
         updates.push(`${key} = ?`);
         values.push(req.body[key]);
+        const oldVal = (oldPlayer as Record<string, unknown>)[key];
+        if (String(oldVal) !== String(req.body[key])) {
+          changes.push(`${key}: ${JSON.stringify(oldVal)} → ${JSON.stringify(req.body[key])}`);
+        }
       }
     }
 
@@ -225,16 +287,27 @@ sysadminRouter.patch('/players/:id', async (req: Request, res: Response) => {
     values.push(playerId);
     await db.execute(`UPDATE players SET ${updates.join(', ')} WHERE id = ?`, values);
 
-    const actionKey = req.body.is_banned !== undefined ? 'player.ban_toggled'
-      : req.body.role_id !== undefined ? 'player.role_assigned'
-      : 'player.updated';
+    // Determine action key based on what changed
+    let actionKey = 'player.updated';
+    if (req.body.is_banned !== undefined) actionKey = req.body.is_banned ? 'player.banned' : 'player.unbanned';
+    else if (req.body.role_id !== undefined) actionKey = 'player.role_assigned';
+    else if (req.body.is_super_admin !== undefined) actionKey = 'player.super_admin_toggled';
+
+    // Resolve role names for readable audit
+    let roleDesc = '';
+    if (req.body.role_id !== undefined) {
+      const newRole = req.body.role_id ? await db.queryOne<{ name: string }>(`SELECT name FROM roles WHERE id = ?`, [req.body.role_id]) : null;
+      const oldRole = oldPlayer.role_id ? await db.queryOne<{ name: string }>(`SELECT name FROM roles WHERE id = ?`, [oldPlayer.role_id]) : null;
+      roleDesc = ` role: ${oldRole?.name || 'none'} → ${newRole?.name || 'none'}`;
+    }
 
     await logAuditAction({
       actorId: req.player!.id,
       actionKey,
-      description: `Updated player #${playerId}: ${updates.map((u, i) => `${u.replace(' = ?', '')}=${JSON.stringify(values[i])}`).join(', ')}`,
+      description: `Updated player "${oldPlayer.discord_username}" (#${playerId})${roleDesc || (changes.length ? ': ' + changes.join(', ') : '')}`,
       targetType: 'player',
       targetId: playerId,
+      metadata: changes.length ? { changes } : undefined,
     }).catch(e => logger.error('Audit error:', e));
 
     res.json({ success: true });

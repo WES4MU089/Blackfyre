@@ -56,6 +56,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/my/applications/new',
+      name: 'new-application',
+      component: () => import('@/views/player/NewApplication.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/my/applications/:id',
       name: 'my-application-detail',
       component: () => import('@/views/player/ApplicationDetail.vue'),
