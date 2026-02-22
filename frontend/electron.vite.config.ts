@@ -5,7 +5,9 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig({
   main: {
     build: {
-      externalizeDeps: true
+      externalizeDeps: {
+        exclude: ['electron-updater']
+      }
     }
   },
   preload: {
