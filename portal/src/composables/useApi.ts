@@ -32,5 +32,24 @@ export function useApi() {
     return res.json()
   }
 
-  return { apiFetch, authHeaders }
+  async function apiUpload<T = unknown>(
+    path: string,
+    formData: FormData,
+  ): Promise<T> {
+    const url = `${API_URL}${path}`
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { ...authHeaders() },
+      body: formData,
+    })
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      throw new Error(body.error || `Upload failed: ${res.status}`)
+    }
+
+    return res.json()
+  }
+
+  return { apiFetch, apiUpload, authHeaders }
 }

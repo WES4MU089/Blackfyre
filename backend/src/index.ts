@@ -72,6 +72,10 @@ if (existsSync(portalDistPath)) {
   logger.info(`🌐 Web Portal serving from ${portalDistPath}`);
 }
 
+// Uploaded files (gauntlet map images, etc.)
+const uploadsPath = join(__dirname, '../../uploads');
+app.use('/uploads', express.static(uploadsPath));
+
 // 404 handler
 app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: 'Not found' });

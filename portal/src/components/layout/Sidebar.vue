@@ -21,6 +21,12 @@ const auth = useAuthStore()
       >Family Trees</router-link>
     </div>
 
+    <!-- Gauntlet Section -->
+    <div v-if="auth.hasPermission('content.manage_gauntlet')" class="sidebar-section">
+      <div class="sidebar-heading">Gauntlet</div>
+      <router-link to="/gauntlet" class="sidebar-link">Campaign Maps</router-link>
+    </div>
+
     <!-- Logs Section -->
     <div v-if="auth.isSuperAdmin || auth.hasPermission('system.view_audit_log') || auth.hasPermission('system.view_combat_log') || auth.hasPermission('system.view_chat_log')" class="sidebar-section">
       <div class="sidebar-heading">Logs</div>

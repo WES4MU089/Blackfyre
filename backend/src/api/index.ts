@@ -32,6 +32,7 @@ import { staffCombatLogRouter } from './routes/staff-combat-log.js';
 import { staffChatLogRouter } from './routes/staff-chat-log.js';
 import { codexRouter } from './routes/codex.js';
 import { sysadminRouter } from './routes/sysadmin.js';
+import { gauntletRouter } from './routes/gauntlet.js';
 
 export const apiRouter = Router();
 
@@ -74,6 +75,7 @@ apiRouter.get('/', (_req: Request, res: Response) => {
       '/api/staff/chat-log',
       '/api/codex',
       '/api/sysadmin',
+      '/api/gauntlet',
     ],
   });
 });
@@ -112,3 +114,4 @@ apiRouter.use('/staff/combat-log', staffCombatLogRouter);
 apiRouter.use('/staff/chat-log', staffChatLogRouter);
 apiRouter.use('/codex', codexRouter);
 apiRouter.use('/sysadmin', sysadminRouter);
+apiRouter.use('/gauntlet', gauntletRouter);

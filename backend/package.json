@@ -27,6 +27,7 @@
     "express": "^4.21.2",
     "helmet": "^8.0.0",
     "mariadb": "^3.4.0",
+    "multer": "^2.0.2",
     "socket.io": "^4.8.1",
     "uuid": "^11.0.5",
     "winston": "^3.17.0",
@@ -35,6 +36,7 @@
   "devDependencies": {
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
+    "@types/multer": "^2.0.0",
     "@types/node": "^22.13.1",
     "@types/uuid": "^10.0.0",
     "tsx": "^4.19.2",

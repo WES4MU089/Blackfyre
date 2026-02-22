@@ -138,6 +138,26 @@ const router = createRouter({
       meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'system.database_access' },
     },
 
+    // --- Gauntlet (campaign maps) ---
+    {
+      path: '/gauntlet',
+      name: 'gauntlet-index',
+      component: () => import('@/views/gauntlet/GauntletIndex.vue'),
+      meta: { requiresAuth: true, permission: 'content.manage_gauntlet' },
+    },
+    {
+      path: '/gauntlet/:id/edit',
+      name: 'gauntlet-map-editor',
+      component: () => import('@/views/gauntlet/GauntletMapEditor.vue'),
+      meta: { requiresAuth: true, permission: 'content.manage_gauntlet' },
+    },
+    {
+      path: '/gauntlet/:id/test',
+      name: 'gauntlet-map-tester',
+      component: () => import('@/views/gauntlet/GauntletMapTester.vue'),
+      meta: { requiresAuth: true, permission: 'content.manage_gauntlet' },
+    },
+
     // --- Logs (staff) ---
     {
       path: '/logs/combat',
