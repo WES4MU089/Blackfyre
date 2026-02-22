@@ -6,12 +6,12 @@ export const blacksmithTree: DialogTree = {
   greeting: 'greeting',
   shopItems: [
     // Daggers
-    'rusty_dagger', 'iron_dagger', 'steel_dagger', 'cf_dagger', 'valyrian_dagger',
+    'rusty_dagger', 'iron_dagger', 'steel_dagger', 'cf_dagger',
     // Bastard Swords (1H)
-    'iron_bastard_sword', 'steel_bastard_sword', 'cf_bastard_sword', 'valyrian_bastard_sword',
+    'iron_bastard_sword', 'steel_bastard_sword', 'cf_bastard_sword',
     // Greatswords (2H)
-    'iron_sword', 'steel_sword', 'cf_longsword', 'valyrian_longsword',
-    'iron_greatsword', 'steel_greatsword', 'cf_greatsword', 'valyrian_greatsword',
+    'iron_sword', 'steel_sword', 'cf_longsword',
+    'iron_greatsword', 'steel_greatsword', 'cf_greatsword',
     // Battle Axes (1H)
     'iron_battleaxe', 'steel_battleaxe', 'cf_battleaxe',
     // Greataxes (2H)
@@ -35,7 +35,7 @@ export const blacksmithTree: DialogTree = {
     // Medium Armor
     'brigandine', 'chainmail', 'scale_armor', 'cf_chainmail',
     // Heavy Armor
-    'iron_plate', 'steel_plate', 'plate_armor', 'valyrian_plate',
+    'iron_plate', 'steel_plate', 'plate_armor',
     // Bucklers
     'iron_buckler', 'steel_buckler', 'cf_buckler',
     // Heater Shields
