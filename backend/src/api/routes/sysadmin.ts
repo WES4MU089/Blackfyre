@@ -175,7 +175,7 @@ sysadminRouter.get('/players', async (req: Request, res: Response) => {
              r.name AS role_name, r.color AS role_color
       FROM players p
       LEFT JOIN roles r ON p.role_id = r.id
-      WHERE 1=1
+      WHERE p.discord_id IS NOT NULL
     `;
     const params: unknown[] = [];
 
@@ -190,7 +190,7 @@ sysadminRouter.get('/players', async (req: Request, res: Response) => {
     const players = await db.query(sql, params);
 
     // Get total count
-    let countSql = `SELECT COUNT(*) AS total FROM players p WHERE 1=1`;
+    let countSql = `SELECT COUNT(*) AS total FROM players p WHERE p.discord_id IS NOT NULL`;
     const countParams: unknown[] = [];
     if (search) {
       countSql += ` AND (p.discord_username LIKE ? OR p.sl_name LIKE ? OR p.discord_id = ?)`;
