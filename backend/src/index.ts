@@ -33,9 +33,6 @@ const io = new SocketServer(httpServer, {
 // Middleware
 app.use(helmet({
   contentSecurityPolicy: false,
-  hsts: false,                   // No HTTPS — disable Strict-Transport-Security
-  crossOriginOpenerPolicy: false,
-  originAgentCluster: false,
 }));
 
 app.use(cors({
