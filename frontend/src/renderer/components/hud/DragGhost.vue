@@ -19,10 +19,14 @@ const name = computed(() => {
 const iconUrl = computed(() => {
   if (!dragPayload.value) return null
   if (dragPayload.value.source === 'inventory' && dragPayload.value.inventoryItem) {
-    return getItemIcon(dragPayload.value.inventoryItem.item_key)
+    const inv = dragPayload.value.inventoryItem
+    const wt = inv.model_data?.weaponType as string | undefined
+    return getItemIcon(inv.item_key, { weaponType: wt, tier: inv.tier, category: inv.category })
   }
   if (dragPayload.value.source === 'equipment' && dragPayload.value.equippedItem) {
-    return getItemIcon(dragPayload.value.equippedItem.itemKey)
+    const eq = dragPayload.value.equippedItem
+    const wt = eq.modelData?.weaponType as string | undefined
+    return getItemIcon(eq.itemKey, { weaponType: wt, tier: eq.tier, category: eq.category })
   }
   return null
 })

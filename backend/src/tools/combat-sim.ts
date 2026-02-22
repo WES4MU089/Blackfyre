@@ -431,7 +431,7 @@ function simulate(a: Build, b: Build, n: number = 10000) {
 // BUILD PRESETS
 // ═══════════════════════════════════════════════
 
-// Steel longsword (Tier 3): pen = 15 + (-2) = 13, 2H
+// Steel greatsword (Tier 3): pen = 15 + (-3) = 12, 2H
 // Steel bastard sword (Tier 3): pen = 12 + (-2) = 10, 1H
 // Castle-forged warhammer 1H (Tier 4): pen = 17 + 8 = 25
 // Steel warhammer 1H (Tier 3): pen = 12 + 8 = 20

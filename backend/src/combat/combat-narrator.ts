@@ -318,7 +318,6 @@ export function generateBleedingEmote(
 const WEAPON_NAMES: Record<string, string> = {
   dagger: 'dagger',
   bastardSword: 'bastard sword',
-  longsword: 'longsword',
   greatsword: 'greatsword',
   battleAxe1H: 'battle axe',
   battleAxe2H: 'battle axe',

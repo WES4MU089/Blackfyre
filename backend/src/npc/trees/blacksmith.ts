@@ -9,9 +9,8 @@ export const blacksmithTree: DialogTree = {
     'rusty_dagger', 'iron_dagger', 'steel_dagger', 'cf_dagger', 'valyrian_dagger',
     // Bastard Swords (1H)
     'iron_bastard_sword', 'steel_bastard_sword', 'cf_bastard_sword', 'valyrian_bastard_sword',
-    // Longswords (2H)
-    'iron_sword', 'steel_sword', 'cf_longsword', 'valyrian_longsword',
     // Greatswords (2H)
+    'iron_sword', 'steel_sword', 'cf_longsword', 'valyrian_longsword',
     'iron_greatsword', 'steel_greatsword', 'cf_greatsword', 'valyrian_greatsword',
     // Battle Axes (1H)
     'iron_battleaxe', 'steel_battleaxe', 'cf_battleaxe',

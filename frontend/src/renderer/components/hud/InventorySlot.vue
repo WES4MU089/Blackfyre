@@ -24,7 +24,11 @@ function tierClass(tier: number): string {
   return getTierClass(tier)
 }
 
-const itemIcon = computed(() => props.item ? getItemIcon(props.item.item_key) : null)
+const itemIcon = computed(() => {
+  if (!props.item) return null
+  const wt = props.item.model_data?.weaponType as string | undefined
+  return getItemIcon(props.item.item_key, { weaponType: wt, tier: props.item.tier, category: props.item.category })
+})
 
 // Is this slot the current drag source?
 const isDragSource = computed(() => {

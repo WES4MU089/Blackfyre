@@ -10,7 +10,7 @@ export type DuelOutcome = 'victory' | 'yield_accepted' | 'yield_rejected_slain' 
 export type Actor = 'attacker' | 'defender';
 
 export type WeaponType =
-  | 'dagger' | 'bastardSword' | 'longsword' | 'greatsword'
+  | 'dagger' | 'bastardSword' | 'greatsword'
   | 'battleAxe1H' | 'battleAxe2H'
   | 'warhammer1H' | 'warhammer2H' | 'mace1H'
   | 'spear' | 'polearm'

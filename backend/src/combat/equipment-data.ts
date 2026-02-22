@@ -43,7 +43,6 @@ export interface WeaponTypeData {
 export const WEAPON_TYPES: Record<WeaponType, WeaponTypeData> = {
   dagger:       { name: 'Dagger', penMod: -3, baseDamage: 10, twoHanded: false, noEncumbrance: true, armorPiercing: true, slashing: true, critEffect: 'bleeding', critBonus: 5 },
   bastardSword: { name: 'Bastard Sword', penMod: -2, baseDamage: 14, twoHanded: false, slashing: true, critEffect: 'bleeding' },
-  longsword:    { name: 'Longsword', penMod: -2, baseDamage: 14, twoHanded: true, slashing: true, critEffect: 'bleeding' },
   greatsword:   { name: 'Greatsword', penMod: -3, baseDamage: 15, twoHanded: true, slashing: true, critEffect: 'bleeding' },
   battleAxe1H:  { name: 'Battle Axe', penMod: 5, baseDamage: 16, twoHanded: false, encumbranceMod: -2, critEffect: 'sundered' },
   battleAxe2H:  { name: 'Greataxe', penMod: 4, baseDamage: 18, twoHanded: true, encumbranceMod: -3, critEffect: 'sundered' },

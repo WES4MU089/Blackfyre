@@ -30,7 +30,11 @@ function rarityClass(rarity: string): string {
   }
 }
 
-const itemIcon = computed(() => props.item ? getItemIcon(props.item.itemKey) : null)
+const itemIcon = computed(() => {
+  if (!props.item) return null
+  const wt = props.item.modelData?.weaponType as string | undefined
+  return getItemIcon(props.item.itemKey, { weaponType: wt, tier: props.item.tier, category: props.item.category })
+})
 
 // Is this slot the current drag source?
 const isDragSource = computed(() => {
