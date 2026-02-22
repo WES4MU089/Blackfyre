@@ -32,6 +32,7 @@ onMounted(() => {
   flex: 1;
   overflow-y: auto;
   padding: var(--space-lg);
+  background: rgba(8, 6, 12, 0.75);
 }
 
 .app-content.with-sidebar {
