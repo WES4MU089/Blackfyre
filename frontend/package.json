@@ -1,6 +1,6 @@
 {
   "name": "blackfyre-hud",
-  "version": "1.0.0",
+  "version": "0.0.2",
   "description": "Blackfyre RPG HUD Overlay for Second Life",
   "main": "./out/main/index.js",
   "scripts": {
@@ -8,8 +8,9 @@
     "dev:test": "electron-vite dev -- --user-data-dir=%APPDATA%/blackfyre-hud-test",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
-    "pack": "electron-vite build && set CSC_LINK=../certs/blackfyre.pfx&& electron-builder --win portable",
-    "pack:unsigned": "electron-vite build && set CSC_IDENTITY_AUTO_DISCOVERY=false&& electron-builder --win portable",
+    "pack": "electron-vite build && set CSC_LINK=../certs/blackfyre.pfx&& electron-builder --win nsis",
+    "pack:unsigned": "electron-vite build && set CSC_IDENTITY_AUTO_DISCOVERY=false&& electron-builder --win nsis",
+    "pack:portable": "electron-vite build && set CSC_LINK=../certs/blackfyre.pfx&& electron-builder --win portable",
     "postinstall": "electron-builder install-app-deps"
   },
   "build": {
@@ -20,19 +21,27 @@
     },
     "files": [
       "out/**/*",
-      "resources/tray-icon.png",
       "resources/images/art/appIcon.png",
       "!node_modules/**/*"
     ],
     "win": {
-      "target": "portable",
+      "target": "nsis",
       "icon": "resources/images/art/appIcon.png"
     },
-    "portable": {
-      "artifactName": "DragonsDominion-${version}-portable.exe"
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "artifactName": "DragonsDominion-${version}-setup.exe"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "WES4MU089",
+      "repo": "Blackfyre"
     }
   },
   "dependencies": {
+    "electron-updater": "^6.3.9",
     "pinia": "^2.3.0",
     "socket.io-client": "^4.8.1",
     "vue": "^3.5.13",

@@ -13,6 +13,7 @@ import { useAilmentsStore } from '@/stores/ailments'
 import { useShopStore, type ShopOpenPayload } from '@/stores/shop'
 import { useAuthStore } from '@/stores/auth'
 import { useAdminStore } from '@/stores/admin'
+import { useNotificationStore } from '@/stores/notifications'
 import { BACKEND_URL } from '@/config'
 
 const SOCKET_URL = BACKEND_URL
@@ -79,6 +80,17 @@ export function useSocket() {
         }
       }
       hudStore.addNotification('success', 'Connected', 'Authenticated with server')
+    })
+
+    // --- Persistent notification events ---
+    const notificationStore = useNotificationStore()
+
+    socket.on('notification:new', (data: { notification: Record<string, unknown>; showToast?: boolean }) => {
+      notificationStore.onNewNotification(data)
+    })
+
+    socket.on('notifications:unread-count', (data: { unreadCount: number }) => {
+      notificationStore.setUnreadCount(data.unreadCount)
     })
 
     // Character data loaded
@@ -283,12 +295,7 @@ export function useSocket() {
         characterStore.updateVitals({ health: myCombatant.currentHealth })
       }
       combatStore.processSessionEnd(data)
-      const won = data.winningTeam === combatStore.myCombatTeam
-      hudStore.addNotification(
-        won ? 'success' : 'danger',
-        'Combat',
-        won ? 'Victory!' : (data.winningTeam === 0 ? 'Draw!' : 'Defeat!'),
-      )
+      // Persistent notification + toast handled by notification:new from server
     })
 
     socket.on('combat:wound-assessment', (data: { sessionId: number; results: any[] }) => {
@@ -327,7 +334,7 @@ export function useSocket() {
     })
 
     socket.on('character:death', (data: { characterId: number; cause: string }) => {
-      hudStore.addNotification('danger', 'Death', `Succumbed to ${data.cause}`)
+      // Persistent notification + toast handled by notification:new from server
     })
 
     // --- NPC Dialog events ---
@@ -395,7 +402,7 @@ export function useSocket() {
 
     socket.on('xp:character-levelup', (data: { newLevel: number; segments: number; aptitudePoints: number }) => {
       characterStore.applyLevelUp(data)
-      hudStore.addNotification('success', 'Level Up!', `You reached level ${data.newLevel}!`)
+      // Persistent notification + toast handled by notification:new from server
     })
 
     // --- Point allocation responses ---
@@ -409,24 +416,12 @@ export function useSocket() {
       characterName: string
       status: string
     }) => {
-      // Notify the player about their application status change
-      const statusLabels: Record<string, string> = {
-        approved: 'Your application has been approved!',
-        denied: 'Your application has been denied.',
-        revision: 'Your application requires revision.',
-      }
-      const msg = statusLabels[data.status] ?? `Application status: ${data.status}`
-      const level = data.status === 'approved' ? 'success' : data.status === 'denied' ? 'danger' : 'warning'
-      hudStore.addNotification(level, data.characterName, msg)
-      // Refresh character list to pick up new status
+      // Persistent notification + toast handled by notification:new from server
+      // Just refresh character list to pick up new status
       socket?.emit('characters:list')
     })
 
-    socket.on('application:comment', (data: { characterName: string; isPrivate: boolean }) => {
-      if (!data.isPrivate) {
-        hudStore.addNotification('info', data.characterName, 'New comment on your application')
-      }
-    })
+    // application:comment for players is now handled by persistent notification:new from server
 
     socket.on('application:submitted', (data: { characterName: string; tier: number }) => {
       // Staff notification — refresh admin queue if open

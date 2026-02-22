@@ -39,6 +39,8 @@ export interface ApplicationComment {
   author_name: string
   body: string
   is_private: boolean
+  is_visible: boolean
+  edited_at: string | null
   created_at: string
 }
 
@@ -162,6 +164,72 @@ export const useAdminStore = defineStore('admin', () => {
     comments.value = []
   }
 
+  async function editComment(appId: number, commentId: number, body: string): Promise<boolean> {
+    try {
+      const res = await fetch(
+        `${BACKEND_URL}/api/staff/applications/${appId}/comments/${commentId}`,
+        {
+          method: 'PATCH',
+          headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ body }),
+        }
+      )
+      if (res.ok) {
+        const c = comments.value.find(c => c.id === commentId)
+        if (c) {
+          c.body = body
+          c.edited_at = new Date().toISOString()
+        }
+        return true
+      }
+      return false
+    } catch (err) {
+      console.error('Failed to edit comment:', err)
+      return false
+    }
+  }
+
+  async function toggleCommentVisibility(appId: number, commentId: number): Promise<boolean> {
+    const c = comments.value.find(c => c.id === commentId)
+    if (!c) return false
+    const newVisible = !c.is_visible
+    try {
+      const res = await fetch(
+        `${BACKEND_URL}/api/staff/applications/${appId}/comments/${commentId}/visibility`,
+        {
+          method: 'PATCH',
+          headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isVisible: newVisible }),
+        }
+      )
+      if (res.ok) {
+        c.is_visible = newVisible
+        return true
+      }
+      return false
+    } catch (err) {
+      console.error('Failed to toggle comment visibility:', err)
+      return false
+    }
+  }
+
+  async function deleteComment(appId: number, commentId: number): Promise<boolean> {
+    try {
+      const res = await fetch(
+        `${BACKEND_URL}/api/staff/applications/${appId}/comments/${commentId}`,
+        { method: 'DELETE', headers: authHeaders() }
+      )
+      if (res.ok) {
+        comments.value = comments.value.filter(c => c.id !== commentId)
+        return true
+      }
+      return false
+    } catch (err) {
+      console.error('Failed to delete comment:', err)
+      return false
+    }
+  }
+
   return {
     applications,
     selectedApplication,
@@ -175,6 +243,9 @@ export const useAdminStore = defineStore('admin', () => {
     fetchApplicationDetail,
     updateApplicationStatus,
     postComment,
+    editComment,
+    toggleCommentVisibility,
+    deleteComment,
     openPanel,
     closePanel,
     backToQueue,

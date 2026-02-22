@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import LoginScreen from '@/components/login/LoginScreen.vue'
 import simLogo from '@res/images/art/logo.png'
 
 const authStore = useAuthStore()
+const router = useRouter()
 const initializing = ref(true)
 
 const minimizeWindow = () => window.electronAPI.minimizeWindow()
@@ -17,7 +19,7 @@ onMounted(async () => {
   // Try to load stored token for auto-login
   const hasToken = await authStore.loadStoredToken()
   if (hasToken) {
-    window.electronAPI.loginSuccess()
+    router.push('/launcher')
     return
   }
 
@@ -25,7 +27,10 @@ onMounted(async () => {
 
   // Listen for Discord OAuth callback
   window.electronAPI.onAuthSuccess(async (data) => {
-    await authStore.handleAuthSuccess(data.token)
+    const valid = await authStore.handleAuthSuccess(data.token)
+    if (valid) {
+      router.push('/launcher')
+    }
   })
 })
 </script>

@@ -29,6 +29,19 @@ export interface ElectronAPI {
   // Last Character
   setLastCharacter: (characterId: number) => Promise<void>
   getLastCharacter: () => Promise<number | null>
+
+  // Auto-updater
+  checkForUpdates: () => Promise<{ success: boolean; version?: string; error?: string }>
+  downloadUpdate: () => Promise<{ success: boolean; error?: string }>
+  installUpdate: () => Promise<void>
+  onUpdateAvailable: (callback: (info: { version: string; releaseNotes: string }) => void) => void
+  onUpdateUpToDate: (callback: () => void) => void
+  onUpdateProgress: (callback: (progress: { percent: number; bytesPerSecond: number; transferred: number; total: number }) => void) => void
+  onUpdateDownloaded: (callback: () => void) => void
+  onUpdateError: (callback: (message: string) => void) => void
+
+  // App version
+  getAppVersion: () => Promise<string>
 }
 
 declare global {

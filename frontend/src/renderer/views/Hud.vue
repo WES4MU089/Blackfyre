@@ -27,7 +27,11 @@ import ShopPanel from '@/components/shop/ShopPanel.vue'
 import RetainerPanel from '@/components/retainers/RetainerPanel.vue'
 import RetainerHire from '@/components/retainers/RetainerHire.vue'
 import AdminPanel from '@/components/admin/AdminPanel.vue'
+import NotificationPanel from '@/components/hud/NotificationPanel.vue'
+import ApplicationReviewModal from '@/components/hud/ApplicationReviewModal.vue'
 import { useAdminStore } from '@/stores/admin'
+import { useNotificationStore } from '@/stores/notifications'
+import { usePlayerApplicationStore } from '@/stores/playerApplication'
 import { useCombatStore } from '@/stores/combat'
 import { useNpcDialogStore } from '@/stores/npcDialog'
 import { useShopStore } from '@/stores/shop'
@@ -43,6 +47,8 @@ const npcDialogStore = useNpcDialogStore()
 const shopStore = useShopStore()
 const chatStore = useChatStore()
 const adminStore = useAdminStore()
+const notificationStore = useNotificationStore()
+const playerAppStore = usePlayerApplicationStore()
 const { connect } = useSocket()
 const { isDragging: isItemDragging, cancelDrag } = useItemDrag()
 
@@ -147,6 +153,12 @@ onMounted(async () => {
 
     <!-- Retainer Hire Wizard (opens from NPC dialog or panel) -->
     <RetainerHire v-if="characterStore.isHiringRetainer" />
+
+    <!-- Player Application Review Modal -->
+    <ApplicationReviewModal v-if="playerAppStore.isOpen" />
+
+    <!-- Persistent notification panel (fixed position, outside system overlay) -->
+    <NotificationPanel v-if="notificationStore.isOpen" />
 
     <!-- System panel overlay -->
     <div v-if="hudStore.openSystemPanels.size > 0 || combatStore.activeView !== 'none' || adminStore.isOpen" class="hud-system-overlay">

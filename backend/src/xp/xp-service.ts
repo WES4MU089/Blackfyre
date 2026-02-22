@@ -3,6 +3,7 @@ import { logger } from '../utils/logger.js';
 import { getXpConfig } from './xp-config.js';
 import { getIO } from '../websocket/index.js';
 import { RETAINER_LEVEL_CAP } from '../retainers/retainer-manager.js';
+import { createNotification } from '../utils/notifications.js';
 
 // ---- Types ----
 
@@ -123,6 +124,23 @@ export async function grantCharacterXp(
         segments: newSegments,
         aptitudePoints: aptitudePointsGained,
       });
+    }
+  }
+
+  // Create persistent notification for level-up (skip retainers)
+  if (leveledUp && !isRetainer) {
+    const charInfo = await db.queryOne<{ player_id: number; name: string }>(
+      'SELECT player_id, name FROM characters WHERE id = ?',
+      [characterId],
+    );
+    if (charInfo) {
+      createNotification({
+        playerId: charInfo.player_id,
+        characterId,
+        type: 'levelup',
+        title: 'Level Up!',
+        message: `${charInfo.name} reached level ${newLevel}!`,
+      }).catch(err => logger.error('Failed to create levelup notification:', err));
     }
   }
 

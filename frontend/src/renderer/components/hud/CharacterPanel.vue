@@ -4,6 +4,7 @@ import { useCharacterStore, type EquippedItem, type InventoryItem } from '@/stor
 import { useHudStore } from '@/stores/hud'
 import { useCreationStore } from '@/stores/creation'
 import { useAilmentsStore } from '@/stores/ailments'
+import { usePlayerApplicationStore } from '@/stores/playerApplication'
 import { useDraggable } from '@/composables/useDraggable'
 import { useSocket } from '@/composables/useSocket'
 import { useItemDrag, type DragPayload } from '@/composables/useItemDrag'
@@ -19,6 +20,7 @@ const characterStore = useCharacterStore()
 const hudStore = useHudStore()
 const creationStore = useCreationStore()
 const ailmentsStore = useAilmentsStore()
+const playerAppStore = usePlayerApplicationStore()
 const { selectCharacter, requestCharacterList, requestTemplates, dismissRetainer, deleteCharacter, allocateAptitude } = useSocket()
 const panelRef = ref<HTMLElement | null>(null)
 const { isDragging, onDragStart } = useDraggable('character', panelRef, { alwaysDraggable: true })
@@ -57,6 +59,11 @@ function openCreationWizard() {
   showCharacterDropdown.value = false
   creationStore.open()
   requestTemplates()
+}
+
+function viewApplication(characterId: number) {
+  showCharacterDropdown.value = false
+  playerAppStore.open(characterId)
 }
 
 const panelStyle = computed(() => {
@@ -291,6 +298,14 @@ function close() {
                 {{ statusLabel(c.application_status) }}
               </span>
               <span v-else class="char-dropdown-level">Lv {{ c.level }}</span>
+            </button>
+            <button
+              v-if="!isPlayable(c.application_status)"
+              class="char-dropdown-view-app"
+              title="View application"
+              @click.stop="viewApplication(c.id)"
+            >
+              View App
             </button>
             <button
               class="char-dropdown-delete"
@@ -901,6 +916,27 @@ function close() {
   opacity: 1 !important;
   background: rgba(139, 26, 26, 0.2);
   color: #e44;
+}
+
+.char-dropdown-view-app {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  background: none;
+  border: 1px solid var(--color-gold-dim);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-display);
+  font-size: 8px;
+  color: var(--color-gold-dim);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.char-dropdown-view-app:hover {
+  color: var(--color-gold);
+  border-color: var(--color-gold);
+  background: rgba(201, 168, 76, 0.1);
 }
 
 /* Delete current character button */

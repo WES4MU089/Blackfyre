@@ -18,6 +18,9 @@ import { shopRouter } from './routes/shop.js';
 import { housesRouter } from './routes/houses.js';
 import { applicationsRouter } from './routes/applications.js';
 import { staffApplicationsRouter } from './routes/staff-applications.js';
+import { notificationsRouter } from './routes/notifications.js';
+import { tosRouter } from './routes/tos.js';
+import { clientRouter } from './routes/client.js';
 
 export const apiRouter = Router();
 
@@ -46,6 +49,9 @@ apiRouter.get('/', (_req: Request, res: Response) => {
       '/api/houses',
       '/api/applications',
       '/api/staff/applications',
+      '/api/notifications',
+      '/api/tos',
+      '/api/client',
     ],
   });
 });
@@ -70,3 +76,6 @@ apiRouter.use('/shop', shopRouter);
 apiRouter.use('/houses', housesRouter);
 apiRouter.use('/applications', applicationsRouter);
 apiRouter.use('/staff/applications', staffApplicationsRouter);
+apiRouter.use('/notifications', notificationsRouter);
+apiRouter.use('/tos', tosRouter);
+apiRouter.use('/client', clientRouter);

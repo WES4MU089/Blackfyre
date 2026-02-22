@@ -124,11 +124,13 @@ function handleSubmit(): void {
   background: var(--color-surface);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   pointer-events: auto;
 }
 
 .creation-container {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   max-width: 1100px;
@@ -278,6 +280,7 @@ function handleSubmit(): void {
 /* Body */
 .creation-body {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: var(--space-md) 0;
   scrollbar-width: thin;

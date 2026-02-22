@@ -1,15 +1,57 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useAdminStore } from '@/stores/admin'
+import { useAuthStore } from '@/stores/auth'
 import { useHudStore } from '@/stores/hud'
 
 const adminStore = useAdminStore()
+const authStore = useAuthStore()
 const hudStore = useHudStore()
 
 const reviewNotes = ref('')
 const commentBody = ref('')
 const commentIsPrivate = ref(false)
 const isActioning = ref(false)
+
+/** Comment editing state */
+const editingCommentId = ref<number | null>(null)
+const editingBody = ref('')
+
+function startEditComment(commentId: number, body: string): void {
+  editingCommentId.value = commentId
+  editingBody.value = body
+}
+
+function cancelEditComment(): void {
+  editingCommentId.value = null
+  editingBody.value = ''
+}
+
+async function saveEditComment(commentId: number): Promise<void> {
+  if (!adminStore.selectedApplication || !editingBody.value.trim()) return
+  const ok = await adminStore.editComment(adminStore.selectedApplication.id, commentId, editingBody.value.trim())
+  if (ok) {
+    editingCommentId.value = null
+    editingBody.value = ''
+  }
+}
+
+async function toggleVisibility(commentId: number): Promise<void> {
+  if (!adminStore.selectedApplication) return
+  await adminStore.toggleCommentVisibility(adminStore.selectedApplication.id, commentId)
+}
+
+const confirmDeleteId = ref<number | null>(null)
+
+async function confirmDeleteComment(commentId: number): Promise<void> {
+  if (!adminStore.selectedApplication) return
+  await adminStore.deleteComment(adminStore.selectedApplication.id, commentId)
+  confirmDeleteId.value = null
+}
+
+function isOwnComment(authorId: number): boolean {
+  return authStore.user?.id === authorId || authStore.isSuperAdmin
+}
 
 const ROLE_LABELS: Record<string, string> = {
   member: 'Member',
@@ -141,14 +183,60 @@ function formatDate(dateStr: string): string {
           v-for="c in adminStore.comments"
           :key="c.id"
           class="comment-item"
-          :class="{ 'comment-item--private': c.is_private }"
+          :class="{
+            'comment-item--private': c.is_private,
+            'comment-item--hidden': !c.is_visible,
+          }"
         >
           <div class="comment-header">
             <span class="comment-author">{{ c.author_name }}</span>
             <span v-if="c.is_private" class="comment-private-tag">Staff Only</span>
+            <span v-if="!c.is_visible" class="comment-hidden-tag">Hidden</span>
+            <span v-if="c.edited_at" class="comment-edited-tag">(edited)</span>
             <span class="comment-time">{{ formatDate(c.created_at) }}</span>
           </div>
-          <p class="comment-body">{{ c.body }}</p>
+
+          <!-- Editing mode -->
+          <template v-if="editingCommentId === c.id">
+            <textarea
+              v-model="editingBody"
+              class="comment-edit-textarea"
+              rows="2"
+            />
+            <div class="comment-edit-actions">
+              <button class="comment-edit-save" @click="saveEditComment(c.id)">Save</button>
+              <button class="comment-edit-cancel" @click="cancelEditComment">Cancel</button>
+            </div>
+          </template>
+
+          <!-- Normal display -->
+          <template v-else>
+            <p class="comment-body">{{ c.body }}</p>
+
+            <!-- Management actions (own comments or super admin) -->
+            <div v-if="isOwnComment(c.author_id)" class="comment-actions">
+              <button class="comment-action-btn" title="Edit" @click="startEditComment(c.id, c.body)">Edit</button>
+              <button
+                class="comment-action-btn"
+                :title="c.is_visible ? 'Hide from player' : 'Show to player'"
+                @click="toggleVisibility(c.id)"
+              >
+                {{ c.is_visible ? 'Hide' : 'Show' }}
+              </button>
+              <button
+                v-if="confirmDeleteId !== c.id"
+                class="comment-action-btn comment-action-btn--danger"
+                title="Delete"
+                @click="confirmDeleteId = c.id"
+              >
+                Delete
+              </button>
+              <template v-else>
+                <button class="comment-action-btn comment-action-btn--danger" @click="confirmDeleteComment(c.id)">Confirm?</button>
+                <button class="comment-action-btn" @click="confirmDeleteId = null">Cancel</button>
+              </template>
+            </div>
+          </template>
         </div>
       </div>
 
@@ -402,12 +490,131 @@ function formatDate(dateStr: string): string {
   color: var(--color-text-muted);
 }
 
+.comment-item--hidden {
+  opacity: 0.5;
+}
+
+.comment-hidden-tag {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0 4px;
+  border: 1px solid var(--color-border-dim);
+  border-radius: 2px;
+}
+
+.comment-edited-tag {
+  font-family: var(--font-body);
+  font-size: 8px;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
 .comment-body {
   font-family: var(--font-body);
   font-size: var(--font-size-xs);
   color: var(--color-text-dim);
   line-height: 1.4;
   margin: 3px 0 0;
+}
+
+/* Comment management actions */
+.comment-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.comment-action-btn {
+  padding: 1px 6px;
+  background: none;
+  border: 1px solid var(--color-border-dim);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-display);
+  font-size: 8px;
+  color: var(--color-text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.comment-action-btn:hover {
+  color: var(--color-gold-dim);
+  border-color: var(--color-gold-dim);
+  background: rgba(201, 168, 76, 0.06);
+}
+
+.comment-action-btn--danger {
+  color: var(--color-crimson-light);
+  border-color: rgba(139, 26, 26, 0.3);
+}
+
+.comment-action-btn--danger:hover {
+  color: var(--color-crimson-light);
+  border-color: rgba(139, 26, 26, 0.6);
+  background: rgba(139, 26, 26, 0.1);
+}
+
+/* Edit textarea */
+.comment-edit-textarea {
+  width: 100%;
+  padding: 4px 6px;
+  background: var(--color-surface-dark);
+  border: 1px solid var(--color-gold-dim);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  color: var(--color-text);
+  resize: vertical;
+  outline: none;
+  margin-top: 4px;
+}
+
+.comment-edit-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.comment-edit-save {
+  padding: 2px 8px;
+  background: rgba(201, 168, 76, 0.1);
+  border: 1px solid var(--color-gold-dim);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-display);
+  font-size: 8px;
+  color: var(--color-gold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.comment-edit-save:hover {
+  background: rgba(201, 168, 76, 0.2);
+  border-color: var(--color-gold);
+}
+
+.comment-edit-cancel {
+  padding: 2px 8px;
+  background: none;
+  border: 1px solid var(--color-border-dim);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-display);
+  font-size: 8px;
+  color: var(--color-text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.comment-edit-cancel:hover {
+  color: var(--color-text-dim);
+  border-color: var(--color-border);
 }
 
 /* Comment input */

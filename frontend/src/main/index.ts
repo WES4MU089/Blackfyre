@@ -1,6 +1,7 @@
 import { app, BrowserWindow, globalShortcut, ipcMain, Tray, Menu, screen, nativeImage, shell } from 'electron'
 import { join } from 'path'
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
+import { autoUpdater } from 'electron-updater'
 
 // Test client mode: separate userData, no single-instance lock, no protocol, different hotkeys
 // Detect via env var OR --user-data-dir containing 'blackfyre-hud-test' (env var may not
@@ -453,6 +454,68 @@ ipcMain.on('hud:set-auto-clickthrough', (_event, data: { interactive: boolean; s
   }
 })
 
+// --- Auto-updater ---
+autoUpdater.autoDownload = false
+autoUpdater.autoInstallOnAppQuit = true
+
+// Forward updater events to login/launcher renderer
+autoUpdater.on('update-available', (info) => {
+  loginWindow?.webContents.send('updater:update-available', {
+    version: info.version,
+    releaseNotes: typeof info.releaseNotes === 'string' ? info.releaseNotes : '',
+  })
+})
+
+autoUpdater.on('update-not-available', () => {
+  loginWindow?.webContents.send('updater:up-to-date')
+})
+
+autoUpdater.on('download-progress', (progress) => {
+  loginWindow?.webContents.send('updater:progress', {
+    percent: progress.percent,
+    bytesPerSecond: progress.bytesPerSecond,
+    transferred: progress.transferred,
+    total: progress.total,
+  })
+})
+
+autoUpdater.on('update-downloaded', () => {
+  loginWindow?.webContents.send('updater:downloaded')
+})
+
+autoUpdater.on('error', (err) => {
+  loginWindow?.webContents.send('updater:error', err.message)
+})
+
+// Updater IPC handlers
+ipcMain.handle('updater:check', async () => {
+  try {
+    const result = await autoUpdater.checkForUpdates()
+    return { success: true, version: result?.updateInfo?.version }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: message }
+  }
+})
+
+ipcMain.handle('updater:download', async () => {
+  try {
+    await autoUpdater.downloadUpdate()
+    return { success: true }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: message }
+  }
+})
+
+ipcMain.handle('updater:install', () => {
+  autoUpdater.quitAndInstall(false, true)
+})
+
+ipcMain.handle('app:get-version', () => {
+  return app.getVersion()
+})
+
 // App lifecycle
 app.whenReady().then(() => {
   createTray()
@@ -460,14 +523,8 @@ app.whenReady().then(() => {
   // Primary: F3/F4 — Test client: F6/F7
   registerGlobalShortcuts()
 
-  // Check for existing auth token
-  const token = storeGet('auth.token')
-  if (token) {
-    // TODO: Validate token with backend before auto-login
-    createHudWindow()
-  } else {
-    createLoginWindow()
-  }
+  // Always start with the login/launcher window — it handles auth, TOS, and updates
+  createLoginWindow()
 
   updateTrayMenu()
 })

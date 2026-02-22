@@ -48,13 +48,14 @@ applicationsRouter.get('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Application not found' });
     }
 
-    // Load public comments only (player cannot see private comments)
+    // Load public, visible, non-deleted comments only
     const comments = await db.query(
-      `SELECT ac.id, ac.body, ac.is_private, ac.created_at,
+      `SELECT ac.id, ac.author_id, ac.body, ac.is_private, ac.created_at, ac.edited_at,
               p.discord_username AS author_name
        FROM application_comments ac
        JOIN players p ON ac.author_id = p.id
        WHERE ac.application_id = ? AND ac.is_private = FALSE
+         AND ac.is_visible = TRUE AND ac.deleted_at IS NULL
        ORDER BY ac.created_at ASC`,
       [req.params.id]
     );
@@ -162,5 +163,67 @@ applicationsRouter.put('/:id', async (req: Request, res: Response) => {
     }
     logger.error('Failed to resubmit application:', err);
     res.status(500).json({ error: 'Failed to resubmit application' });
+  }
+});
+
+// Post a public comment on own application
+const playerCommentSchema = z.object({
+  body: z.string().min(1).max(5000),
+});
+
+applicationsRouter.post('/:id/comments', async (req: Request, res: Response) => {
+  try {
+    const parsed = playerCommentSchema.parse(req.body);
+
+    // Verify application belongs to player
+    const application = await db.queryOne<{ id: number; status: string }>(
+      `SELECT id, status FROM character_applications
+       WHERE id = ? AND player_id = ?`,
+      [req.params.id, req.player!.id]
+    );
+
+    if (!application) {
+      return res.status(404).json({ error: 'Application not found' });
+    }
+
+    // Only allow commenting on pending or revision applications
+    if (application.status !== 'pending' && application.status !== 'revision') {
+      return res.status(400).json({ error: 'Cannot comment on this application' });
+    }
+
+    const commentId = await db.insert(
+      `INSERT INTO application_comments (application_id, author_id, body, is_private)
+       VALUES (?, ?, ?, FALSE)`,
+      [application.id, req.player!.id, parsed.body]
+    );
+
+    // Notify staff via socket
+    const { getIO } = await import('../../websocket/index.js');
+    const io = getIO();
+    if (io) {
+      io.to('staff:applications').emit('application:comment', {
+        applicationId: application.id,
+        commentId,
+        isPrivate: false,
+      });
+    }
+
+    res.json({
+      success: true,
+      comment: {
+        id: commentId,
+        author_id: req.player!.id,
+        body: parsed.body,
+        is_private: false,
+        created_at: new Date().toISOString(),
+        author_name: req.player!.discordUsername ?? 'Player',
+      },
+    });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Validation error', details: err.errors });
+    }
+    logger.error('Failed to post player comment:', err);
+    res.status(500).json({ error: 'Failed to post comment' });
   }
 });

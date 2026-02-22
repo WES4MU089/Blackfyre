@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useAdminStore } from '@/stores/admin'
 import { useDraggable } from '@/composables/useDraggable'
+import { useResizable } from '@/composables/useResizable'
 import { useHudStore } from '@/stores/hud'
 import ApplicationQueue from './ApplicationQueue.vue'
 import ApplicationReview from './ApplicationReview.vue'
@@ -10,12 +11,23 @@ const adminStore = useAdminStore()
 const hudStore = useHudStore()
 const panelRef = ref<HTMLElement | null>(null)
 const { isDragging, onDragStart } = useDraggable('admin', panelRef, { alwaysDraggable: true })
+const { isResizing, onResizeStart, currentWidth, currentHeight } = useResizable(
+  'admin', panelRef,
+  { minWidth: 360, maxWidth: 900, minHeight: 300, maxHeight: 900 },
+)
 
-const panelStyle = {
-  position: 'fixed' as const,
-  right: '20px',
-  top: '90px',
-}
+const panelStyle = computed(() => {
+  const pos = hudStore.hudPositions['admin']
+  if (pos && pos.x != null && pos.y != null) {
+    return { position: 'fixed' as const, left: `${pos.x}px`, top: `${pos.y}px` }
+  }
+  return { position: 'fixed' as const, right: '20px', top: '90px' }
+})
+
+const sizeStyle = computed(() => ({
+  width: currentWidth.value + 'px',
+  height: currentHeight.value + 'px',
+}))
 
 function close() {
   adminStore.closePanel()
@@ -27,7 +39,8 @@ function close() {
     <div
       ref="panelRef"
       class="admin-panel panel-ornate animate-fade-in"
-      :class="{ 'is-dragging': isDragging }"
+      :class="{ 'is-dragging': isDragging, 'is-resizing': isResizing }"
+      :style="sizeStyle"
     >
       <!-- Header -->
       <div class="admin-header" @mousedown="onDragStart">
@@ -45,6 +58,18 @@ function close() {
         <ApplicationQueue v-if="adminStore.activeView === 'queue'" />
         <ApplicationReview v-if="adminStore.activeView === 'detail'" />
       </div>
+
+      <!-- Resize handle -->
+      <div class="admin-resize-handle" @mousedown="onResizeStart">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+          <circle cx="10" cy="10" r="1.2" />
+          <circle cx="6" cy="10" r="1.2" />
+          <circle cx="10" cy="6" r="1.2" />
+          <circle cx="2" cy="10" r="1.2" />
+          <circle cx="6" cy="6" r="1.2" />
+          <circle cx="10" cy="2" r="1.2" />
+        </svg>
+      </div>
     </div>
   </div>
 </template>
@@ -55,14 +80,14 @@ function close() {
 }
 
 .admin-panel {
-  width: 420px;
-  max-height: calc(100vh - 160px);
   display: flex;
   flex-direction: column;
   pointer-events: auto;
+  position: relative;
 }
 
-.admin-panel.is-dragging {
+.admin-panel.is-dragging,
+.admin-panel.is-resizing {
   z-index: 1000;
 }
 
@@ -147,5 +172,27 @@ function close() {
   flex: 1;
   scrollbar-width: thin;
   scrollbar-color: var(--color-gold-dim) transparent;
+}
+
+/* Resize handle */
+.admin-resize-handle {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: nwse-resize;
+  color: var(--color-text-muted);
+  opacity: 0.5;
+  transition: opacity var(--transition-fast);
+  z-index: 10;
+}
+
+.admin-resize-handle:hover {
+  opacity: 1;
+  color: var(--color-gold);
 }
 </style>

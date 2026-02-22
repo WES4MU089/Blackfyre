@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useHudStore } from '@/stores/hud'
+import NotificationBell from '@/components/hud/NotificationBell.vue'
 
 const hudStore = useHudStore()
 
@@ -62,6 +63,13 @@ const playerCountText = computed(() => {
     <!-- Player count -->
     <div class="bb-section bb-players">
       <span class="bb-value">{{ playerCountText }}</span>
+    </div>
+
+    <div class="bb-divider" />
+
+    <!-- Notification bell -->
+    <div class="bb-section bb-notifications">
+      <NotificationBell />
     </div>
   </div>
 </template>
@@ -156,5 +164,9 @@ const playerCountText = computed(() => {
 .bb-players {
   flex-shrink: 0;
   margin-left: auto;
+}
+
+.bb-notifications {
+  flex-shrink: 0;
 }
 </style>

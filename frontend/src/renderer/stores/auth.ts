@@ -85,17 +85,18 @@ export const useAuthStore = defineStore('auth', () => {
     window.electronAPI.openDiscordAuth(`${API_BASE}/api/auth/discord`)
   }
 
-  async function handleAuthSuccess(jwt: string): Promise<void> {
+  async function handleAuthSuccess(jwt: string): Promise<boolean> {
     token.value = jwt
     await window.electronAPI.setToken(jwt)
     const valid = await validateToken(jwt)
     isLoading.value = false
     if (valid) {
-      window.electronAPI.loginSuccess()
+      return true
     } else {
       error.value = 'Failed to validate authentication'
       token.value = null
       await window.electronAPI.clearToken()
+      return false
     }
   }
 

@@ -44,5 +44,30 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setLastCharacter: (characterId: number) =>
     ipcRenderer.invoke('character:set-last', characterId),
   getLastCharacter: (): Promise<number | null> =>
-    ipcRenderer.invoke('character:get-last')
+    ipcRenderer.invoke('character:get-last'),
+
+  // Auto-updater
+  checkForUpdates: (): Promise<{ success: boolean; version?: string; error?: string }> =>
+    ipcRenderer.invoke('updater:check'),
+  downloadUpdate: (): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('updater:download'),
+  installUpdate: () => ipcRenderer.invoke('updater:install'),
+  onUpdateAvailable: (callback: (info: { version: string; releaseNotes: string }) => void) => {
+    ipcRenderer.on('updater:update-available', (_event, info) => callback(info))
+  },
+  onUpdateUpToDate: (callback: () => void) => {
+    ipcRenderer.on('updater:up-to-date', () => callback())
+  },
+  onUpdateProgress: (callback: (progress: { percent: number; bytesPerSecond: number; transferred: number; total: number }) => void) => {
+    ipcRenderer.on('updater:progress', (_event, progress) => callback(progress))
+  },
+  onUpdateDownloaded: (callback: () => void) => {
+    ipcRenderer.on('updater:downloaded', () => callback())
+  },
+  onUpdateError: (callback: (message: string) => void) => {
+    ipcRenderer.on('updater:error', (_event, message) => callback(message))
+  },
+
+  // App version
+  getAppVersion: (): Promise<string> => ipcRenderer.invoke('app:get-version')
 })

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { db } from '../../db/connection.js';
 import { logger } from '../../utils/logger.js';
 import { requireAuth, requirePermission } from '../middleware/auth.js';
+import { createNotification } from '../../utils/notifications.js';
 
 export const staffApplicationsRouter = Router();
 
@@ -80,13 +81,14 @@ staffApplicationsRouter.get(
         return res.status(404).json({ error: 'Application not found' });
       }
 
-      // Load all comments (public + private)
+      // Load all non-deleted comments (public + private) for staff
       const comments = await db.query(
-        `SELECT ac.id, ac.body, ac.is_private, ac.created_at,
+        `SELECT ac.id, ac.author_id, ac.body, ac.is_private, ac.is_visible,
+                ac.created_at, ac.edited_at,
                 p.discord_username AS author_name
          FROM application_comments ac
          JOIN players p ON ac.author_id = p.id
-         WHERE ac.application_id = ?
+         WHERE ac.application_id = ? AND ac.deleted_at IS NULL
          ORDER BY ac.created_at ASC`,
         [req.params.id]
       );
@@ -123,10 +125,14 @@ staffApplicationsRouter.patch(
         mother_name: string;
         public_bio: string | null;
         status: string;
+        character_name: string;
       }>(
-        `SELECT id, character_id, player_id, house_id, is_bastard, is_dragon_seed,
-                father_name, mother_name, public_bio, status
-         FROM character_applications WHERE id = ?`,
+        `SELECT ca.id, ca.character_id, ca.player_id, ca.house_id, ca.is_bastard, ca.is_dragon_seed,
+                ca.father_name, ca.mother_name, ca.public_bio, ca.status,
+                c.name AS character_name
+         FROM character_applications ca
+         JOIN characters c ON ca.character_id = c.id
+         WHERE ca.id = ?`,
         [req.params.id]
       );
 
@@ -201,11 +207,12 @@ staffApplicationsRouter.patch(
       const { getIO } = await import('../../websocket/index.js');
       const io = getIO();
       if (io) {
-        // Notify the applicant
+        // Notify the applicant via socket
         io.to(`player:${application.player_id}`).emit('application:updated', {
           applicationId: application.id,
           status: parsed.status,
           characterId: application.character_id,
+          characterName: application.character_name,
         });
 
         // Notify staff
@@ -230,6 +237,26 @@ staffApplicationsRouter.patch(
           io.to(`player:${application.player_id}`).emit('characters:list', characters);
         }
       }
+
+      // Create persistent notification for applicant
+      const statusMessages: Record<string, string> = {
+        approved: 'Your application has been approved!',
+        denied: 'Your application has been denied.',
+        revision: 'Your application requires revision.',
+      };
+      const statusTypes: Record<string, 'success' | 'warning' | 'error'> = {
+        approved: 'success',
+        denied: 'error',
+        revision: 'warning',
+      };
+      await createNotification({
+        playerId: application.player_id,
+        characterId: application.character_id,
+        type: 'application',
+        title: application.character_name,
+        message: statusMessages[parsed.status] ?? `Application status: ${parsed.status}`,
+        metadata: { applicationId: application.id, status: parsed.status },
+      }).catch(err => logger.error('Failed to create application notification:', err));
 
       res.json({ success: true, status: parsed.status });
     } catch (err) {
@@ -261,8 +288,11 @@ staffApplicationsRouter.post(
       }
 
       // Verify application exists
-      const application = await db.queryOne<{ id: number; player_id: number }>(
-        `SELECT id, player_id FROM character_applications WHERE id = ?`,
+      const application = await db.queryOne<{ id: number; player_id: number; character_name: string }>(
+        `SELECT ca.id, ca.player_id, c.name AS character_name
+         FROM character_applications ca
+         JOIN characters c ON ca.character_id = c.id
+         WHERE ca.id = ?`,
         [req.params.id]
       );
 
@@ -295,6 +325,17 @@ staffApplicationsRouter.post(
         });
       }
 
+      // Create persistent notification for applicant (public comments only)
+      if (!parsed.isPrivate) {
+        await createNotification({
+          playerId: application.player_id,
+          type: 'application',
+          title: application.character_name,
+          message: 'New comment on your application',
+          metadata: { applicationId: application.id, commentId },
+        }).catch(err => logger.error('Failed to create comment notification:', err));
+      }
+
       res.json({ success: true, commentId });
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -302,6 +343,127 @@ staffApplicationsRouter.post(
       }
       logger.error('Failed to post comment:', err);
       res.status(500).json({ error: 'Failed to post comment' });
+    }
+  }
+);
+
+// Edit own comment body
+const editCommentSchema = z.object({
+  body: z.string().min(1).max(5000),
+});
+
+staffApplicationsRouter.patch(
+  '/:id/comments/:commentId',
+  requirePermission('applications.comment_public', 'applications.comment_private'),
+  async (req: Request, res: Response) => {
+    try {
+      const parsed = editCommentSchema.parse(req.body);
+
+      // Verify comment exists and belongs to current user (super admins can edit any)
+      const comment = await db.queryOne<{ id: number; author_id: number }>(
+        `SELECT id, author_id FROM application_comments
+         WHERE id = ? AND application_id = ? AND deleted_at IS NULL`,
+        [req.params.commentId, req.params.id]
+      );
+
+      if (!comment) {
+        return res.status(404).json({ error: 'Comment not found' });
+      }
+
+      if (comment.author_id !== req.player!.id && !req.player!.isSuperAdmin) {
+        return res.status(403).json({ error: 'Can only edit your own comments' });
+      }
+
+      await db.execute(
+        `UPDATE application_comments SET body = ?, edited_at = NOW() WHERE id = ?`,
+        [parsed.body, comment.id]
+      );
+
+      logger.info(`Staff comment edited: commentId=${comment.id} by playerId=${req.player!.id}`);
+      res.json({ success: true });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ error: 'Validation error', details: err.errors });
+      }
+      logger.error('Failed to edit comment:', err);
+      res.status(500).json({ error: 'Failed to edit comment' });
+    }
+  }
+);
+
+// Toggle comment visibility (hide/show from player)
+const visibilitySchema = z.object({
+  isVisible: z.boolean(),
+});
+
+staffApplicationsRouter.patch(
+  '/:id/comments/:commentId/visibility',
+  requirePermission('applications.comment_public', 'applications.comment_private'),
+  async (req: Request, res: Response) => {
+    try {
+      const parsed = visibilitySchema.parse(req.body);
+
+      const comment = await db.queryOne<{ id: number; author_id: number }>(
+        `SELECT id, author_id FROM application_comments
+         WHERE id = ? AND application_id = ? AND deleted_at IS NULL`,
+        [req.params.commentId, req.params.id]
+      );
+
+      if (!comment) {
+        return res.status(404).json({ error: 'Comment not found' });
+      }
+
+      if (comment.author_id !== req.player!.id && !req.player!.isSuperAdmin) {
+        return res.status(403).json({ error: 'Can only toggle visibility of your own comments' });
+      }
+
+      await db.execute(
+        `UPDATE application_comments SET is_visible = ? WHERE id = ?`,
+        [parsed.isVisible, comment.id]
+      );
+
+      logger.info(`Staff comment visibility toggled: commentId=${comment.id} visible=${parsed.isVisible} by playerId=${req.player!.id}`);
+      res.json({ success: true, isVisible: parsed.isVisible });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ error: 'Validation error', details: err.errors });
+      }
+      logger.error('Failed to toggle comment visibility:', err);
+      res.status(500).json({ error: 'Failed to toggle comment visibility' });
+    }
+  }
+);
+
+// Soft-delete own comment
+staffApplicationsRouter.delete(
+  '/:id/comments/:commentId',
+  requirePermission('applications.comment_public', 'applications.comment_private'),
+  async (req: Request, res: Response) => {
+    try {
+      const comment = await db.queryOne<{ id: number; author_id: number }>(
+        `SELECT id, author_id FROM application_comments
+         WHERE id = ? AND application_id = ? AND deleted_at IS NULL`,
+        [req.params.commentId, req.params.id]
+      );
+
+      if (!comment) {
+        return res.status(404).json({ error: 'Comment not found' });
+      }
+
+      if (comment.author_id !== req.player!.id && !req.player!.isSuperAdmin) {
+        return res.status(403).json({ error: 'Can only delete your own comments' });
+      }
+
+      await db.execute(
+        `UPDATE application_comments SET deleted_at = NOW() WHERE id = ?`,
+        [comment.id]
+      );
+
+      logger.info(`Staff comment soft-deleted: commentId=${comment.id} by playerId=${req.player!.id}`);
+      res.json({ success: true });
+    } catch (err) {
+      logger.error('Failed to delete comment:', err);
+      res.status(500).json({ error: 'Failed to delete comment' });
     }
   }
 );

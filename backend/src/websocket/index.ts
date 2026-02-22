@@ -466,6 +466,17 @@ export function setupWebSocket(io: SocketServer): void {
             });
             logger.info(`Socket authenticated via JWT: playerId=${player.id}, slUuid=${player.sl_uuid || 'not linked'}, role=${roleName || 'none'}`);
 
+            // Send unread notification count for badge
+            const unreadRow = await db.queryOne<{ cnt: number }>(
+              `SELECT COUNT(*) AS cnt FROM notifications
+               WHERE player_id = ? AND is_read = FALSE
+               AND (expires_at IS NULL OR expires_at > NOW())`,
+              [player.id],
+            );
+            socket.emit('notifications:unread-count', {
+              unreadCount: Number(unreadRow?.cnt ?? 0),
+            });
+
             // Auto-send character list
             const characters = await db.query(`
               SELECT c.id, c.name, c.level, c.is_active, c.portrait_url,
