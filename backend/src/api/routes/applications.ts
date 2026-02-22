@@ -10,6 +10,18 @@ export const applicationsRouter = Router();
 // All player application routes require authentication
 applicationsRouter.use(requireAuth());
 
+// List available class templates for the creation form
+// NOTE: Must come before /:id to avoid "templates" matching as an id param
+applicationsRouter.get('/templates', async (_req: Request, res: Response) => {
+  try {
+    const templates = await loadTemplates();
+    res.json({ templates });
+  } catch (err) {
+    logger.error('Failed to load templates:', err);
+    res.status(500).json({ error: 'Failed to load templates' });
+  }
+});
+
 // List own applications
 applicationsRouter.get('/', async (req: Request, res: Response) => {
   try {
@@ -137,17 +149,6 @@ function determineApplicationTier(
   if (template.category === 'nobility' || data.houseId || data.isBastard || data.isDragonSeed || data.orgRequiresApproval) return 2;
   return 1;
 }
-
-// List available class templates for the creation form
-applicationsRouter.get('/templates', async (_req: Request, res: Response) => {
-  try {
-    const templates = await loadTemplates();
-    res.json({ templates });
-  } catch (err) {
-    logger.error('Failed to load templates:', err);
-    res.status(500).json({ error: 'Failed to load templates' });
-  }
-});
 
 applicationsRouter.post('/submit', async (req: Request, res: Response) => {
   try {
