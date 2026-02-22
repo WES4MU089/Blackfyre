@@ -115,6 +115,15 @@ export function useSocket() {
       }
     })
 
+    // Character deleted confirmation
+    socket.on('character:deleted', (data: { characterId: number }) => {
+      // If we just deleted the active character, clear state (but list will be refreshed by server)
+      if (characterStore.character?.id === data.characterId) {
+        characterStore.character = null
+      }
+      hudStore.addNotification('info', 'Character Deleted', 'The character has been permanently deleted.')
+    })
+
     // Real-time vitals updates
     socket.on('vitals:changed', (data: Record<string, number>) => {
       characterStore.updateVitals(data)
@@ -491,6 +500,10 @@ export function useSocket() {
     socket?.emit('retainer:dismiss', { retainerId })
   }
 
+  function deleteCharacter(characterId: number, confirmName: string): void {
+    socket?.emit('character:delete', { characterId, confirmName })
+  }
+
   function allocateAptitude(aptitudeKey: string): void {
     socket?.emit('aptitude:allocate', { aptitudeKey })
   }
@@ -522,6 +535,7 @@ export function useSocket() {
     closeNpcDialog,
     closeShop,
     dismissRetainer,
+    deleteCharacter,
     allocateAptitude,
     disconnect
   }

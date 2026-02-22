@@ -185,6 +185,66 @@ export function setupWebSocket(io: SocketServer): void {
       }
     });
 
+    // Delete a character (requires name confirmation from client)
+    socket.on('character:delete', async (data: { characterId: number; confirmName: string }) => {
+      try {
+        const playerInfo = connectedPlayers.get(socket.id);
+        if (!playerInfo?.playerId) {
+          return socket.emit('error', { message: 'Not authenticated' });
+        }
+
+        const { characterId, confirmName } = data;
+
+        // Verify character belongs to this player and is not a retainer
+        const character = await db.queryOne<{ id: number; name: string }>(
+          `SELECT id, name FROM characters WHERE id = ? AND player_id = ? AND owner_character_id IS NULL`,
+          [characterId, playerInfo.playerId]
+        );
+
+        if (!character) {
+          return socket.emit('error', { message: 'Character not found' });
+        }
+
+        // Name must match exactly
+        if (confirmName !== character.name) {
+          return socket.emit('error', { message: 'Character name does not match' });
+        }
+
+        // If deleting the currently active character, release session
+        if (playerInfo.characterId === characterId) {
+          socket.leave(`character:${characterId}`);
+          releaseSessionId(socket.id);
+          playerInfo.characterId = undefined;
+          playerInfo.characterName = undefined;
+          playerInfo.sessionId = undefined;
+        }
+
+        await db.execute(`DELETE FROM characters WHERE id = ?`, [characterId]);
+
+        socket.emit('character:deleted', { characterId });
+        logger.info(`Character deleted: ${character.name} (${characterId}) by player ${playerInfo.playerId}`);
+
+        // Send updated character list
+        const characters = await db.query(`
+          SELECT c.id, c.name, c.level, c.is_active, c.portrait_url,
+                 c.application_status,
+                 cv.health, cv.max_health
+          FROM characters c
+          LEFT JOIN character_vitals cv ON c.id = cv.character_id
+          WHERE c.player_id = ? AND c.owner_character_id IS NULL
+          ORDER BY c.created_at DESC
+        `, [playerInfo.playerId]);
+
+        socket.emit('characters:list', characters);
+
+        // Update session list if they were playing the deleted character
+        io.emit('session:player-list', getAllSessions());
+      } catch (error) {
+        logger.error('Character delete error:', error);
+        socket.emit('error', { message: 'Failed to delete character' });
+      }
+    });
+
     // Dismiss a retainer from the character panel
     socket.on('retainer:dismiss', async (data: { retainerId: number }) => {
       try {

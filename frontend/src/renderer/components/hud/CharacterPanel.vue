@@ -19,7 +19,7 @@ const characterStore = useCharacterStore()
 const hudStore = useHudStore()
 const creationStore = useCreationStore()
 const ailmentsStore = useAilmentsStore()
-const { selectCharacter, requestCharacterList, requestTemplates, dismissRetainer, allocateAptitude } = useSocket()
+const { selectCharacter, requestCharacterList, requestTemplates, dismissRetainer, deleteCharacter, allocateAptitude } = useSocket()
 const panelRef = ref<HTMLElement | null>(null)
 const { isDragging, onDragStart } = useDraggable('character', panelRef, { alwaysDraggable: true })
 
@@ -83,6 +83,36 @@ function statusLabel(status?: string): string | null {
   if (!status || status === 'none' || status === 'approved') return null
   const labels: Record<string, string> = { pending: 'Pending', denied: 'Denied', revision: 'Revision' }
   return labels[status] ?? null
+}
+
+/** Character deletion */
+const deleteTarget = ref<{ id: number; name: string } | null>(null)
+const deleteConfirmInput = ref('')
+const deleteConfirmValid = computed(() =>
+  deleteTarget.value != null && deleteConfirmInput.value === deleteTarget.value.name
+)
+
+function promptDelete(characterId: number, characterName: string) {
+  deleteTarget.value = { id: characterId, name: characterName }
+  deleteConfirmInput.value = ''
+  showCharacterDropdown.value = false
+}
+
+function promptDeleteCurrent() {
+  if (!characterStore.character) return
+  promptDelete(characterStore.character.id, characterStore.character.name)
+}
+
+function confirmDelete() {
+  if (!deleteTarget.value || !deleteConfirmValid.value) return
+  deleteCharacter(deleteTarget.value.id, deleteConfirmInput.value)
+  deleteTarget.value = null
+  deleteConfirmInput.value = ''
+}
+
+function cancelDelete() {
+  deleteTarget.value = null
+  deleteConfirmInput.value = ''
 }
 
 onMounted(() => {
@@ -245,26 +275,75 @@ function close() {
       <Transition name="dropdown-fade">
         <div v-if="showCharacterDropdown" class="char-dropdown">
           <div class="char-dropdown-label">Switch Character</div>
-          <button
+          <div
             v-for="c in otherCharacters"
             :key="c.id"
-            class="char-dropdown-item"
-            :class="{ 'char-dropdown-item--disabled': !isPlayable(c.application_status) }"
-            :disabled="!isPlayable(c.application_status)"
-            @click="isPlayable(c.application_status) && switchCharacter(c.id)"
+            class="char-dropdown-row"
           >
-            <span class="char-dropdown-name">{{ c.name }}</span>
-            <span v-if="statusLabel(c.application_status)" class="char-dropdown-status" :class="`char-dropdown-status--${c.application_status}`">
-              {{ statusLabel(c.application_status) }}
-            </span>
-            <span v-else class="char-dropdown-level">Lv {{ c.level }}</span>
-          </button>
+            <button
+              class="char-dropdown-item"
+              :class="{ 'char-dropdown-item--disabled': !isPlayable(c.application_status) }"
+              :disabled="!isPlayable(c.application_status)"
+              @click="isPlayable(c.application_status) && switchCharacter(c.id)"
+            >
+              <span class="char-dropdown-name">{{ c.name }}</span>
+              <span v-if="statusLabel(c.application_status)" class="char-dropdown-status" :class="`char-dropdown-status--${c.application_status}`">
+                {{ statusLabel(c.application_status) }}
+              </span>
+              <span v-else class="char-dropdown-level">Lv {{ c.level }}</span>
+            </button>
+            <button
+              class="char-dropdown-delete"
+              title="Delete character"
+              @click.stop="promptDelete(c.id, c.name)"
+            >
+              &times;
+            </button>
+          </div>
           <div v-if="otherCharacters.length === 0" class="char-dropdown-empty">
             No other characters
           </div>
           <button class="char-dropdown-item char-dropdown-create" @click="openCreationWizard">
             + New Character
           </button>
+          <button class="char-dropdown-item char-dropdown-delete-current" @click="promptDeleteCurrent">
+            Delete Current Character
+          </button>
+        </div>
+      </Transition>
+
+      <!-- Delete confirmation modal -->
+      <Transition name="dropdown-fade">
+        <div v-if="deleteTarget" class="char-delete-overlay" @click.self="cancelDelete">
+          <div class="char-delete-modal">
+            <div class="char-delete-title">Delete Character</div>
+            <p class="char-delete-warning">
+              This will <strong>permanently</strong> delete
+              <span class="char-delete-name">{{ deleteTarget.name }}</span>
+              and all associated data. This cannot be undone.
+            </p>
+            <label class="char-delete-label">
+              Type the character's full name to confirm:
+            </label>
+            <input
+              v-model="deleteConfirmInput"
+              class="char-delete-input"
+              type="text"
+              :placeholder="deleteTarget.name"
+              spellcheck="false"
+              autocomplete="off"
+            />
+            <div class="char-delete-actions">
+              <button class="char-delete-cancel" @click="cancelDelete">Cancel</button>
+              <button
+                class="char-delete-confirm"
+                :disabled="!deleteConfirmValid"
+                @click="confirmDelete"
+              >
+                Delete Forever
+              </button>
+            </div>
+          </div>
         </div>
       </Transition>
 
@@ -782,6 +861,186 @@ function close() {
 
 .char-dropdown-create:hover {
   color: var(--color-gold);
+}
+
+/* Dropdown row with delete button */
+.char-dropdown-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.char-dropdown-row .char-dropdown-item {
+  flex: 1;
+  min-width: 0;
+}
+
+.char-dropdown-delete {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--color-crimson-light, #b33);
+  border-radius: var(--radius-sm);
+  opacity: 0;
+  transition: all var(--transition-fast);
+}
+
+.char-dropdown-row:hover .char-dropdown-delete {
+  opacity: 0.7;
+}
+
+.char-dropdown-delete:hover {
+  opacity: 1 !important;
+  background: rgba(139, 26, 26, 0.2);
+  color: #e44;
+}
+
+/* Delete current character button */
+.char-dropdown-delete-current {
+  border-top: 1px solid var(--color-border-dim);
+  margin-top: 2px;
+  color: var(--color-crimson-light, #b33);
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  opacity: 0.7;
+}
+
+.char-dropdown-delete-current:hover {
+  opacity: 1;
+  color: #e44;
+  background: rgba(139, 26, 26, 0.15);
+}
+
+/* Delete confirmation modal */
+.char-delete-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.char-delete-modal {
+  background: var(--color-surface-dark);
+  border: 1px solid var(--color-crimson-light, #b33);
+  border-radius: var(--radius-md);
+  padding: var(--space-md) var(--space-lg);
+  max-width: 380px;
+  width: 90%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+.char-delete-title {
+  font-family: var(--font-display);
+  font-size: var(--font-size-md);
+  color: var(--color-crimson-light, #b33);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.char-delete-warning {
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-dim);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.char-delete-name {
+  color: var(--color-gold);
+  font-family: var(--font-display);
+}
+
+.char-delete-label {
+  font-family: var(--font-body);
+  font-size: 10px;
+  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
+}
+
+.char-delete-input {
+  width: 100%;
+  padding: 6px 10px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: var(--font-size-sm);
+  letter-spacing: 0.06em;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.char-delete-input:focus {
+  border-color: var(--color-crimson-light, #b33);
+}
+
+.char-delete-input::placeholder {
+  color: var(--color-text-muted);
+  opacity: 0.5;
+}
+
+.char-delete-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-top: var(--space-xs);
+}
+
+.char-delete-cancel {
+  padding: 5px 14px;
+  background: var(--color-surface-hover);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-dim);
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.char-delete-cancel:hover {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.char-delete-confirm {
+  padding: 5px 14px;
+  background: rgba(139, 26, 26, 0.3);
+  border: 1px solid var(--color-crimson-light, #b33);
+  border-radius: var(--radius-sm);
+  color: var(--color-crimson-light, #b33);
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.char-delete-confirm:hover:not(:disabled) {
+  background: rgba(139, 26, 26, 0.5);
+  color: #e44;
+}
+
+.char-delete-confirm:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
 /* Dropdown transition */
