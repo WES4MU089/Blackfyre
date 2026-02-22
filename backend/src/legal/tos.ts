@@ -3,7 +3,7 @@
  * Update TOS_VERSION when content changes to trigger re-acceptance.
  */
 
-export const TOS_VERSION = '1.0';
+export const TOS_VERSION = '1.1';
 export const TOS_LAST_UPDATED = '2026-02-22';
 
 export const TOS_CONTENT = `TERMS OF SERVICE
@@ -54,9 +54,13 @@ c) You represent that any content you submit does not infringe upon the intellec
 
 7. INTELLECTUAL PROPERTY
 
-a) The Service, including its software, design, graphics, game mechanics, and documentation, is the property of Dragon's Dominion and is protected by applicable intellectual property laws.
-b) "Dragon's Dominion" and "Blackfyre" are our service marks. You may not use these marks without our prior written consent.
-c) Second Life is a trademark of Linden Research, Inc. We are not affiliated with, endorsed by, or sponsored by Linden Research, Inc.
+a) Dragon's Dominion is a fan-made roleplay project inspired by the literary works of George R.R. Martin, including "A Song of Ice and Fire" and related materials. All elements from these works — including but not limited to character names, house names, locations, lore, and world-building concepts — are the intellectual property of George R.R. Martin and/or their respective rights holders. We claim no ownership of these elements.
+b) This Service is not affiliated with, endorsed by, licensed by, or in any way officially connected with George R.R. Martin, his publishers, HBO, Warner Bros. Discovery, or any of their subsidiaries or affiliates.
+c) The Service is operated as a non-commercial, fan-created roleplay experience. No profit is derived from the use of George R.R. Martin's intellectual property.
+d) The original software, design, graphics, game mechanics, and documentation created specifically for Dragon's Dominion are the property of the Dragon's Dominion project team and are protected by applicable intellectual property laws.
+e) "Dragon's Dominion" and "Blackfyre" (as used in reference to this Service) are our service marks. You may not use these marks without our prior written consent.
+f) Second Life is a trademark of Linden Research, Inc. We are not affiliated with, endorsed by, or sponsored by Linden Research, Inc.
+g) Discord is a trademark of Discord, Inc. We are not affiliated with, endorsed by, or sponsored by Discord, Inc.
 
 8. ACCOUNT SUSPENSION AND TERMINATION
 
@@ -77,22 +81,30 @@ a) We reserve the right to modify these Terms at any time. Updated Terms will be
 b) When we make material changes to these Terms, you will be required to review and accept the updated Terms before continuing to use the Service.
 c) Your continued use of the Service after accepting updated Terms constitutes your agreement to be bound by the revised Terms.
 
-11. DISCLAIMER OF WARRANTIES
+11. SECURITY PRACTICES
+
+a) All official client builds are digitally signed using a trusted Certificate Authority (CA) code signing certificate. Users should verify the digital signature before installation to confirm the software has not been tampered with.
+b) The client application does not contain telemetry, analytics, tracking software, or any form of automated data collection from your device.
+c) The client communicates exclusively with our game server via encrypted connections. No data is transmitted to any third-party services.
+d) We encourage users to download the client only from our official GitHub releases page or other distribution channels designated by the administration team.
+e) The client source code may be made available for community review at the discretion of the project team.
+
+12. DISCLAIMER OF WARRANTIES
 
 THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. WE DO NOT WARRANT THAT THE SERVICE WILL BE UNINTERRUPTED, ERROR-FREE, SECURE, OR FREE OF VIRUSES OR OTHER HARMFUL COMPONENTS.
 
-12. LIMITATION OF LIABILITY
+13. LIMITATION OF LIABILITY
 
 TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL DRAGON'S DOMINION, ITS OPERATORS, CONTRIBUTORS, OR AFFILIATES BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO LOSS OF DATA, LOSS OF VIRTUAL ASSETS, OR INTERRUPTION OF SERVICE, ARISING OUT OF OR IN CONNECTION WITH YOUR USE OF THE SERVICE, WHETHER BASED ON WARRANTY, CONTRACT, TORT, OR ANY OTHER LEGAL THEORY.
 
-13. INDEMNIFICATION
+14. INDEMNIFICATION
 
 You agree to indemnify, defend, and hold harmless Dragon's Dominion and its operators, contributors, and affiliates from and against any claims, liabilities, damages, losses, and expenses arising out of or in any way connected with: (a) your use of the Service; (b) your violation of these Terms; or (c) your violation of any rights of a third party.
 
-14. SEVERABILITY
+15. SEVERABILITY
 
 If any provision of these Terms is found to be unenforceable or invalid, that provision shall be limited or eliminated to the minimum extent necessary so that the remaining provisions of these Terms shall remain in full force and effect.
 
-15. CONTACT
+16. CONTACT
 
 If you have any questions about these Terms, please contact us through our official Discord server or at the communication channels provided within the Service.`;

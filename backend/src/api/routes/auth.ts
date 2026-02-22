@@ -22,7 +22,7 @@ authRouter.get('/discord', (_req: Request, res: Response) => {
     client_id: clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
-    scope: 'identify email',
+    scope: 'identify',
     state,
   });
 
@@ -76,7 +76,6 @@ authRouter.get('/discord/callback', async (req: Request, res: Response) => {
       id: string;
       username: string;
       discriminator?: string;
-      email?: string;
       avatar?: string;
     };
 
@@ -89,12 +88,11 @@ authRouter.get('/discord/callback', async (req: Request, res: Response) => {
     if (!player) {
       // Create new player
       const id = await db.insert(
-        `INSERT INTO players (discord_id, discord_username, discord_email, sl_name)
-         VALUES (?, ?, ?, ?)`,
+        `INSERT INTO players (discord_id, discord_username, sl_name)
+         VALUES (?, ?, ?)`,
         [
           discordUser.id,
           discordUser.username,
-          discordUser.email || null,
           discordUser.username,
         ]
       );
@@ -105,12 +103,10 @@ authRouter.get('/discord/callback', async (req: Request, res: Response) => {
       await db.execute(
         `UPDATE players SET
           discord_username = ?,
-          discord_email = ?,
           last_seen = NOW()
         WHERE id = ?`,
         [
           discordUser.username,
-          discordUser.email || null,
           player.id,
         ]
       );
@@ -150,14 +146,13 @@ authRouter.get('/me', async (req: Request, res: Response) => {
     id: number;
     discord_id: string;
     discord_username: string;
-    discord_email: string | null;
     is_banned: boolean;
     created_at: string;
     last_seen: string;
     role_id: number | null;
     is_super_admin: boolean;
   }>(
-    `SELECT id, discord_id, discord_username, discord_email, is_banned, created_at, last_seen,
+    `SELECT id, discord_id, discord_username, is_banned, created_at, last_seen,
             role_id, is_super_admin
      FROM players WHERE id = ? AND is_active = 1`,
     [payload.userId]

@@ -3,7 +3,7 @@
  * Update PRIVACY_VERSION when content changes to trigger re-acceptance.
  */
 
-export const PRIVACY_VERSION = '1.0';
+export const PRIVACY_VERSION = '1.1';
 export const PRIVACY_LAST_UPDATED = '2026-02-22';
 
 export const PRIVACY_CONTENT = `PRIVACY POLICY
@@ -16,7 +16,7 @@ Dragon's Dominion ("we," "us," or "our") is committed to protecting your privacy
 
 We collect only the information necessary to provide and operate the Service:
 
-a) Discord Account Data: When you authenticate via Discord OAuth, we receive and store your Discord user ID, username, and email address. This information is used solely for account identification and authentication.
+a) Discord Account Data: When you authenticate via Discord OAuth, we receive and store your Discord user ID and username. This information is used solely for account identification and authentication. We do not request or store your Discord email address.
 
 b) Second Life Avatar Data: If you link your Second Life account, we store your avatar UUID and display name to enable in-game integration between the HUD overlay and the Second Life environment.
 
@@ -24,9 +24,7 @@ c) Character and Game Data: Information you provide while using the Service, inc
 
 d) Chat Logs: All in-character (IC) and out-of-character (OOC) chat messages sent through the Service are logged and stored on our servers. Chat logs are retained for the purpose of moderation, dispute resolution, and community safety. Authorized administrators and staff members may review chat logs when investigating reported issues.
 
-e) IP Addresses: Your IP address is recorded when you connect to the Service. This data is used for security purposes, abuse prevention, and legal compliance.
-
-f) Authentication Tokens: We issue JSON Web Tokens (JWT) for session management. These tokens are stored locally on your device and are used to authenticate your requests to our server.
+e) Authentication Tokens: We issue JSON Web Tokens (JWT) for session management. These tokens are stored locally on your device and are used to authenticate your requests to our server.
 
 2. INFORMATION WE DO NOT COLLECT
 
@@ -76,13 +74,11 @@ c) While we take reasonable measures to protect your data, no method of electron
 
 6. DATA RETENTION
 
-a) Account data (Discord ID, username, email) is retained for as long as your account remains active.
+a) Account data (Discord ID, username) is retained for as long as your account remains active.
 
 b) Character and game data is retained for as long as your account remains active.
 
 c) Chat logs are retained for moderation purposes. We may retain chat logs for a reasonable period after account closure to address any pending or potential moderation matters.
-
-d) IP address logs are retained for a reasonable period for security purposes.
 
 7. YOUR RIGHTS
 

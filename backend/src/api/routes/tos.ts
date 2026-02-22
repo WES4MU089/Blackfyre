@@ -66,13 +66,11 @@ tosRouter.post('/accept', requireAuth(), async (req: Request, res: Response) => 
   }
 
   try {
-    const ip = req.headers['x-forwarded-for'] as string || req.socket.remoteAddress || null;
-
     await db.execute(
-      `INSERT INTO tos_acceptances (player_id, tos_version, privacy_version, ip_address)
-       VALUES (?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE accepted_at = NOW(), ip_address = VALUES(ip_address)`,
-      [req.player!.id, tosVersion, privacyVersion, ip]
+      `INSERT INTO tos_acceptances (player_id, tos_version, privacy_version)
+       VALUES (?, ?, ?)
+       ON DUPLICATE KEY UPDATE accepted_at = NOW()`,
+      [req.player!.id, tosVersion, privacyVersion]
     );
 
     logger.info(`Player ${req.player!.id} accepted TOS v${tosVersion} / Privacy v${privacyVersion}`);
