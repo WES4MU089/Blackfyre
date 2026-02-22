@@ -105,6 +105,7 @@ export const useLauncherStore = defineStore('launcher', () => {
       })
       if (!res.ok) {
         tosAccepted.value = false
+        tosChecked.value = true
         return
       }
       const data = await res.json()
