@@ -138,6 +138,38 @@ const router = createRouter({
       meta: { requiresAuth: true, requiresSuperAdmin: true, permission: 'system.database_access' },
     },
 
+    // --- Logs (staff) ---
+    {
+      path: '/logs/combat',
+      name: 'combat-log',
+      component: () => import('@/views/logs/CombatLogIndex.vue'),
+      meta: { requiresAuth: true, requiresSuperAdmin: true },
+    },
+    {
+      path: '/logs/combat/duels/:duelId',
+      name: 'duel-detail',
+      component: () => import('@/views/logs/DuelDetail.vue'),
+      meta: { requiresAuth: true, requiresSuperAdmin: true },
+    },
+    {
+      path: '/logs/combat/:sessionId',
+      name: 'combat-session-detail',
+      component: () => import('@/views/logs/CombatSessionDetail.vue'),
+      meta: { requiresAuth: true, requiresSuperAdmin: true },
+    },
+    {
+      path: '/logs/chat',
+      name: 'chat-log',
+      component: () => import('@/views/logs/ChatLogIndex.vue'),
+      meta: { requiresAuth: true, requiresSuperAdmin: true },
+    },
+    {
+      path: '/logs/chat/:date',
+      name: 'chat-log-day',
+      component: () => import('@/views/logs/ChatLogDay.vue'),
+      meta: { requiresAuth: true, requiresSuperAdmin: true },
+    },
+
     // Catch-all
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],

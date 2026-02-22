@@ -21,12 +21,31 @@ const auth = useAuthStore()
       >Family Trees</router-link>
     </div>
 
+    <!-- Logs Section -->
+    <div v-if="auth.isSuperAdmin || auth.hasPermission('system.view_audit_log') || auth.hasPermission('system.view_combat_log') || auth.hasPermission('system.view_chat_log')" class="sidebar-section">
+      <div class="sidebar-heading">Logs</div>
+      <router-link
+        v-if="auth.isSuperAdmin || auth.hasPermission('system.view_audit_log')"
+        to="/sysadmin/audit-log"
+        class="sidebar-link"
+      >Audit Log</router-link>
+      <router-link
+        v-if="auth.isSuperAdmin || auth.hasPermission('system.view_combat_log')"
+        to="/logs/combat"
+        class="sidebar-link"
+      >Combat Log</router-link>
+      <router-link
+        v-if="auth.isSuperAdmin || auth.hasPermission('system.view_chat_log')"
+        to="/logs/chat"
+        class="sidebar-link"
+      >Chat Log</router-link>
+    </div>
+
     <!-- Sysadmin Section -->
     <div v-if="auth.isSuperAdmin" class="sidebar-section">
       <div class="sidebar-heading">System Admin</div>
       <router-link to="/sysadmin/roles" class="sidebar-link">Roles</router-link>
       <router-link to="/sysadmin/players" class="sidebar-link">Players</router-link>
-      <router-link to="/sysadmin/audit-log" class="sidebar-link">Audit Log</router-link>
       <router-link v-if="auth.hasPermission('system.database_access')" to="/sysadmin/database" class="sidebar-link">Schema</router-link>
       <router-link v-if="auth.hasPermission('system.database_access')" to="/sysadmin/database/migrations" class="sidebar-link">Migrations</router-link>
       <router-link v-if="auth.hasPermission('system.database_access')" to="/sysadmin/database/query" class="sidebar-link">Query Console</router-link>
