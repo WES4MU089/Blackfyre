@@ -127,7 +127,7 @@ gauntletRouter.post(
     try {
       const data = createMapSchema.parse(req.body);
       const imagePath = req.file
-        ? `gauntlet/maps/${req.file.filename}`
+        ? `uploads/gauntlet/maps/${req.file.filename}`
         : null;
 
       const id = await db.insert(
@@ -197,11 +197,11 @@ gauntletRouter.post(
 
       // Delete old file if exists
       if (map.base_image_path) {
-        const oldPath = join(uploadsBase, '..', map.base_image_path);
+        const oldPath = join(uploadsBase, '../..',map.base_image_path);
         try { unlinkSync(oldPath); } catch { /* file may not exist */ }
       }
 
-      const newPath = `gauntlet/maps/${req.file.filename}`;
+      const newPath = `uploads/gauntlet/maps/${req.file.filename}`;
       await db.execute(
         `UPDATE gauntlet_maps SET base_image_path = ? WHERE id = ?`,
         [newPath, map.id]
@@ -240,7 +240,7 @@ gauntletRouter.delete(
       ].filter(Boolean) as string[];
 
       for (const filePath of filesToDelete) {
-        try { unlinkSync(join(uploadsBase, '..', filePath)); } catch { /* ignore */ }
+        try { unlinkSync(join(uploadsBase, '../..',filePath)); } catch { /* ignore */ }
       }
 
       // CASCADE will delete terrain_types and layers
@@ -399,11 +399,11 @@ gauntletRouter.post(
         [mapId, layerType]
       );
       if (existing) {
-        try { unlinkSync(join(uploadsBase, '..', existing.image_path)); } catch { /* ignore */ }
+        try { unlinkSync(join(uploadsBase, '../..',existing.image_path)); } catch { /* ignore */ }
         await db.execute(`DELETE FROM gauntlet_map_layers WHERE id = ?`, [existing.id]);
       }
 
-      const imagePath = `gauntlet/layers/${req.file.filename}`;
+      const imagePath = `uploads/gauntlet/layers/${req.file.filename}`;
       const id = await db.insert(
         `INSERT INTO gauntlet_map_layers (map_id, layer_type, image_path) VALUES (?, ?, ?)`,
         [mapId, layerType, imagePath]
@@ -430,7 +430,7 @@ gauntletRouter.delete(
       );
       if (!layer) return res.status(404).json({ error: 'Layer not found' });
 
-      try { unlinkSync(join(uploadsBase, '..', layer.image_path)); } catch { /* ignore */ }
+      try { unlinkSync(join(uploadsBase, '../..',layer.image_path)); } catch { /* ignore */ }
       await db.execute(`DELETE FROM gauntlet_map_layers WHERE id = ?`, [layer.id]);
       res.json({ success: true });
     } catch (error) {
