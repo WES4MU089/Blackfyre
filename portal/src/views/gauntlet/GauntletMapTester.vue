@@ -410,8 +410,13 @@ function onMouseUp(e: MouseEvent) {
         unitMoving.value = true
       }
     } else {
-      // No grid — just teleport
-      unitPos.value = { x: world.x, y: world.y }
+      // No grid — animate straight line to destination
+      unitPath.value = [
+        { gx: 0, gy: 0, worldX: unitPos.value.x, worldY: unitPos.value.y },
+        { gx: 0, gy: 0, worldX: world.x, worldY: world.y },
+      ]
+      pathIndex = 1
+      unitMoving.value = true
     }
   }
 }
