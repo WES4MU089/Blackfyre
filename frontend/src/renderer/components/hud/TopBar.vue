@@ -46,11 +46,12 @@ const leftSystems: SystemTab[] = [
   { id: 'combat', label: 'Combat', icon: combatIcon, tooltip: 'Combat' },
   { id: 'inventory', label: 'Inventory', icon: inventoryIcon, tooltip: 'Inventory' },
   { id: 'retainers', label: 'Retainers', icon: combatIcon, tooltip: 'Retainer Management' },
+  { id: 'social', label: 'Social', icon: '', tooltip: 'Social Viewer' },
 ]
 
 const rightSystems: SystemTab[] = [
   { id: 'holdings', label: 'Holdings', icon: holdingsIcon, tooltip: 'Holdings & Land' },
-  { id: 'social', label: 'Social', icon: worldIcon, tooltip: 'Social Viewer' },
+  { id: 'world', label: 'World', icon: worldIcon, tooltip: 'World Map' },
   { id: 'wiki', label: 'Codex', icon: wikiIcon, tooltip: 'Codex' },
   { id: 'settings', label: 'Settings', icon: settingsIcon, tooltip: 'Settings' },
 ]
@@ -64,12 +65,18 @@ const rightSystems: SystemTab[] = [
         v-for="sys in leftSystems"
         :key="sys.id"
         class="system-btn"
-        :class="{ active: hudStore.isPanelOpen(sys.id) }"
+        :class="{ active: sys.id === 'social' ? socialStore.isOpen : hudStore.isPanelOpen(sys.id) }"
         :title="sys.tooltip"
-        @click="hudStore.toggleSystemPanel(sys.id)"
+        @click="sys.id === 'social' ? toggleSocialPanel() : hudStore.toggleSystemPanel(sys.id)"
       >
         <div class="system-icon">
-          <img :src="sys.icon" :alt="sys.label" class="system-icon-img" />
+          <svg v-if="sys.id === 'social'" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          <img v-else :src="sys.icon" :alt="sys.label" class="system-icon-img" />
         </div>
         <span class="system-label">{{ sys.label }}</span>
       </button>
@@ -80,13 +87,13 @@ const rightSystems: SystemTab[] = [
       <div class="title-ornament-line left" />
       <div class="topbar-title">
         <div class="title-dragon left">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" opacity="0.7">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" opacity="0.7">
             <path d="M9 2C6 2 4 4.5 4 7c0 1.5.5 2.8 1.3 3.8L2 14l3 1-1 3 3-1 1 3 3.7-3.3c1 .8 2.3 1.3 3.8 1.3 2.5 0 5-2 5-5 0-1-.3-2-.8-2.8L22 6l-4.2 1.8C16.5 5.5 14.5 4 12 4c-1 0-2 .3-2.8.8L9 2z"/>
           </svg>
         </div>
         <h1 class="title-text">Dragon's Dominion</h1>
         <div class="title-dragon right">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" opacity="0.7" style="transform: scaleX(-1)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" opacity="0.7" style="transform: scaleX(-1)">
             <path d="M9 2C6 2 4 4.5 4 7c0 1.5.5 2.8 1.3 3.8L2 14l3 1-1 3 3-1 1 3 3.7-3.3c1 .8 2.3 1.3 3.8 1.3 2.5 0 5-2 5-5 0-1-.3-2-.8-2.8L22 6l-4.2 1.8C16.5 5.5 14.5 4 12 4c-1 0-2 .3-2.8.8L9 2z"/>
           </svg>
         </div>
@@ -100,9 +107,9 @@ const rightSystems: SystemTab[] = [
         v-for="sys in rightSystems"
         :key="sys.id"
         class="system-btn"
-        :class="{ active: sys.id === 'social' ? socialStore.isOpen : hudStore.isPanelOpen(sys.id) }"
+        :class="{ active: hudStore.isPanelOpen(sys.id) }"
         :title="sys.tooltip"
-        @click="sys.id === 'social' ? toggleSocialPanel() : hudStore.toggleSystemPanel(sys.id)"
+        @click="hudStore.toggleSystemPanel(sys.id)"
       >
         <div class="system-icon">
           <img :src="sys.icon" :alt="sys.label" class="system-icon-img" />
@@ -283,6 +290,21 @@ const rightSystems: SystemTab[] = [
   line-height: 1;
 }
 
+/* Social button uses inline SVG (people icon) */
+.system-btn .system-icon svg {
+  color: var(--color-text-dim);
+  transition: all var(--transition-fast);
+}
+
+.system-btn:hover .system-icon svg {
+  color: var(--color-gold);
+}
+
+.system-btn.active .system-icon svg {
+  color: var(--color-gold);
+  filter: drop-shadow(0 0 3px rgba(201, 168, 76, 0.4));
+}
+
 /* Staff button uses inline SVG instead of img */
 .staff-btn .system-icon svg {
   color: var(--color-text-dim);
@@ -302,13 +324,13 @@ const rightSystems: SystemTab[] = [
 .topbar-title-group {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
   flex-shrink: 0;
-  padding: 0 var(--space-md);
+  padding: 0 var(--space-sm);
 }
 
 .title-ornament-line {
-  width: 60px;
+  width: 36px;
   height: 1px;
   background: linear-gradient(90deg, transparent, var(--color-gold-dim));
   flex-shrink: 0;
@@ -321,18 +343,18 @@ const rightSystems: SystemTab[] = [
 .topbar-title {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
   flex-shrink: 0;
 }
 
 .title-text {
   font-family: var(--font-display);
-  font-size: var(--font-size-xl);
+  font-size: var(--font-size-md);
   color: var(--color-gold);
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   white-space: nowrap;
-  text-shadow: 0 0 12px rgba(201, 168, 76, 0.3);
+  text-shadow: 0 0 10px rgba(201, 168, 76, 0.3);
   font-weight: 400;
   line-height: 1;
 }
