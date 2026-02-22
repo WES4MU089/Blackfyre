@@ -1,0 +1,98 @@
+:root {
+  /* === Dark Medieval Fantasy Palette (shared with HUD) === */
+
+  /* Primary - Aged Gold */
+  --color-gold: #c9a84c;
+  --color-gold-light: #e0c878;
+  --color-gold-dark: #9a7b2e;
+  --color-gold-dim: rgba(201, 168, 76, 0.3);
+  --color-gold-glow: rgba(201, 168, 76, 0.15);
+  --color-gold-ember: #b8942f;
+
+  /* Secondary - Dark Crimson / Blood */
+  --color-crimson: #8b1a1a;
+  --color-crimson-light: #b22222;
+  --color-crimson-dark: #5c1010;
+  --color-blood: #6b0f0f;
+
+  /* Accent - Dark Leather */
+  --color-leather: #2a1a0a;
+  --color-leather-light: #3d2815;
+
+  /* Iron / Steel */
+  --color-iron: #5a5e6b;
+  --color-iron-light: #7a7e8b;
+
+  /* Text Colors */
+  --color-text: #e8dcc8;
+  --color-text-dim: #a89b85;
+  --color-text-bright: #fff8ee;
+  --color-text-muted: #6b6051;
+
+  /* Surface / Panel Colors - SOLID for portal (not transparent like HUD) */
+  --color-surface: #0c0a10;
+  --color-surface-light: #14121a;
+  --color-surface-solid: #08060c;
+  --color-surface-hover: #1a1820;
+  --color-surface-dark: #060408;
+  --color-surface-card: #100e16;
+  --color-surface-input: #0e0c14;
+
+  /* Borders */
+  --color-border: rgba(201, 168, 76, 0.22);
+  --color-border-bright: rgba(201, 168, 76, 0.45);
+  --color-border-dim: rgba(201, 168, 76, 0.1);
+  --color-border-ornate: rgba(201, 168, 76, 0.35);
+
+  /* Status Colors */
+  --color-success: #2d8a4e;
+  --color-warning: #d4a932;
+  --color-danger: #c42b2b;
+  --color-info: #3a7bd5;
+
+  /* Discord */
+  --color-discord: #5865F2;
+  --color-discord-hover: #4752c4;
+
+  /* === Typography === */
+  --font-display: 'Cinzel', 'Times New Roman', serif;
+  --font-body: 'Rajdhani', 'Inter', 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Consolas', monospace;
+
+  --font-size-xs: 0.7rem;
+  --font-size-sm: 0.8rem;
+  --font-size-md: 0.95rem;
+  --font-size-lg: 1.2rem;
+  --font-size-xl: 1.6rem;
+  --font-size-2xl: 2.2rem;
+  --font-size-3xl: 3rem;
+
+  /* === Spacing === */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+
+  /* === Effects === */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.6);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.7);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.8);
+  --shadow-gold: 0 0 12px rgba(201, 168, 76, 0.2);
+  --shadow-glow: 0 0 20px rgba(201, 168, 76, 0.15);
+
+  --transition-fast: 150ms ease;
+  --transition-normal: 300ms ease;
+
+  /* === Border Radius === */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --radius-full: 9999px;
+
+  /* === Portal Layout === */
+  --nav-height: 56px;
+  --sidebar-width: 240px;
+  --content-max-width: 1200px;
+}

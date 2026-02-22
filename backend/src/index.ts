@@ -3,6 +3,9 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { createServer } from 'http';
 import { Server as SocketServer } from 'socket.io';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { existsSync } from 'fs';
 
 import { config } from './config/index.js';
 import { db } from './db/connection.js';
@@ -11,6 +14,8 @@ import { apiRouter } from './api/index.js';
 import { setupWebSocket } from './websocket/index.js';
 import { loadXpConfig } from './xp/xp-config.js';
 import { startAilmentTicker } from './utils/ailment-ticker.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const app: Express = express();
 const httpServer = createServer(app);
@@ -55,6 +60,17 @@ app.get('/health', (_req: Request, res: Response) => {
 
 // API routes
 app.use('/api', apiRouter);
+
+// Web Portal — serve Vue SPA from portal/dist/
+const portalDistPath = join(__dirname, '../../portal/dist');
+if (existsSync(portalDistPath)) {
+  app.use('/portal', express.static(portalDistPath));
+  // SPA fallback — serve index.html for all /portal/* routes that aren't static files
+  app.get('/portal/*', (_req: Request, res: Response) => {
+    res.sendFile(join(portalDistPath, 'index.html'));
+  });
+  logger.info(`🌐 Web Portal serving from ${portalDistPath}`);
+}
 
 // 404 handler
 app.use((_req: Request, res: Response) => {

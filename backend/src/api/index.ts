@@ -28,6 +28,8 @@ import { staffFactionsRouter } from './routes/staff-factions.js';
 import { familyTreeRouter } from './routes/family-tree.js';
 import { staffFamilyTreeRouter } from './routes/staff-family-tree.js';
 import { staffAuditLogRouter } from './routes/staff-audit-log.js';
+import { codexRouter } from './routes/codex.js';
+import { sysadminRouter } from './routes/sysadmin.js';
 
 export const apiRouter = Router();
 
@@ -66,6 +68,8 @@ apiRouter.get('/', (_req: Request, res: Response) => {
       '/api/staff/factions',
       '/api/staff/family-tree',
       '/api/staff/audit-log',
+      '/api/codex',
+      '/api/sysadmin',
     ],
   });
 });
@@ -100,3 +104,5 @@ apiRouter.use('/staff/organizations', staffOrganizationsRouter);
 apiRouter.use('/staff/factions', staffFactionsRouter);
 apiRouter.use('/staff/family-tree', staffFamilyTreeRouter);
 apiRouter.use('/staff/audit-log', staffAuditLogRouter);
+apiRouter.use('/codex', codexRouter);
+apiRouter.use('/sysadmin', sysadminRouter);
