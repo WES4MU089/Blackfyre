@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useApi } from '@/composables/useApi'
 import PageHeader from '@/components/layout/PageHeader.vue'
@@ -333,6 +333,7 @@ function openTerrainForm(terrain?: TerrainType) {
   }
   terrainError.value = ''
   showTerrainForm.value = true
+  nextTick(() => loadEyedropperPreview())
 }
 
 async function saveTerrain() {
