@@ -94,6 +94,9 @@ const visibilityRadius = ref(75)
 const influenceRadius = ref(30)
 const showGrid = ref(false)
 
+// ETA tracking
+const unitEta = ref(0) // seconds remaining
+
 // Debug / passability stats
 const passApplied = ref(false)
 const passStats = ref({ land: 0, naval: 0, dragon: 0, total: 0 })
@@ -260,12 +263,16 @@ function renderLoop(timestamp: number) {
 }
 
 function updateUnit(dt: number) {
-  if (!unitMoving.value || unitPath.value.length === 0) return
+  if (!unitMoving.value || unitPath.value.length === 0) {
+    unitEta.value = 0
+    return
+  }
 
   const path = unitPath.value
   if (pathIndex >= path.length) {
     unitMoving.value = false
     unitPath.value = []
+    unitEta.value = 0
     return
   }
 
@@ -275,7 +282,8 @@ function updateUnit(dt: number) {
   const dist = Math.sqrt(dx * dx + dy * dy)
 
   // Get terrain cost at current position
-  const [gx, gy] = worldToGrid(unitPos.value.x, unitPos.value.y, mapData.value!.grid_size)
+  const gs = mapData.value!.grid_size
+  const [gx, gy] = worldToGrid(unitPos.value.x, unitPos.value.y, gs)
   const cell = grid[gy]?.[gx]
   const terrainCost = cell?.cost ?? 1
 
@@ -289,10 +297,33 @@ function updateUnit(dt: number) {
     if (pathIndex >= path.length) {
       unitMoving.value = false
       unitPath.value = []
+      unitEta.value = 0
     }
   } else {
     unitPos.value.x += (dx / dist) * step
     unitPos.value.y += (dy / dist) * step
+  }
+
+  // Calculate ETA: time to traverse remaining path segments
+  if (unitMoving.value) {
+    let eta = 0
+    // Current segment: unit → next waypoint
+    const curCost = terrainCost
+    eta += dist / (baseSpeed.value / curCost)
+
+    // Remaining segments: waypoint → waypoint
+    for (let i = pathIndex; i < path.length - 1; i++) {
+      const ax = path[i].worldX
+      const ay = path[i].worldY
+      const bx = path[i + 1].worldX
+      const by = path[i + 1].worldY
+      const segDist = Math.sqrt((bx - ax) ** 2 + (by - ay) ** 2)
+      const [sgx, sgy] = worldToGrid(bx, by, gs)
+      const segCell = grid[sgy]?.[sgx]
+      const segCost = segCell?.cost ?? 1
+      eta += segDist / (baseSpeed.value / segCost)
+    }
+    unitEta.value = eta
   }
 }
 
@@ -620,6 +651,10 @@ onUnmounted(() => window.removeEventListener('resize', onWindowResize))
           <div v-if="unitPath.length > 0" class="info-row">
             <span class="label">Path nodes</span>
             <span class="value">{{ unitPath.length - pathIndex }} remaining</span>
+          </div>
+          <div v-if="unitMoving && unitEta > 0" class="info-row">
+            <span class="label">ETA</span>
+            <span class="value">{{ unitEta >= 60 ? Math.floor(unitEta / 60) + 'm ' + Math.floor(unitEta % 60) + 's' : unitEta.toFixed(1) + 's' }}</span>
           </div>
         </div>
 
