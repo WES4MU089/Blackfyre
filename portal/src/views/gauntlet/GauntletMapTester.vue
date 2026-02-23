@@ -551,7 +551,7 @@ function onMouseMove(e: MouseEvent) {
           })
 
           hoverTerrain.value = match
-            ? { name: match.name, cost: match.movement_cost, passable: match.is_passable, passLand: cell.passLand, passNaval: cell.passNaval, passDragon: cell.passDragon }
+            ? { name: match.name, cost: Number(match.movement_cost), passable: match.is_passable, passLand: cell.passLand, passNaval: cell.passNaval, passDragon: cell.passDragon }
             : { name: 'Unknown', cost: cell.cost, passable: cell.passable, passLand: cell.passLand, passNaval: cell.passNaval, passDragon: cell.passDragon }
         } else {
           hoverTerrain.value = { name: 'No terrain map', cost: cell.cost, passable: cell.passable, passLand: cell.passLand, passNaval: cell.passNaval, passDragon: cell.passDragon }
