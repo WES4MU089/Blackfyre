@@ -99,6 +99,7 @@ async function loadMap() {
     editActive.value = map.value.is_active
     loadEyedropperPreview()
     detectExistingPassability()
+    detectExistingTerrainPalette()
   } catch (e: any) {
     error.value = e.message
   } finally {
@@ -169,83 +170,102 @@ async function uploadLayer(layerType: 'terrain' | 'passability', e: Event) {
   }
 }
 
+/** Load an image element from a source (URL or blob URL) */
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => resolve(img)
+    img.onerror = reject
+    img.src = src
+  })
+}
+
+/** Extract ImageData from an image element */
+function imageToData(img: HTMLImageElement): ImageData {
+  const canvas = document.createElement('canvas')
+  canvas.width = img.naturalWidth
+  canvas.height = img.naturalHeight
+  const ctx = canvas.getContext('2d')!
+  ctx.drawImage(img, 0, 0)
+  return ctx.getImageData(0, 0, canvas.width, canvas.height)
+}
+
+/** Convert numeric RGB key back to #RRGGBB */
+function rgbKeyToHex(key: number): string {
+  const r = (key >> 16) & 0xFF
+  const g = (key >> 8) & 0xFF
+  const b = key & 0xFF
+  return '#' + [r, g, b].map(c => c.toString(16).padStart(2, '0')).join('').toUpperCase()
+}
+
 /**
- * Extract distinct colors from a terrain texture map image file and create
- * new terrain palette entries for any colors not already in the palette.
+ * Extract distinct colors from ImageData and return significant ones.
+ * Uses numeric keys instead of string hex for speed on large images.
  */
+function extractPalette(imageData: ImageData, minPercent = 0.001): string[] {
+  const data = imageData.data
+  const totalPixels = imageData.width * imageData.height
+  const minPixels = Math.max(1, Math.floor(totalPixels * minPercent))
+
+  // Use numeric color keys: r*65536 + g*256 + b (much faster than string concat)
+  const colorCounts = new Map<number, number>()
+  for (let i = 0; i < data.length; i += 4) {
+    const key = (data[i] << 16) | (data[i + 1] << 8) | data[i + 2]
+    colorCounts.set(key, (colorCounts.get(key) ?? 0) + 1)
+  }
+
+  return [...colorCounts.entries()]
+    .filter(([, count]) => count >= minPixels)
+    .sort((a, b) => b[1] - a[1])
+    .map(([key]) => rgbKeyToHex(key))
+}
+
+/**
+ * Detect palette from ImageData and create terrain entries for new colors.
+ */
+async function createTerrainFromPalette(colors: string[]) {
+  const existingColors = new Set(
+    map.value!.terrainTypes.map(t => t.hex_color.toUpperCase())
+  )
+  const newColors = colors.filter(hex => !existingColors.has(hex))
+  paletteDetected.value = newColors
+
+  if (newColors.length === 0) return
+
+  const existingCount = map.value!.terrainTypes.length
+  for (let i = 0; i < newColors.length; i++) {
+    try {
+      const created = await apiFetch<TerrainType>(
+        `/api/gauntlet/maps/${mapId.value}/terrain`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            name: `Terrain ${existingCount + i + 1}`,
+            hex_color: newColors[i],
+            movement_cost: 1.0,
+            is_passable: true,
+            sort_order: existingCount + i,
+          }),
+        }
+      )
+      map.value!.terrainTypes.push(created)
+    } catch {
+      // Skip duplicates or other errors silently
+    }
+  }
+}
+
+/** Auto-detect palette from a newly uploaded file */
 async function autoDetectPalette(file: File) {
   paletteDetecting.value = true
   paletteDetected.value = []
   try {
-    // Load image from file
     const url = URL.createObjectURL(file)
-    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const i = new Image()
-      i.onload = () => resolve(i)
-      i.onerror = reject
-      i.src = url
-    })
-
-    // Draw to offscreen canvas and read pixels
-    const canvas = document.createElement('canvas')
-    canvas.width = img.naturalWidth
-    canvas.height = img.naturalHeight
-    const ctx = canvas.getContext('2d')!
-    ctx.drawImage(img, 0, 0)
+    const img = await loadImage(url)
     URL.revokeObjectURL(url)
-
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-    const data = imageData.data
-
-    // Count pixel occurrences per color (ignore alpha)
-    const colorCounts = new Map<string, number>()
-    for (let i = 0; i < data.length; i += 4) {
-      const hex = '#' + [data[i], data[i + 1], data[i + 2]]
-        .map(c => c.toString(16).padStart(2, '0'))
-        .join('')
-        .toUpperCase()
-      colorCounts.set(hex, (colorCounts.get(hex) ?? 0) + 1)
-    }
-
-    // Filter: only colors with at least 0.1% of total pixels (noise filter)
-    const totalPixels = canvas.width * canvas.height
-    const minPixels = Math.max(1, Math.floor(totalPixels * 0.001))
-    const significantColors = [...colorCounts.entries()]
-      .filter(([, count]) => count >= minPixels)
-      .sort((a, b) => b[1] - a[1]) // Sort by frequency descending
-      .map(([hex]) => hex)
-
-    // Determine which colors are already in the palette (case-insensitive)
-    const existingColors = new Set(
-      map.value!.terrainTypes.map(t => t.hex_color.toUpperCase())
-    )
-    const newColors = significantColors.filter(hex => !existingColors.has(hex))
-    paletteDetected.value = newColors
-
-    if (newColors.length === 0) return
-
-    // Create terrain entries for each new color
-    const existingCount = map.value!.terrainTypes.length
-    for (let i = 0; i < newColors.length; i++) {
-      try {
-        const created = await apiFetch<TerrainType>(
-          `/api/gauntlet/maps/${mapId.value}/terrain`,
-          {
-            method: 'POST',
-            body: JSON.stringify({
-              name: `Terrain ${existingCount + i + 1}`,
-              hex_color: newColors[i],
-              movement_cost: 1.0,
-              is_passable: true,
-              sort_order: existingCount + i,
-            }),
-          }
-        )
-        map.value!.terrainTypes.push(created)
-      } catch {
-        // Skip duplicates or other errors silently
-      }
-    }
+    const imageData = imageToData(img)
+    const colors = extractPalette(imageData)
+    await createTerrainFromPalette(colors)
   } finally {
     paletteDetecting.value = false
   }
@@ -273,6 +293,23 @@ function analyzePassabilityImage(url: string | null) {
 
 function detectExistingPassability() {
   analyzePassabilityImage(passabilityLayerUrl.value)
+}
+
+/** On page load, detect terrain palette from existing terrain layer */
+async function detectExistingTerrainPalette() {
+  if (!terrainLayerUrl.value) return
+  // Skip if terrain types already exist (admin already configured them)
+  if (map.value!.terrainTypes.length > 0) return
+  paletteDetecting.value = true
+  paletteDetected.value = []
+  try {
+    const img = await loadImage(terrainLayerUrl.value)
+    const imageData = imageToData(img)
+    const colors = extractPalette(imageData)
+    await createTerrainFromPalette(colors)
+  } finally {
+    paletteDetecting.value = false
+  }
 }
 
 function loadEyedropperPreview() {
