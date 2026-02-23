@@ -71,8 +71,8 @@ let terrainImage: HTMLImageElement | null = null
 
 // Pathfinding grid
 let grid: GridCell[][] = []
-let gridCols = 0
-let gridRows = 0
+const gridCols = ref(0)
+const gridRows = ref(0)
 
 // Camera
 const camera = ref({ x: 0, y: 0, zoom: 1 })
@@ -93,6 +93,11 @@ const unitRadius = ref(6)
 const visibilityRadius = ref(75)
 const influenceRadius = ref(30)
 const showGrid = ref(false)
+
+// Debug / passability stats
+const passApplied = ref(false)
+const passStats = ref({ land: 0, naval: 0, dragon: 0, total: 0 })
+const pathStatus = ref('')
 
 // Mouse hover info
 const hoverTerrain = ref<{ name: string; cost: number; passable: boolean; passLand: boolean; passNaval: boolean; passDragon: boolean } | null>(null)
@@ -174,15 +179,15 @@ async function initCanvas() {
     }))
 
     grid = buildGrid(imageData, defs, map.width, map.height, map.grid_size)
-    gridRows = grid.length
-    gridCols = grid[0]?.length ?? 0
+    gridRows.value = grid.length
+    gridCols.value = grid[0]?.length ?? 0
   }
 
   // Load passability texture and overlay onto grid
   const passLayer = map.layers.find(l => l.layer_type === 'passability')
   if (passLayer) {
     // If no terrain grid exists yet, build a default one (all cost=1, all passable)
-    if (gridRows === 0 || gridCols === 0) {
+    if (gridRows.value === 0 || gridCols.value === 0) {
       const cols = Math.ceil(map.width / map.grid_size)
       const rows = Math.ceil(map.height / map.grid_size)
       grid = Array.from({ length: rows }, () =>
@@ -190,8 +195,8 @@ async function initCanvas() {
           cost: 1, passable: true, passLand: true, passNaval: true, passDragon: true,
         }))
       )
-      gridRows = rows
-      gridCols = cols
+      gridRows.value = rows
+      gridCols.value = cols
     }
 
     const passImg = await loadImage('/' + passLayer.image_path)
@@ -202,6 +207,20 @@ async function initCanvas() {
     ctx2.drawImage(passImg, 0, 0)
     const passData = ctx2.getImageData(0, 0, offscreen2.width, offscreen2.height)
     applyPassability(grid, passData, map.width, map.height, map.grid_size)
+    passApplied.value = true
+
+    // Count passability stats
+    let land = 0, naval = 0, dragon = 0, total = 0
+    for (let gy = 0; gy < gridRows.value; gy++) {
+      for (let gx = 0; gx < gridCols.value; gx++) {
+        total++
+        if (grid[gy][gx].passLand) land++
+        if (grid[gy][gx].passNaval) naval++
+        if (grid[gy][gx].passDragon) dragon++
+      }
+    }
+    passStats.value = { land, naval, dragon, total }
+    console.log('[Gauntlet] Passability applied:', { land, naval, dragon, total, gridCols: gridCols.value, gridRows: gridRows.value, passImgW: passImg.naturalWidth, passImgH: passImg.naturalHeight, mapW: map.width, mapH: map.height })
   }
 
   // Center camera on map
@@ -428,16 +447,26 @@ function onMouseUp(e: MouseEvent) {
     world.x = Math.max(0, Math.min(mapData.value.width - 1, world.x))
     world.y = Math.max(0, Math.min(mapData.value.height - 1, world.y))
 
-    if (gridCols > 0 && gridRows > 0) {
+    if (gridCols.value > 0 && gridRows.value > 0) {
       const gs = mapData.value.grid_size
       const [sx2, sy2] = worldToGrid(unitPos.value.x, unitPos.value.y, gs)
       const [ex, ey] = worldToGrid(world.x, world.y, gs)
+
+      const startCell = grid[sy2]?.[sx2]
+      const endCell = grid[ey]?.[ex]
+      console.log(`[Gauntlet] Click: unit=${unitType.value} start=(${sx2},${sy2}) end=(${ex},${ey})`, {
+        startPass: startCell ? { land: startCell.passLand, naval: startCell.passNaval, dragon: startCell.passDragon } : 'OOB',
+        endPass: endCell ? { land: endCell.passLand, naval: endCell.passNaval, dragon: endCell.passDragon } : 'OOB',
+      })
 
       const path = findPath(grid, sx2, sy2, ex, ey, gs, unitType.value)
       if (path.length > 0) {
         unitPath.value = path
         pathIndex = 1 // skip first node (current position)
         unitMoving.value = true
+        pathStatus.value = `Path: ${path.length} nodes`
+      } else {
+        pathStatus.value = `No path for ${unitType.value}`
       }
     } else {
       // No grid — animate straight line to destination
@@ -447,6 +476,7 @@ function onMouseUp(e: MouseEvent) {
       ]
       pathIndex = 1
       unitMoving.value = true
+      pathStatus.value = 'Straight line (no grid)'
     }
   }
 }
@@ -673,6 +703,36 @@ onUnmounted(() => window.removeEventListener('resize', onWindowResize))
             </div>
           </div>
           <p v-else class="dim small">No terrain types defined</p>
+        </div>
+
+        <div class="panel-section">
+          <h4 class="gold">Debug</h4>
+          <div class="info-row">
+            <span class="label">Grid</span>
+            <span class="value">{{ gridCols }} x {{ gridRows }}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">Passability</span>
+            <span class="value">{{ passApplied ? 'Applied' : 'None' }}</span>
+          </div>
+          <template v-if="passApplied">
+            <div class="info-row">
+              <span class="label">Land cells</span>
+              <span class="value">{{ passStats.land }} / {{ passStats.total }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Naval cells</span>
+              <span class="value">{{ passStats.naval }} / {{ passStats.total }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Dragon cells</span>
+              <span class="value">{{ passStats.dragon }} / {{ passStats.total }}</span>
+            </div>
+          </template>
+          <div v-if="pathStatus" class="info-row">
+            <span class="label">Last click</span>
+            <span class="value">{{ pathStatus }}</span>
+          </div>
         </div>
       </div>
     </div>
