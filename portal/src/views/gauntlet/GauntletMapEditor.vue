@@ -259,7 +259,6 @@ async function uploadPassabilityLayer(e: Event) {
 function analyzePassabilityImage(url: string | null) {
   if (!url) return
   const img = new Image()
-  img.crossOrigin = 'anonymous'
   img.onload = () => {
     const canvas = document.createElement('canvas')
     canvas.width = img.naturalWidth
@@ -279,9 +278,9 @@ function detectExistingPassability() {
 function loadEyedropperPreview() {
   if (!terrainLayerUrl.value || !eyedropperCanvas.value) return
   const img = new Image()
-  img.crossOrigin = 'anonymous'
   img.onload = () => {
-    const canvas = eyedropperCanvas.value!
+    const canvas = eyedropperCanvas.value
+    if (!canvas) return
     const maxW = 400
     const scale = Math.min(maxW / img.naturalWidth, 1)
     canvas.width = img.naturalWidth * scale
