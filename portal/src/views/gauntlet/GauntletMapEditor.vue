@@ -74,6 +74,7 @@ const terrainError = ref('')
 // Auto-palette detection
 const paletteDetecting = ref(false)
 const paletteDetected = ref<string[]>([])
+const paletteError = ref('')
 
 // Eyedropper canvas
 const eyedropperCanvas = ref<HTMLCanvasElement | null>(null)
@@ -163,7 +164,7 @@ async function uploadLayer(layerType: 'terrain' | 'passability', e: Event) {
 
     if (layerType === 'terrain') {
       loadEyedropperPreview()
-      autoDetectPalette(file)
+      await autoDetectPalette(file)
     }
   } catch (e: any) {
     alert(e.message)
@@ -175,7 +176,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image()
     img.onload = () => resolve(img)
-    img.onerror = reject
+    img.onerror = () => reject(new Error(`Failed to load image: ${src}`))
     img.src = src
   })
 }
@@ -259,6 +260,7 @@ async function createTerrainFromPalette(colors: string[]) {
 async function autoDetectPalette(file: File) {
   paletteDetecting.value = true
   paletteDetected.value = []
+  paletteError.value = ''
   try {
     const url = URL.createObjectURL(file)
     const img = await loadImage(url)
@@ -266,6 +268,9 @@ async function autoDetectPalette(file: File) {
     const imageData = imageToData(img)
     const colors = extractPalette(imageData)
     await createTerrainFromPalette(colors)
+  } catch (e: any) {
+    paletteError.value = `Palette detection failed: ${e.message || e}`
+    console.error('autoDetectPalette error:', e)
   } finally {
     paletteDetecting.value = false
   }
@@ -302,11 +307,15 @@ async function detectExistingTerrainPalette() {
   if (map.value!.terrainTypes.length > 0) return
   paletteDetecting.value = true
   paletteDetected.value = []
+  paletteError.value = ''
   try {
     const img = await loadImage(terrainLayerUrl.value)
     const imageData = imageToData(img)
     const colors = extractPalette(imageData)
     await createTerrainFromPalette(colors)
+  } catch (e: any) {
+    paletteError.value = `Palette detection failed: ${e.message || e}`
+    console.error('detectExistingTerrainPalette error:', e)
   } finally {
     paletteDetecting.value = false
   }
@@ -469,6 +478,9 @@ async function deleteTerrain(terrain: TerrainType) {
           </div>
           <div v-if="paletteDetecting" class="palette-status">
             <span class="dim small">Detecting terrain palette...</span>
+          </div>
+          <div v-else-if="paletteError" class="palette-status">
+            <span class="error small">{{ paletteError }}</span>
           </div>
           <div v-else-if="paletteDetected.length > 0" class="palette-status">
             <span class="dim small">Added {{ paletteDetected.length }} color(s) to terrain palette:</span>
