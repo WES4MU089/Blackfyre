@@ -88,7 +88,7 @@ let lastFrameTime = 0
 
 // Settings
 const unitType = ref<UnitType>('land')
-const baseSpeed = ref(120) // pixels per second
+const baseSpeed = ref(0.0025) // pixels per second (land default)
 const unitRadius = ref(6)
 const visibilityRadius = ref(75)
 const influenceRadius = ref(30)
@@ -718,7 +718,7 @@ onUnmounted(() => window.removeEventListener('resize', onWindowResize))
           </div>
           <div class="setting-row">
             <label>Speed (px/s)</label>
-            <input v-model.number="baseSpeed" type="number" min="10" max="1000" step="10" />
+            <input v-model.number="baseSpeed" type="number" min="0.0001" max="10" step="0.0005" />
           </div>
           <div class="setting-row">
             <label>Visibility</label>
