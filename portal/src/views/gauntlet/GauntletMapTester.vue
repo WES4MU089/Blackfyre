@@ -180,7 +180,20 @@ async function initCanvas() {
 
   // Load passability texture and overlay onto grid
   const passLayer = map.layers.find(l => l.layer_type === 'passability')
-  if (passLayer && gridRows > 0 && gridCols > 0) {
+  if (passLayer) {
+    // If no terrain grid exists yet, build a default one (all cost=1, all passable)
+    if (gridRows === 0 || gridCols === 0) {
+      const cols = Math.ceil(map.width / map.grid_size)
+      const rows = Math.ceil(map.height / map.grid_size)
+      grid = Array.from({ length: rows }, () =>
+        Array.from({ length: cols }, () => ({
+          cost: 1, passable: true, passLand: true, passNaval: true, passDragon: true,
+        }))
+      )
+      gridRows = rows
+      gridCols = cols
+    }
+
     const passImg = await loadImage('/' + passLayer.image_path)
     const offscreen2 = document.createElement('canvas')
     offscreen2.width = passImg.naturalWidth
