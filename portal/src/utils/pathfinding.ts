@@ -8,7 +8,7 @@
  * follows.
  *
  * Passability channels (from passability texture map):
- *   Green channel → Land (all units)
+ *   Green channel → Land + Dragon
  *   Blue  channel → Naval + Dragon
  *   Red   channel → Dragon only
  */
@@ -174,9 +174,9 @@ export function buildGrid(
  * existing terrain grid.  Mutates the grid in-place.
  *
  * Channel rules (pixel must exceed threshold):
- *   Green ≥ threshold & dominant → passLand=true, passNaval=true, passDragon=true
- *   Blue  ≥ threshold & dominant → passNaval=true, passDragon=true
- *   Red   ≥ threshold            → passDragon=true
+ *   Green ≥ threshold & dominant → passLand=true, passDragon=true  (land + dragon)
+ *   Blue  ≥ threshold & dominant → passNaval=true, passDragon=true (naval + dragon)
+ *   Red   ≥ threshold            → passDragon=true                 (dragon only)
  *   All below threshold          → impassable to all
  */
 export function applyPassability(
@@ -205,8 +205,8 @@ export function applyPassability(
       let land = false, naval = false, dragon = false
 
       if (g >= threshold && g >= r && g >= b) {
-        // Green dominant → all units
-        land = true; naval = true; dragon = true
+        // Green dominant → land + dragon (not naval)
+        land = true; dragon = true
       } else if (b >= threshold && b >= r) {
         // Blue dominant → naval + dragon
         naval = true; dragon = true

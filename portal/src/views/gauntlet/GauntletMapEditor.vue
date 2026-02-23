@@ -345,7 +345,7 @@ async function deleteTerrain(terrain: TerrainType) {
           <hr class="divider" />
 
           <h3 class="gold">Passability Texture Map</h3>
-          <p class="dim small">RGB channels define unit access. Red = Dragon, Blue = Naval + Dragon, Green = All units.</p>
+          <p class="dim small">RGB channels define unit access. Red = Dragon, Blue = Naval + Dragon, Green = Land + Dragon.</p>
           <div v-if="passabilityLayerUrl" class="image-preview">
             <img :src="passabilityLayerUrl" alt="Passability texture map" />
           </div>
@@ -356,7 +356,7 @@ async function deleteTerrain(terrain: TerrainType) {
           <div v-if="passChannels" class="channel-stats">
             <div class="channel-row">
               <span class="channel-swatch channel-green" />
-              <span>All Units (Green): <strong>{{ passChannels.green.toLocaleString() }}</strong> pixels</span>
+              <span>Land + Dragon (Green): <strong>{{ passChannels.green.toLocaleString() }}</strong> pixels</span>
             </div>
             <div class="channel-row">
               <span class="channel-swatch channel-blue" />
