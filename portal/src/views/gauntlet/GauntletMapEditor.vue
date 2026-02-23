@@ -100,7 +100,7 @@ async function loadMap() {
     editActive.value = map.value.is_active
     loadEyedropperPreview()
     detectExistingPassability()
-    detectExistingTerrainPalette()
+    await detectExistingTerrainPalette()
   } catch (e: any) {
     error.value = e.message
   } finally {
@@ -300,22 +300,29 @@ function detectExistingPassability() {
   analyzePassabilityImage(passabilityLayerUrl.value)
 }
 
-/** On page load, detect terrain palette from existing terrain layer */
+/** Detect terrain palette from the terrain layer image (page load or manual trigger) */
 async function detectExistingTerrainPalette() {
-  if (!terrainLayerUrl.value) return
-  // Skip if terrain types already exist (admin already configured them)
-  if (map.value!.terrainTypes.length > 0) return
+  const url = terrainLayerUrl.value
+  if (!url) {
+    console.log('[palette] No terrain layer URL, skipping')
+    return
+  }
+  console.log('[palette] Starting detection from:', url)
   paletteDetecting.value = true
   paletteDetected.value = []
   paletteError.value = ''
   try {
-    const img = await loadImage(terrainLayerUrl.value)
+    const img = await loadImage(url)
+    console.log('[palette] Image loaded:', img.naturalWidth, 'x', img.naturalHeight)
     const imageData = imageToData(img)
+    console.log('[palette] ImageData extracted:', imageData.width, 'x', imageData.height)
     const colors = extractPalette(imageData)
+    console.log('[palette] Colors found:', colors.length, colors.slice(0, 10))
     await createTerrainFromPalette(colors)
+    console.log('[palette] Done. New colors added:', paletteDetected.value.length)
   } catch (e: any) {
     paletteError.value = `Palette detection failed: ${e.message || e}`
-    console.error('detectExistingTerrainPalette error:', e)
+    console.error('[palette] Error:', e)
   } finally {
     paletteDetecting.value = false
   }
@@ -476,8 +483,17 @@ async function deleteTerrain(terrain: TerrainType) {
             <label>{{ terrainLayerUrl ? 'Replace' : 'Upload' }} Terrain Map</label>
             <input type="file" accept="image/*" @change="(e: Event) => uploadLayer('terrain', e)" />
           </div>
+          <div v-if="terrainLayerUrl" class="palette-actions">
+            <button
+              class="btn-secondary btn-sm"
+              :disabled="paletteDetecting"
+              @click="detectExistingTerrainPalette()"
+            >
+              {{ paletteDetecting ? 'Detecting...' : 'Detect Palette' }}
+            </button>
+          </div>
           <div v-if="paletteDetecting" class="palette-status">
-            <span class="dim small">Detecting terrain palette...</span>
+            <span class="dim small">Analyzing image pixels for terrain colors...</span>
           </div>
           <div v-else-if="paletteError" class="palette-status">
             <span class="error small">{{ paletteError }}</span>
@@ -846,6 +862,10 @@ async function deleteTerrain(terrain: TerrainType) {
 .btn-xs {
   padding: 2px 8px;
   font-size: 11px;
+}
+
+.palette-actions {
+  margin-top: var(--space-sm);
 }
 
 .palette-status {
