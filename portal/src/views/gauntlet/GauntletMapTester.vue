@@ -302,7 +302,7 @@ function updateUnit(dt: number) {
   const gs = mapData.value!.grid_size
   const [gx, gy] = worldToGrid(unitPos.value.x, unitPos.value.y, gs)
   const cell = grid[gy]?.[gx]
-  const terrainCost = cell?.cost ?? 1
+  const terrainCost = unitType.value === 'dragon' ? 1 : (cell?.cost ?? 1)
 
   const speed = baseSpeed.value / terrainCost
   const step = speed * dt
@@ -337,7 +337,7 @@ function updateUnit(dt: number) {
       const segDist = Math.sqrt((bx - ax) ** 2 + (by - ay) ** 2)
       const [sgx, sgy] = worldToGrid(bx, by, gs)
       const segCell = grid[sgy]?.[sgx]
-      const segCost = segCell?.cost ?? 1
+      const segCost = unitType.value === 'dragon' ? 1 : (segCell?.cost ?? 1)
       eta += segDist / (baseSpeed.value / segCost)
     }
     unitEta.value = eta

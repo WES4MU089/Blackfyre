@@ -382,7 +382,8 @@ export function findPath(
         if (!isPassableFor(grid[gy][nx], unitType) || !isPassableFor(grid[ny][gx], unitType)) continue
       }
 
-      const moveCost = (dx !== 0 && dy !== 0) ? cell.cost * SQRT2 : cell.cost
+      const baseCost = unitType === 'dragon' ? 1 : cell.cost
+      const moveCost = (dx !== 0 && dy !== 0) ? baseCost * SQRT2 : baseCost
       const tentativeG = currentG + moveCost
 
       if (tentativeG < gCost[nk]) {
@@ -406,15 +407,16 @@ export function worldToGrid(wx: number, wy: number, gridSize: number): [number, 
 }
 
 /** Calculate total path cost (sum of segment costs) */
-export function pathCost(path: PathNode[], grid: GridCell[][]): number {
+export function pathCost(path: PathNode[], grid: GridCell[][], unitType: UnitType = 'land'): number {
   let total = 0
   for (let i = 1; i < path.length; i++) {
     const prev = path[i - 1]
     const curr = path[i]
     const cell = grid[curr.gy]?.[curr.gx]
     if (!cell) continue
+    const baseCost = unitType === 'dragon' ? 1 : cell.cost
     const diagonal = prev.gx !== curr.gx && prev.gy !== curr.gy
-    total += diagonal ? cell.cost * SQRT2 : cell.cost
+    total += diagonal ? baseCost * SQRT2 : baseCost
   }
   return total
 }
