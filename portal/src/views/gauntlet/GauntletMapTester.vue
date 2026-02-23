@@ -96,6 +96,23 @@ const showGrid = ref(false)
 
 // ETA tracking
 const unitEta = ref(0) // seconds remaining
+function formatEta(totalSeconds: number): string {
+  const units: [string, number][] = [
+    ['y', 31536000], ['mo', 2592000], ['w', 604800],
+    ['d', 86400], ['h', 3600], ['m', 60],
+  ]
+  const parts: string[] = []
+  let rem = Math.floor(totalSeconds)
+  for (const [label, size] of units) {
+    if (rem >= size) {
+      const count = Math.floor(rem / size)
+      parts.push(count + label)
+      rem %= size
+    }
+  }
+  if (rem > 0 || parts.length === 0) parts.push(rem + 's')
+  return parts.join(' ')
+}
 
 // Debug / passability stats
 const passApplied = ref(false)
@@ -654,7 +671,7 @@ onUnmounted(() => window.removeEventListener('resize', onWindowResize))
           </div>
           <div v-if="unitMoving && unitEta > 0" class="info-row">
             <span class="label">ETA</span>
-            <span class="value">{{ unitEta >= 60 ? Math.floor(unitEta / 60) + 'm ' + Math.floor(unitEta % 60) + 's' : unitEta.toFixed(1) + 's' }}</span>
+            <span class="value">{{ formatEta(unitEta) }}</span>
           </div>
         </div>
 
