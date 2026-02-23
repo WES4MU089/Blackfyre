@@ -327,8 +327,11 @@ export function findPath(
   const heuristic = (x: number, y: number) => {
     const dx = Math.abs(x - endX)
     const dy = Math.abs(y - endY)
-    // Octile distance
-    return Math.min(dx, dy) * SQRT2 + Math.abs(dx - dy)
+    // Octile distance with small cross-product tie-breaker to prefer straight lines
+    const base = Math.min(dx, dy) * SQRT2 + Math.abs(dx - dy)
+    // Cross-product: how far off the direct line are we? Breaks ties toward straighter paths.
+    const cx = Math.abs(dx * (startY - endY) - (y - endY) * (startX - endX))
+    return base + cx * 0.001
   }
 
   const startKey = key(startX, startY)
