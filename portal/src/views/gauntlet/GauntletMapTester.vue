@@ -88,7 +88,9 @@ let lastFrameTime = 0
 
 // Settings
 const unitType = ref<UnitType>('land')
-const baseSpeed = ref(0.0025) // pixels per second (land default)
+const defaultSpeeds: Record<UnitType, number> = { land: 0.0025, naval: 0.0065, dragon: 0.0100 }
+const baseSpeed = ref(defaultSpeeds.land)
+watch(unitType, (t) => { baseSpeed.value = defaultSpeeds[t] })
 const unitRadius = ref(6)
 const visibilityRadius = ref(75)
 const influenceRadius = ref(30)
