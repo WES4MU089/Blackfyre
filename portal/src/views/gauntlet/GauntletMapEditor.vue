@@ -626,9 +626,9 @@ async function deleteTerrain(terrain: TerrainType) {
                 <span class="dim small">{{ t.hex_color }}</span>
               </span>
               <span class="terrain-name">{{ t.name }}</span>
-              <span>{{ t.movement_cost.toFixed(2) }}</span>
+              <span>{{ Number(t.movement_cost).toFixed(2) }}</span>
               <span>{{ t.is_passable ? 'Yes' : 'No' }}</span>
-              <span>{{ t.attrition_rate.toFixed(2) }}</span>
+              <span>{{ Number(t.attrition_rate).toFixed(2) }}</span>
               <span>{{ t.defense_bonus }}</span>
               <span class="actions">
                 <button class="btn-secondary btn-xs" @click="openTerrainForm(t)">Edit</button>
