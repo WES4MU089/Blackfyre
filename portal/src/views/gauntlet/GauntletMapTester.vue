@@ -734,7 +734,7 @@ onUnmounted(() => window.removeEventListener('resize', onWindowResize))
             <div v-for="t in mapData.terrainTypes" :key="t.id" class="legend-item">
               <span class="color-swatch" :style="{ background: t.hex_color }" />
               <span>{{ t.name }}</span>
-              <span class="dim small">{{ t.movement_cost.toFixed(1) }}x</span>
+              <span class="dim small">{{ Number(t.movement_cost).toFixed(1) }}x</span>
             </div>
           </div>
           <p v-else class="dim small">No terrain types defined</p>
