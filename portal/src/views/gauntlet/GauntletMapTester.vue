@@ -8,9 +8,12 @@ import {
   findPath,
   worldToGrid,
   pathCost,
+  applyPassability,
+  isPassableFor,
   type GridCell,
   type PathNode,
   type TerrainDef,
+  type UnitType,
 } from '@/utils/pathfinding'
 
 // ---------------------------------------------------------------------------
@@ -84,6 +87,7 @@ let pathIndex = 0
 let lastFrameTime = 0
 
 // Settings
+const unitType = ref<UnitType>('land')
 const baseSpeed = ref(120) // pixels per second
 const unitRadius = ref(6)
 const visibilityRadius = ref(75)
@@ -91,7 +95,7 @@ const influenceRadius = ref(30)
 const showGrid = ref(false)
 
 // Mouse hover info
-const hoverTerrain = ref<{ name: string; cost: number; passable: boolean } | null>(null)
+const hoverTerrain = ref<{ name: string; cost: number; passable: boolean; passLand: boolean; passNaval: boolean; passDragon: boolean } | null>(null)
 const hoverWorldPos = ref({ x: 0, y: 0 })
 
 // Pan state
@@ -172,6 +176,19 @@ async function initCanvas() {
     grid = buildGrid(imageData, defs, map.width, map.height, map.grid_size)
     gridRows = grid.length
     gridCols = grid[0]?.length ?? 0
+  }
+
+  // Load passability texture and overlay onto grid
+  const passLayer = map.layers.find(l => l.layer_type === 'passability')
+  if (passLayer && gridRows > 0 && gridCols > 0) {
+    const passImg = await loadImage('/' + passLayer.image_path)
+    const offscreen2 = document.createElement('canvas')
+    offscreen2.width = passImg.naturalWidth
+    offscreen2.height = passImg.naturalHeight
+    const ctx2 = offscreen2.getContext('2d')!
+    ctx2.drawImage(passImg, 0, 0)
+    const passData = ctx2.getImageData(0, 0, offscreen2.width, offscreen2.height)
+    applyPassability(grid, passData, map.width, map.height, map.grid_size)
   }
 
   // Center camera on map
@@ -403,7 +420,7 @@ function onMouseUp(e: MouseEvent) {
       const [sx2, sy2] = worldToGrid(unitPos.value.x, unitPos.value.y, gs)
       const [ex, ey] = worldToGrid(world.x, world.y, gs)
 
-      const path = findPath(grid, sx2, sy2, ex, ey, gs)
+      const path = findPath(grid, sx2, sy2, ex, ey, gs, unitType.value)
       if (path.length > 0) {
         unitPath.value = path
         pathIndex = 1 // skip first node (current position)
@@ -460,10 +477,10 @@ function onMouseMove(e: MouseEvent) {
           })
 
           hoverTerrain.value = match
-            ? { name: match.name, cost: match.movement_cost, passable: match.is_passable }
-            : { name: 'Unknown', cost: cell.cost, passable: cell.passable }
+            ? { name: match.name, cost: match.movement_cost, passable: match.is_passable, passLand: cell.passLand, passNaval: cell.passNaval, passDragon: cell.passDragon }
+            : { name: 'Unknown', cost: cell.cost, passable: cell.passable, passLand: cell.passLand, passNaval: cell.passNaval, passDragon: cell.passDragon }
         } else {
-          hoverTerrain.value = { name: 'No terrain map', cost: cell.cost, passable: cell.passable }
+          hoverTerrain.value = { name: 'No terrain map', cost: cell.cost, passable: cell.passable, passLand: cell.passLand, passNaval: cell.passNaval, passDragon: cell.passDragon }
         }
       } else {
         hoverTerrain.value = null
@@ -575,8 +592,16 @@ onUnmounted(() => window.removeEventListener('resize', onWindowResize))
               <span class="value">{{ hoverTerrain.cost.toFixed(2) }}</span>
             </div>
             <div class="info-row">
-              <span class="label">Passable</span>
-              <span class="value">{{ hoverTerrain.passable ? 'Yes' : 'No' }}</span>
+              <span class="label">Land</span>
+              <span class="value">{{ hoverTerrain.passLand ? 'Yes' : 'No' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Naval</span>
+              <span class="value">{{ hoverTerrain.passNaval ? 'Yes' : 'No' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Dragon</span>
+              <span class="value">{{ hoverTerrain.passDragon ? 'Yes' : 'No' }}</span>
             </div>
           </template>
           <p v-else class="dim small">Hover over map</p>
@@ -588,6 +613,14 @@ onUnmounted(() => window.removeEventListener('resize', onWindowResize))
 
         <div class="panel-section">
           <h4 class="gold">Settings</h4>
+          <div class="setting-row">
+            <label>Unit Type</label>
+            <select v-model="unitType" class="unit-select">
+              <option value="land">Land</option>
+              <option value="naval">Naval</option>
+              <option value="dragon">Dragon</option>
+            </select>
+          </div>
           <div class="setting-row">
             <label>Speed (px/s)</label>
             <input v-model.number="baseSpeed" type="number" min="10" max="1000" step="10" />
@@ -754,7 +787,8 @@ onUnmounted(() => window.removeEventListener('resize', onWindowResize))
   margin-bottom: 1px;
 }
 
-.setting-row input {
+.setting-row input,
+.setting-row select {
   width: 100%;
   padding: 4px 6px;
   background: var(--color-bg);

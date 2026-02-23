@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useApi } from '@/composables/useApi'
 import PageHeader from '@/components/layout/PageHeader.vue'
+import { detectPassabilityChannels } from '@/utils/pathfinding'
 
 interface TerrainType {
   id: number
@@ -76,6 +77,11 @@ const terrainLayerUrl = computed(() => {
   const layer = map.value?.layers.find(l => l.layer_type === 'terrain')
   return layer ? `/${layer.image_path}` : null
 })
+const passabilityLayerUrl = computed(() => {
+  const layer = map.value?.layers.find(l => l.layer_type === 'passability')
+  return layer ? `/${layer.image_path}` : null
+})
+const passChannels = ref<{ red: number; green: number; blue: number; black: number; total: number } | null>(null)
 
 onMounted(() => loadMap())
 
@@ -88,6 +94,7 @@ async function loadMap() {
     editGridSize.value = map.value.grid_size
     editActive.value = map.value.is_active
     loadEyedropperPreview()
+    detectExistingPassability()
   } catch (e: any) {
     error.value = e.message
   } finally {
@@ -153,6 +160,31 @@ async function uploadLayer(layerType: 'terrain' | 'passability', e: Event) {
   } catch (e: any) {
     alert(e.message)
   }
+}
+
+async function uploadPassabilityLayer(e: Event) {
+  await uploadLayer('passability', e)
+  analyzePassabilityImage(passabilityLayerUrl.value)
+}
+
+function analyzePassabilityImage(url: string | null) {
+  if (!url) return
+  const img = new Image()
+  img.crossOrigin = 'anonymous'
+  img.onload = () => {
+    const canvas = document.createElement('canvas')
+    canvas.width = img.naturalWidth
+    canvas.height = img.naturalHeight
+    const ctx = canvas.getContext('2d')!
+    ctx.drawImage(img, 0, 0)
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+    passChannels.value = detectPassabilityChannels(imageData)
+  }
+  img.src = url
+}
+
+function detectExistingPassability() {
+  analyzePassabilityImage(passabilityLayerUrl.value)
 }
 
 function loadEyedropperPreview() {
@@ -308,6 +340,37 @@ async function deleteTerrain(terrain: TerrainType) {
           <div class="form-row">
             <label>{{ terrainLayerUrl ? 'Replace' : 'Upload' }} Terrain Map</label>
             <input type="file" accept="image/*" @change="(e: Event) => uploadLayer('terrain', e)" />
+          </div>
+
+          <hr class="divider" />
+
+          <h3 class="gold">Passability Texture Map</h3>
+          <p class="dim small">RGB channels define unit access. Red = Dragon, Blue = Naval + Dragon, Green = All units.</p>
+          <div v-if="passabilityLayerUrl" class="image-preview">
+            <img :src="passabilityLayerUrl" alt="Passability texture map" />
+          </div>
+          <div class="form-row">
+            <label>{{ passabilityLayerUrl ? 'Replace' : 'Upload' }} Passability Map</label>
+            <input type="file" accept="image/*" @change="uploadPassabilityLayer" />
+          </div>
+          <div v-if="passChannels" class="channel-stats">
+            <div class="channel-row">
+              <span class="channel-swatch channel-green" />
+              <span>All Units (Green): <strong>{{ passChannels.green.toLocaleString() }}</strong> pixels</span>
+            </div>
+            <div class="channel-row">
+              <span class="channel-swatch channel-blue" />
+              <span>Naval + Dragon (Blue): <strong>{{ passChannels.blue.toLocaleString() }}</strong> pixels</span>
+            </div>
+            <div class="channel-row">
+              <span class="channel-swatch channel-red" />
+              <span>Dragon Only (Red): <strong>{{ passChannels.red.toLocaleString() }}</strong> pixels</span>
+            </div>
+            <div class="channel-row">
+              <span class="channel-swatch channel-black" />
+              <span>Impassable (Black): <strong>{{ passChannels.black.toLocaleString() }}</strong> pixels</span>
+            </div>
+            <p class="dim small" style="margin-top: 4px;">Total: {{ passChannels.total.toLocaleString() }} pixels</p>
           </div>
         </div>
 
@@ -631,6 +694,36 @@ async function deleteTerrain(terrain: TerrainType) {
   padding: 2px 8px;
   font-size: 11px;
 }
+
+.channel-stats {
+  margin-top: var(--space-sm);
+  padding: var(--space-sm);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-dim);
+  border-radius: var(--radius-sm);
+}
+
+.channel-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--font-size-xs);
+  padding: 2px 0;
+}
+
+.channel-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.channel-green { background: #00FF00; }
+.channel-blue { background: #0000FF; }
+.channel-red { background: #FF0000; }
+.channel-black { background: #000000; }
 
 .error {
   color: var(--color-crimson-light);
