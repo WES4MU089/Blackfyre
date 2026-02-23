@@ -71,6 +71,10 @@ const terrainForm = ref({
 })
 const terrainError = ref('')
 
+// Auto-palette detection
+const paletteDetecting = ref(false)
+const paletteDetected = ref<string[]>([])
+
 // Eyedropper canvas
 const eyedropperCanvas = ref<HTMLCanvasElement | null>(null)
 const terrainLayerUrl = computed(() => {
@@ -156,9 +160,94 @@ async function uploadLayer(layerType: 'terrain' | 'passability', e: Event) {
     if (idx >= 0) map.value!.layers[idx] = layer
     else map.value!.layers.push(layer)
 
-    if (layerType === 'terrain') loadEyedropperPreview()
+    if (layerType === 'terrain') {
+      loadEyedropperPreview()
+      autoDetectPalette(file)
+    }
   } catch (e: any) {
     alert(e.message)
+  }
+}
+
+/**
+ * Extract distinct colors from a terrain texture map image file and create
+ * new terrain palette entries for any colors not already in the palette.
+ */
+async function autoDetectPalette(file: File) {
+  paletteDetecting.value = true
+  paletteDetected.value = []
+  try {
+    // Load image from file
+    const url = URL.createObjectURL(file)
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image()
+      i.onload = () => resolve(i)
+      i.onerror = reject
+      i.src = url
+    })
+
+    // Draw to offscreen canvas and read pixels
+    const canvas = document.createElement('canvas')
+    canvas.width = img.naturalWidth
+    canvas.height = img.naturalHeight
+    const ctx = canvas.getContext('2d')!
+    ctx.drawImage(img, 0, 0)
+    URL.revokeObjectURL(url)
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+    const data = imageData.data
+
+    // Count pixel occurrences per color (ignore alpha)
+    const colorCounts = new Map<string, number>()
+    for (let i = 0; i < data.length; i += 4) {
+      const hex = '#' + [data[i], data[i + 1], data[i + 2]]
+        .map(c => c.toString(16).padStart(2, '0'))
+        .join('')
+        .toUpperCase()
+      colorCounts.set(hex, (colorCounts.get(hex) ?? 0) + 1)
+    }
+
+    // Filter: only colors with at least 0.1% of total pixels (noise filter)
+    const totalPixels = canvas.width * canvas.height
+    const minPixels = Math.max(1, Math.floor(totalPixels * 0.001))
+    const significantColors = [...colorCounts.entries()]
+      .filter(([, count]) => count >= minPixels)
+      .sort((a, b) => b[1] - a[1]) // Sort by frequency descending
+      .map(([hex]) => hex)
+
+    // Determine which colors are already in the palette (case-insensitive)
+    const existingColors = new Set(
+      map.value!.terrainTypes.map(t => t.hex_color.toUpperCase())
+    )
+    const newColors = significantColors.filter(hex => !existingColors.has(hex))
+    paletteDetected.value = newColors
+
+    if (newColors.length === 0) return
+
+    // Create terrain entries for each new color
+    const existingCount = map.value!.terrainTypes.length
+    for (let i = 0; i < newColors.length; i++) {
+      try {
+        const created = await apiFetch<TerrainType>(
+          `/api/gauntlet/maps/${mapId.value}/terrain`,
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              name: `Terrain ${existingCount + i + 1}`,
+              hex_color: newColors[i],
+              movement_cost: 1.0,
+              is_passable: true,
+              sort_order: existingCount + i,
+            }),
+          }
+        )
+        map.value!.terrainTypes.push(created)
+      } catch {
+        // Skip duplicates or other errors silently
+      }
+    }
+  } finally {
+    paletteDetecting.value = false
   }
 }
 
@@ -340,6 +429,21 @@ async function deleteTerrain(terrain: TerrainType) {
           <div class="form-row">
             <label>{{ terrainLayerUrl ? 'Replace' : 'Upload' }} Terrain Map</label>
             <input type="file" accept="image/*" @change="(e: Event) => uploadLayer('terrain', e)" />
+          </div>
+          <div v-if="paletteDetecting" class="palette-status">
+            <span class="dim small">Detecting terrain palette...</span>
+          </div>
+          <div v-else-if="paletteDetected.length > 0" class="palette-status">
+            <span class="dim small">Added {{ paletteDetected.length }} color(s) to terrain palette:</span>
+            <div class="palette-swatches">
+              <span
+                v-for="hex in paletteDetected"
+                :key="hex"
+                class="color-swatch"
+                :style="{ background: hex }"
+                :title="hex"
+              />
+            </div>
           </div>
 
           <hr class="divider" />
@@ -693,6 +797,17 @@ async function deleteTerrain(terrain: TerrainType) {
 .btn-xs {
   padding: 2px 8px;
   font-size: 11px;
+}
+
+.palette-status {
+  margin-top: var(--space-sm);
+}
+
+.palette-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
 }
 
 .channel-stats {
