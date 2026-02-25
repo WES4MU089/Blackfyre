@@ -50,7 +50,7 @@ export type CreationStep = 'template' | 'aptitudes' | 'identity' | 'review'
 
 const STEP_ORDER: CreationStep[] = ['template', 'aptitudes', 'identity', 'review']
 
-const APTITUDE_KEYS = ['prowess', 'fortitude', 'command', 'cunning', 'stewardship', 'presence', 'lore', 'faith'] as const
+const APTITUDE_KEYS = ['prowess', 'fortitude', 'command', 'cunning', 'stewardship', 'presence', 'lore', 'faith', 'craftsmanship'] as const
 
 const APTITUDE_LABELS: Record<string, string> = {
   prowess: 'Prowess',
@@ -61,9 +61,10 @@ const APTITUDE_LABELS: Record<string, string> = {
   presence: 'Presence',
   lore: 'Lore',
   faith: 'Faith',
+  craftsmanship: 'Craftsmanship',
 }
 
-const APTITUDE_TOTAL = 32
+const APTITUDE_TOTAL = 36
 
 export const useCreationStore = defineStore('creation', () => {
   // Wizard state

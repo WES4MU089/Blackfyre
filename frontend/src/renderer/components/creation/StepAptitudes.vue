@@ -4,7 +4,7 @@ import { useCreationStore } from '@/stores/creation'
 const store = useCreationStore()
 
 // 2-column layout matching CharacterPanel aptitude layout
-const LEFT_COLUMN = ['prowess', 'command', 'stewardship', 'lore'] as const
+const LEFT_COLUMN = ['prowess', 'command', 'stewardship', 'lore', 'craftsmanship'] as const
 const RIGHT_COLUMN = ['fortitude', 'cunning', 'presence', 'faith'] as const
 
 function isAtMin(key: string): boolean {

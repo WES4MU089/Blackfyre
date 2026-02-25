@@ -176,6 +176,7 @@ export const useCharacterStore = defineStore('character', () => {
     { id: 'presence', name: 'Presence', baseValue: 3, currentValue: 3 },
     { id: 'lore', name: 'Lore', baseValue: 3, currentValue: 3 },
     { id: 'faith', name: 'Faith', baseValue: 2, currentValue: 2 },
+    { id: 'craftsmanship', name: 'Craftsmanship', baseValue: 1, currentValue: 1 },
   ])
   const equipment = ref<Record<string, EquippedItem | null>>({
     mainHand: null,

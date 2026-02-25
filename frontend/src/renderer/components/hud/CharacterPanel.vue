@@ -141,7 +141,7 @@ const rightSlots = [
 
 /** Ordered aptitude layout — left column, then right column */
 const aptitudeOrder = [
-  { col: 'left',  ids: ['prowess', 'command', 'stewardship', 'lore'] },
+  { col: 'left',  ids: ['prowess', 'command', 'stewardship', 'lore', 'craftsmanship'] },
   { col: 'right', ids: ['fortitude', 'cunning', 'presence', 'faith'] },
 ] as const
 
