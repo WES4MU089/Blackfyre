@@ -64,10 +64,10 @@ const WESTEROS_MOONS: readonly string[] = [
 ] as const
 
 /**
- * Year mapping: 2026 real-world = 127 AC (After the Conquest)
- * Offset: realYear - 1899 = AC year
+ * Year mapping: 2026 real-world = 120 AC (After the Conquest)
+ * Offset: realYear - 1906 = AC year
  */
-const AC_OFFSET = 1899
+const AC_OFFSET = 1906
 
 interface WesterosTime {
   hourName: string
