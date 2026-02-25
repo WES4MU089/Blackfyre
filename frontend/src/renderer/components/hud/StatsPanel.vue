@@ -113,11 +113,12 @@ const aptitudeBonuses = computed(() => [
   { id: 'presence', name: 'Presence', value: getAptitude('presence'), desc: 'Social & Intimidation' },
   { id: 'lore', name: 'Lore', value: getAptitude('lore'), desc: 'Knowledge & Medicine' },
   { id: 'faith', name: 'Faith', value: getAptitude('faith'), desc: 'Ritual & Devotion' },
+  { id: 'craftsmanship', name: 'Craftsmanship', value: getAptitude('craftsmanship'), desc: 'Siege & Engineering' },
 ])
 
 // Split aptitudes into two columns for the grid cell
-const leftAptitudes = computed(() => aptitudeBonuses.value.slice(0, 4))
-const rightAptitudes = computed(() => aptitudeBonuses.value.slice(4))
+const leftAptitudes = computed(() => aptitudeBonuses.value.slice(0, 5))
+const rightAptitudes = computed(() => aptitudeBonuses.value.slice(5))
 
 // --- Equipment summary ---
 const SLOT_LABELS: Record<string, string> = {
