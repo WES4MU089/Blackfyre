@@ -24,6 +24,7 @@ import CombatLobby from '@/components/combat/CombatLobby.vue'
 import CombatSession from '@/components/combat/CombatSession.vue'
 import NPCDialog from '@/components/npc/NPCDialog.vue'
 import ShopPanel from '@/components/shop/ShopPanel.vue'
+import ContainerPanel from '@/components/hud/ContainerPanel.vue'
 import RetainerPanel from '@/components/retainers/RetainerPanel.vue'
 import RetainerHire from '@/components/retainers/RetainerHire.vue'
 import AdminPanel from '@/components/admin/AdminPanel.vue'
@@ -37,6 +38,7 @@ import { usePlayerApplicationStore } from '@/stores/playerApplication'
 import { useCombatStore } from '@/stores/combat'
 import { useNpcDialogStore } from '@/stores/npcDialog'
 import { useShopStore } from '@/stores/shop'
+import { useContainerStore } from '@/stores/container'
 import { useChatStore } from '@/stores/chat'
 import '@/styles/hud.css'
 
@@ -47,6 +49,7 @@ const creationStore = useCreationStore()
 const combatStore = useCombatStore()
 const npcDialogStore = useNpcDialogStore()
 const shopStore = useShopStore()
+const containerStore = useContainerStore()
 const chatStore = useChatStore()
 const adminStore = useAdminStore()
 const socialStore = useSocialStore()
@@ -153,6 +156,9 @@ onMounted(async () => {
 
     <!-- Shop / Trade Panel -->
     <ShopPanel v-if="shopStore.isOpen" />
+
+    <!-- Container / Lockbox Panel -->
+    <ContainerPanel v-if="containerStore.isOpen" />
 
     <!-- Retainer Hire Wizard (opens from NPC dialog or panel) -->
     <RetainerHire v-if="characterStore.isHiringRetainer" />

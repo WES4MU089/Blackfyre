@@ -3,11 +3,13 @@ import type { InventoryItem, EquippedItem } from '@/stores/character'
 import { acquireInteractionLock, releaseInteractionLock } from './useInteractionLock'
 
 export interface DragPayload {
-  source: 'inventory' | 'equipment'
+  source: 'inventory' | 'equipment' | 'container'
   inventoryItem?: InventoryItem
   sourceSlot?: number
   equippedItem?: EquippedItem
   equipmentSlotId?: string
+  containerId?: number
+  containerInventoryId?: number
 }
 
 // Module-level singleton state — shared across all component instances

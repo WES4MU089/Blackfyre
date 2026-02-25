@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useCharacterStore, type InventoryItem, type EquippedItem } from '@/stores/character'
+import { useContainerStore } from '@/stores/container'
 import { useHudStore } from '@/stores/hud'
 import { useDraggable } from '@/composables/useDraggable'
 import { useItemDrag, type DragPayload } from '@/composables/useItemDrag'
+import { getSocket } from '@/composables/useSocket'
 import InventorySlot from './InventorySlot.vue'
 import ItemTooltip from './ItemTooltip.vue'
 import ItemContextMenu from './ItemContextMenu.vue'
@@ -12,6 +14,7 @@ import stagIcon from '@res/images/art/Currency/stag.png'
 import starIcon from '@res/images/art/Currency/star.png'
 
 const characterStore = useCharacterStore()
+const containerStore = useContainerStore()
 const hudStore = useHudStore()
 const panelRef = ref<HTMLElement | null>(null)
 const { isDragging: isPanelDragging, onDragStart } = useDraggable('inventory', panelRef, { alwaysDraggable: true })
@@ -130,6 +133,13 @@ async function onDrop(targetSlot: number, payload: DragPayload): Promise<void> {
   } else if (payload.source === 'equipment' && payload.equipmentSlotId) {
     // Equipment → Inventory: unequip to target slot
     await characterStore.unequipItem(payload.equipmentSlotId, targetSlot)
+  } else if (payload.source === 'container' && payload.containerInventoryId != null && payload.containerId != null) {
+    // Container → Inventory: retrieve item
+    getSocket()?.emit('container:retrieve', {
+      containerId: payload.containerId,
+      containerInventoryId: payload.containerInventoryId,
+      targetSlot,
+    })
   }
 }
 

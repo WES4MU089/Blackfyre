@@ -5,10 +5,14 @@ import { getItemIcon } from '@/utils/itemIcons'
 import { getTierClass } from '@/utils/tierColors'
 import { computed } from 'vue'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   item: InventoryItem | null
   slotIndex: number
-}>()
+  dragSource?: 'inventory' | 'container'
+  containerId?: number
+}>(), {
+  dragSource: 'inventory',
+})
 
 const emit = defineEmits<{
   'hover-start': [item: InventoryItem, e: MouseEvent]
@@ -33,7 +37,7 @@ const itemIcon = computed(() => {
 // Is this slot the current drag source?
 const isDragSource = computed(() => {
   if (!isDragging.value || !dragPayload.value) return false
-  return dragPayload.value.source === 'inventory' && dragPayload.value.sourceSlot === props.slotIndex
+  return dragPayload.value.source === props.dragSource && dragPayload.value.sourceSlot === props.slotIndex
 })
 
 // Is a drag currently hovering over this slot?
@@ -44,9 +48,11 @@ const isDropTarget = computed(() => {
 function onMouseDown(e: MouseEvent): void {
   if (e.button !== 0 || !props.item) return
   startDrag(e, {
-    source: 'inventory',
+    source: props.dragSource,
     inventoryItem: props.item,
     sourceSlot: props.slotIndex,
+    containerId: props.containerId,
+    containerInventoryId: props.dragSource === 'container' ? props.item.inventory_id : undefined,
   })
 }
 

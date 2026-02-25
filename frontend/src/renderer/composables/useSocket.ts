@@ -11,6 +11,7 @@ import {
 import { useNpcDialogStore, type DialogPayload } from '@/stores/npcDialog'
 import { useAilmentsStore } from '@/stores/ailments'
 import { useShopStore, type ShopOpenPayload } from '@/stores/shop'
+import { useContainerStore, type ContainerOpenPayload } from '@/stores/container'
 import { useAuthStore } from '@/stores/auth'
 import { useAdminStore } from '@/stores/admin'
 import { useNotificationStore } from '@/stores/notifications'
@@ -367,6 +368,29 @@ export function useSocket() {
       shopStore.setMessage(data.success, data.message)
       if (data.success && data.cash != null) {
         shopStore.updateCash(data.cash)
+      }
+    })
+
+    // --- Container events ---
+    const containerStore = useContainerStore()
+
+    socket.on('container:open', (data: ContainerOpenPayload) => {
+      containerStore.openContainer(data)
+      // Auto-open inventory panel so player can drag items between both
+      if (!hudStore.isPanelOpen('inventory')) {
+        hudStore.toggleSystemPanel('inventory')
+      }
+    })
+
+    socket.on('container:updated', (data: { containerId: number; items: ContainerOpenPayload['items'] }) => {
+      containerStore.updateItems(data.items)
+    })
+
+    socket.on('container:error', (data: { message: string }) => {
+      if (containerStore.isOpen) {
+        containerStore.setMessage(false, data.message)
+      } else {
+        hudStore.addNotification('danger', 'Container', data.message)
       }
     })
 
