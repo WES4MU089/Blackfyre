@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useChatStore, type AnyMessage, type WhisperMessage, type ChatMessage } from '@/stores/chat'
 import { parseParaText, formatRelativeTime } from '@/utils/chatFormatter'
+import { BACKEND_URL } from '@/config'
 
 const props = defineProps<{
   message: AnyMessage
@@ -38,17 +39,25 @@ const characterName = computed(() => {
   return (props.message as ChatMessage).character_name
 })
 
+function resolvePortrait(url: string | null): string | null {
+  if (!url) return null
+  if (url.startsWith('http')) return url
+  return `${BACKEND_URL}${url}`
+}
+
 const portraitUrl = computed(() => {
   if (isWhisper.value) {
     const w = props.message as WhisperMessage
     const myCharId = chatStore.sessionPlayers.find(
       p => p.sessionId === chatStore.mySessionId
     )?.characterId
-    return myCharId === w.sender_character_id
-      ? w.target_portrait_url
-      : w.sender_portrait_url
+    return resolvePortrait(
+      myCharId === w.sender_character_id
+        ? w.target_portrait_url
+        : w.sender_portrait_url
+    )
   }
-  return (props.message as ChatMessage).portrait_url
+  return resolvePortrait((props.message as ChatMessage).portrait_url)
 })
 
 const initial = computed(() => characterName.value.replace(/^(To |From )/, '').charAt(0).toUpperCase())
