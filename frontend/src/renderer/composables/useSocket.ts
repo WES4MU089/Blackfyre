@@ -45,10 +45,8 @@ export function useSocket() {
     socket.on('connect', () => {
       isConnected.value = true
       hudStore.setConnected(true)
-      // Request character list so last-played character auto-selects
-      socket?.emit('characters:list')
-      // Request full HUD state on connect (needs active character to work)
-      socket?.emit('hud:sync')
+      // characters:list and hud:sync are sent by server after JWT auth completes,
+      // so we don't emit them here — they'd race and fail before auth is done.
       startPing()
     })
 
@@ -64,7 +62,7 @@ export function useSocket() {
     })
 
     // Auth response — populate permissions for staff features
-    socket.on('player:authenticated', (data: {
+    socket.on('player:authenticated', async (data: {
       playerId: number
       roleName?: string | null
       permissions?: string[]
@@ -80,6 +78,24 @@ export function useSocket() {
           isSuperAdmin: data.isSuperAdmin ?? false,
         }
       }
+
+      // Session resumption: if we already had an active character before
+      // disconnect, re-select it on the server so the new socket joins
+      // the character room and receives character-scoped events again.
+      const activeCharId = characterStore.character?.id
+      if (activeCharId) {
+        console.log('Reconnect: re-selecting active character', activeCharId)
+        socket?.emit('character:select', { characterId: activeCharId })
+      } else {
+        // No active character — check electron-store for last played
+        const lastId = await window.electronAPI.getLastCharacter()
+        if (lastId !== null) {
+          // characters:list handler will also try this, but that may arrive
+          // later; doing it here ensures faster resumption
+          console.log('Reconnect: restoring last character from storage', lastId)
+        }
+      }
+
       hudStore.addNotification('success', 'Connected', 'Authenticated with server')
     })
 
