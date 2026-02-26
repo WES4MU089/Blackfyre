@@ -31,6 +31,8 @@ export interface ContainerOpenPayload {
   capacity: number
   isLocked: boolean
   lockType: string
+  isOwner: boolean
+  ownerCharacterId: number | null
   items: ContainerItem[]
 }
 
@@ -41,6 +43,8 @@ export const useContainerStore = defineStore('container', () => {
   const name = ref('')
   const description = ref<string | null>(null)
   const capacity = ref(10)
+  const isLocked = ref(false)
+  const isOwner = ref(false)
   const items = ref<ContainerItem[]>([])
   const lastMessage = ref<{ success: boolean; text: string } | null>(null)
 
@@ -64,6 +68,8 @@ export const useContainerStore = defineStore('container', () => {
     name.value = data.name
     description.value = data.description
     capacity.value = data.capacity
+    isLocked.value = data.isLocked
+    isOwner.value = data.isOwner
     items.value = data.items
     lastMessage.value = null
   }
@@ -75,8 +81,18 @@ export const useContainerStore = defineStore('container', () => {
     name.value = ''
     description.value = null
     capacity.value = 10
+    isLocked.value = false
+    isOwner.value = false
     items.value = []
     lastMessage.value = null
+  }
+
+  function setLocked(locked: boolean): void {
+    isLocked.value = locked
+  }
+
+  function setName(newName: string): void {
+    name.value = newName
   }
 
   function updateItems(newItems: ContainerItem[]): void {
@@ -94,6 +110,8 @@ export const useContainerStore = defineStore('container', () => {
     name,
     description,
     capacity,
+    isLocked,
+    isOwner,
     items,
     lastMessage,
     slotMap,
@@ -103,5 +121,7 @@ export const useContainerStore = defineStore('container', () => {
     closeContainer,
     updateItems,
     setMessage,
+    setLocked,
+    setName,
   }
 })

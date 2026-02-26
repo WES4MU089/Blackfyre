@@ -20,7 +20,17 @@ const adjustedY = ref(props.y)
 // Use runtime field probing to handle all three types robustly
 const i = computed(() => props.item as Record<string, unknown>)
 
-const itemName = computed(() => (i.value.name ?? i.value.itemName ?? '') as string)
+const metadata = computed(() => {
+  const raw = i.value.metadata
+  if (!raw) return null
+  if (typeof raw === 'string') { try { return JSON.parse(raw) } catch { return null } }
+  return raw as Record<string, unknown>
+})
+const itemName = computed(() => {
+  const custom = metadata.value?.custom_name
+  if (typeof custom === 'string' && custom) return custom
+  return (i.value.name ?? i.value.itemName ?? '') as string
+})
 const description = computed(() => (i.value.description ?? '') as string)
 const category = computed(() => (i.value.category ?? '') as string)
 const rarity = computed(() => (i.value.rarity ?? '') as string)

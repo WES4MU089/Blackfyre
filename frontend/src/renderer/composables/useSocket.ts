@@ -394,6 +394,18 @@ export function useSocket() {
       }
     })
 
+    socket.on('container:lock-changed', (data: { containerId: number; isLocked: boolean }) => {
+      if (containerStore.containerId === data.containerId) {
+        containerStore.setLocked(data.isLocked)
+      }
+    })
+
+    socket.on('container:renamed', (data: { containerId: number; name: string }) => {
+      if (containerStore.containerId === data.containerId) {
+        containerStore.setName(data.name)
+      }
+    })
+
     // --- Finances updates ---
     socket.on('finances:changed', (data: Record<string, number>) => {
       characterStore.updateFinances(data)
