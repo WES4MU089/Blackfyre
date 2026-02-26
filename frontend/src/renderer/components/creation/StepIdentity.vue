@@ -40,6 +40,40 @@ function removePortrait(): void {
   portraitError.value = null
 }
 
+const thumbnailInput = ref<HTMLInputElement | null>(null)
+const thumbnailError = ref<string | null>(null)
+
+function triggerThumbnailSelect(): void {
+  thumbnailInput.value?.click()
+}
+
+function onThumbnailSelected(e: Event): void {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  thumbnailError.value = null
+
+  if (!ACCEPTED_TYPES.includes(file.type)) {
+    thumbnailError.value = 'Only PNG, JPG, or WebP images are allowed'
+    input.value = ''
+    return
+  }
+  if (file.size > MAX_PORTRAIT_SIZE) {
+    thumbnailError.value = 'Image must be under 5 MB'
+    input.value = ''
+    return
+  }
+
+  store.setThumbnail(file)
+  input.value = ''
+}
+
+function removeThumbnail(): void {
+  store.setThumbnail(null)
+  thumbnailError.value = null
+}
+
 const NAME_REGEX = /^[a-zA-Z\s'-]+$/
 
 const nameValid = computed(() => {
@@ -135,12 +169,13 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Portrait Upload -->
-    <div class="field-section portrait-section">
-      <label class="field-label">Character Portrait <span class="field-optional">(400 x 600)</span></label>
-      <div class="portrait-area">
+    <!-- Portraits Row -->
+    <div class="portraits-row">
+      <!-- Full Portrait -->
+      <div class="field-section portrait-section">
+        <label class="field-label">Character Portrait <span class="field-optional">(400 x 600)</span></label>
         <div
-          class="portrait-frame"
+          class="portrait-frame portrait-frame--full"
           :class="{ 'portrait-frame--empty': !store.portraitPreview }"
           @click="triggerPortraitSelect"
         >
@@ -152,7 +187,7 @@ onMounted(() => {
           />
           <div v-else class="portrait-placeholder">
             <span class="portrait-plus">+</span>
-            <span class="portrait-hint">Upload Portrait</span>
+            <span class="portrait-hint">Upload</span>
             <span class="portrait-hint-sm">PNG / JPG / WebP</span>
           </div>
         </div>
@@ -173,16 +208,62 @@ onMounted(() => {
             {{ store.portraitPreview ? 'Change' : 'Browse...' }}
           </button>
           <div v-if="portraitError" class="field-error">{{ portraitError }}</div>
-          <div class="field-hint">Recommended 400 x 600 px. Max 5 MB.</div>
         </div>
+        <input
+          ref="portraitInput"
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          class="portrait-file-input"
+          @change="onPortraitSelected"
+        />
       </div>
-      <input
-        ref="portraitInput"
-        type="file"
-        accept="image/png,image/jpeg,image/webp"
-        class="portrait-file-input"
-        @change="onPortraitSelected"
-      />
+
+      <!-- Thumbnail -->
+      <div class="field-section portrait-section">
+        <label class="field-label">Thumbnail <span class="field-optional">(96 x 96)</span></label>
+        <div
+          class="portrait-frame portrait-frame--thumb"
+          :class="{ 'portrait-frame--empty': !store.thumbnailPreview }"
+          @click="triggerThumbnailSelect"
+        >
+          <img
+            v-if="store.thumbnailPreview"
+            :src="store.thumbnailPreview"
+            alt="Thumbnail preview"
+            class="portrait-img"
+          />
+          <div v-else class="portrait-placeholder">
+            <span class="portrait-plus">+</span>
+            <span class="portrait-hint">Upload</span>
+            <span class="portrait-hint-sm">96 x 96 px</span>
+          </div>
+        </div>
+        <div class="portrait-controls">
+          <button
+            v-if="store.thumbnailPreview"
+            class="portrait-btn portrait-btn--remove"
+            type="button"
+            @click="removeThumbnail"
+          >
+            Remove
+          </button>
+          <button
+            class="portrait-btn"
+            type="button"
+            @click="triggerThumbnailSelect"
+          >
+            {{ store.thumbnailPreview ? 'Change' : 'Browse...' }}
+          </button>
+          <div v-if="thumbnailError" class="field-error">{{ thumbnailError }}</div>
+        </div>
+        <input
+          ref="thumbnailInput"
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          class="portrait-file-input"
+          @change="onThumbnailSelected"
+        />
+      </div>
     </div>
 
     <!-- Parentage Row -->
@@ -579,20 +660,18 @@ onMounted(() => {
   color: var(--color-warning);
 }
 
-/* Portrait upload */
+/* Portraits row */
+.portraits-row {
+  display: flex;
+  gap: var(--space-xl);
+  justify-content: center;
+}
+
 .portrait-section {
   align-items: center;
 }
 
-.portrait-area {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-md);
-}
-
 .portrait-frame {
-  width: 160px;
-  height: 240px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   overflow: hidden;
@@ -600,6 +679,16 @@ onMounted(() => {
   flex-shrink: 0;
   transition: border-color var(--transition-fast);
   background: var(--color-surface-dark);
+}
+
+.portrait-frame--full {
+  width: 160px;
+  height: 240px;
+}
+
+.portrait-frame--thumb {
+  width: 96px;
+  height: 96px;
 }
 
 .portrait-frame:hover {
@@ -630,6 +719,10 @@ onMounted(() => {
   font-size: 28px;
   color: var(--color-text-muted);
   line-height: 1;
+}
+
+.portrait-frame--thumb .portrait-plus {
+  font-size: 20px;
 }
 
 .portrait-hint {

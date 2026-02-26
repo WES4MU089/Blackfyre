@@ -85,6 +85,8 @@ export const useCreationStore = defineStore('creation', () => {
   const backstory = ref('')
   const portraitFile = ref<File | null>(null)
   const portraitPreview = ref<string | null>(null)
+  const thumbnailFile = ref<File | null>(null)
+  const thumbnailPreview = ref<string | null>(null)
 
   // Lineage / Application fields
   const fatherName = ref('')
@@ -198,6 +200,11 @@ export const useCreationStore = defineStore('creation', () => {
     }
     portraitFile.value = null
     portraitPreview.value = null
+    if (thumbnailPreview.value) {
+      URL.revokeObjectURL(thumbnailPreview.value)
+    }
+    thumbnailFile.value = null
+    thumbnailPreview.value = null
     fatherName.value = ''
     motherName.value = ''
     selectedHouseId.value = null
@@ -285,6 +292,14 @@ export const useCreationStore = defineStore('creation', () => {
     portraitPreview.value = file ? URL.createObjectURL(file) : null
   }
 
+  function setThumbnail(file: File | null): void {
+    if (thumbnailPreview.value) {
+      URL.revokeObjectURL(thumbnailPreview.value)
+    }
+    thumbnailFile.value = file
+    thumbnailPreview.value = file ? URL.createObjectURL(file) : null
+  }
+
   async function fetchHouses(): Promise<void> {
     if (housesLoaded.value) return
     try {
@@ -353,6 +368,8 @@ export const useCreationStore = defineStore('creation', () => {
     backstory,
     portraitFile,
     portraitPreview,
+    thumbnailFile,
+    thumbnailPreview,
     fatherName,
     motherName,
     selectedHouseId,
@@ -391,6 +408,7 @@ export const useCreationStore = defineStore('creation', () => {
     open,
     close,
     setPortrait,
+    setThumbnail,
     selectTemplate,
     incrementAptitude,
     decrementAptitude,

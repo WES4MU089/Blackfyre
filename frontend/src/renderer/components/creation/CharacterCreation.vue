@@ -63,9 +63,12 @@ async function handleSubmit(): Promise<void> {
     if (payload.publicBio) form.append('publicBio', payload.publicBio)
     if (payload.organizationId != null) form.append('organizationId', String(payload.organizationId))
 
-    // Append portrait file if selected
+    // Append portrait files if selected
     if (store.portraitFile) {
       form.append('portrait', store.portraitFile)
+    }
+    if (store.thumbnailFile) {
+      form.append('thumbnail', store.thumbnailFile)
     }
 
     const res = await fetch(`${BACKEND_URL}/api/applications/submit`, {
