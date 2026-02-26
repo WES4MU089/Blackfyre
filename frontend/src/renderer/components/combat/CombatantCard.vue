@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { CombatantView } from '@/stores/combat'
+import { useCombatStore } from '@/stores/combat'
 import StatusEffectIcon from './StatusEffectIcon.vue'
+import CombatCallout from './CombatCallout.vue'
+
+const combatStore = useCombatStore()
 
 const props = defineProps<{
   combatant: CombatantView
@@ -31,6 +35,8 @@ const hpBarClass = computed(() => {
 })
 
 const isClickable = computed(() => props.combatant.isAlive && !props.combatant.isYielded)
+
+const activeCallout = computed(() => combatStore.getCalloutFor(props.combatant.characterId))
 
 function onClick(): void {
   if (isClickable.value) {
@@ -74,8 +80,14 @@ function onMouseLeave(): void {
     @mousemove="onMouseMove"
     @mouseleave="onMouseLeave"
   >
+    <!-- Callout bubble (floats above card) -->
+    <CombatCallout v-if="activeCallout" :key="activeCallout.id" :text="activeCallout.text" />
+
     <!-- Name row -->
     <div class="card-name-row">
+      <div v-if="combatant.thumbnailUrl" class="card-portrait">
+        <img :src="combatant.thumbnailUrl" :alt="combatant.characterName" />
+      </div>
       <span class="card-name" :title="combatant.characterName">
         {{ combatant.characterName }}
       </span>
@@ -118,7 +130,7 @@ function onMouseLeave(): void {
   flex-direction: column;
   gap: 3px;
   transition: border-color var(--transition-fast), background var(--transition-fast);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .combatant-card.is-clickable {
@@ -165,6 +177,21 @@ function onMouseLeave(): void {
 .combatant-card.is-yielded {
   opacity: 0.5;
   cursor: default;
+}
+
+/* Portrait */
+.card-portrait {
+  width: 24px;
+  height: 24px;
+  border-radius: 2px;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 1px solid var(--color-border-dim);
+}
+.card-portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 /* Name row */

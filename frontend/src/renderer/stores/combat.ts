@@ -64,6 +64,7 @@ export interface CombatantView {
   shieldTier: number
   hasShield: boolean
   combatRating: number
+  thumbnailUrl: string | null
 }
 
 export interface WoundAssessmentView {
@@ -457,6 +458,29 @@ export const useCombatStore = defineStore('combat', () => {
     selectedTargetId.value = characterId
   }
 
+  // ── Combat callouts (NPC speech bubbles) ──
+
+  interface ActiveCallout {
+    characterId: number
+    text: string
+    id: number
+  }
+
+  let nextCalloutId = 0
+  const activeCallouts = ref<ActiveCallout[]>([])
+
+  function addCallout(characterId: number, text: string): void {
+    const id = nextCalloutId++
+    activeCallouts.value.push({ characterId, text, id })
+    setTimeout(() => {
+      activeCallouts.value = activeCallouts.value.filter(c => c.id !== id)
+    }, 4000)
+  }
+
+  function getCalloutFor(characterId: number): ActiveCallout | null {
+    return activeCallouts.value.find(c => c.characterId === characterId) ?? null
+  }
+
   function clearCombatSession(): void {
     sessionId.value = null
     combatants.value = []
@@ -468,6 +492,7 @@ export const useCombatStore = defineStore('combat', () => {
     sessionEnded.value = false
     selectedTargetId.value = null
     woundAssessments.value = []
+    activeCallouts.value = []
     activeView.value = 'none'
   }
 
@@ -524,5 +549,9 @@ export const useCombatStore = defineStore('combat', () => {
     woundAssessments,
     selectTarget,
     clearCombatSession,
+    // Callouts
+    activeCallouts,
+    addCallout,
+    getCalloutFor,
   }
 })

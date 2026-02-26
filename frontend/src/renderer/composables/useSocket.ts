@@ -319,6 +319,10 @@ export function useSocket() {
       combatStore.processWoundAssessment(data.results)
     })
 
+    socket.on('combat:callout', (data: { characterId: number; text: string }) => {
+      combatStore.addCallout(data.characterId, data.text)
+    })
+
     socket.on('combat:error', (data: { message: string }) => {
       hudStore.addNotification('danger', 'Combat', data.message)
     })

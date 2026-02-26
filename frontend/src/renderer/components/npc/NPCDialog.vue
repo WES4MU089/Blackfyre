@@ -3,31 +3,42 @@ import { ref, nextTick, watch } from 'vue'
 import { useNpcDialogStore } from '@/stores/npcDialog'
 import { getSocket } from '@/composables/useSocket'
 import { useDraggable } from '@/composables/useDraggable'
+import { useTypewriter } from '@/composables/useTypewriter'
 
 const store = useNpcDialogStore()
 const panelRef = ref<HTMLElement | null>(null)
 const historyRef = ref<HTMLElement | null>(null)
+const typewriter = useTypewriter({ intervalMs: 30 })
 
 const { onDragStart } = useDraggable('npc-dialog', panelRef, { alwaysDraggable: true })
 
-// Auto-scroll dialog history when new entries are added
+// Auto-scroll dialog history and trigger typewriter for new NPC entries
 watch(
   () => store.dialogHistory.length,
-  async () => {
+  async (newLen) => {
     await nextTick()
     if (historyRef.value) {
       historyRef.value.scrollTop = historyRef.value.scrollHeight
+    }
+    // Start typewriter for the latest NPC entry
+    if (newLen > 0) {
+      const last = store.dialogHistory[newLen - 1]
+      if (last.speaker === 'npc') {
+        typewriter.start(last.text)
+      }
     }
   },
 )
 
 function selectOption(optionId: string, text: string): void {
   if (store.isClosing) return
+  typewriter.skip()
   store.addPlayerChoice(text)
   getSocket()?.emit('npc:select-option', { optionId })
 }
 
 function close(): void {
+  typewriter.skip()
   getSocket()?.emit('npc:close')
   store.closeDialog()
 }
@@ -72,7 +83,13 @@ function close(): void {
           <span class="npc-history-speaker">
             {{ entry.speaker === 'npc' ? store.npcName : 'You' }}:
           </span>
-          <span class="npc-history-text">
+          <!-- Typewriter for the latest NPC entry while animating -->
+          <span
+            v-if="entry.speaker === 'npc' && i === store.dialogHistory.length - 1 && typewriter.isAnimating.value"
+            class="npc-history-text"
+          >&ldquo;{{ typewriter.fullText.value.slice(0, typewriter.visibleCount.value) }}<span class="tw-cursor">|</span>&rdquo;</span>
+          <!-- Normal full text (history or completed animation) -->
+          <span v-else class="npc-history-text">
             {{ entry.speaker === 'npc' ? `\u201C${entry.text}\u201D` : entry.text }}
           </span>
         </div>
@@ -249,6 +266,20 @@ function close(): void {
 
 .npc-history-entry.is-player .npc-history-text {
   color: var(--color-text-dim);
+}
+
+/* ── Typewriter cursor ── */
+
+.tw-cursor {
+  display: inline;
+  color: var(--color-gold-dim);
+  animation: tw-blink 0.6s step-end infinite;
+  font-weight: 300;
+}
+
+@keyframes tw-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
 
 /* ── Response options ── */
