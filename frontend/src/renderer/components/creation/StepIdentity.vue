@@ -1,8 +1,44 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useCreationStore } from '@/stores/creation'
 
 const store = useCreationStore()
+const portraitInput = ref<HTMLInputElement | null>(null)
+const portraitError = ref<string | null>(null)
+
+const MAX_PORTRAIT_SIZE = 5 * 1024 * 1024
+const ACCEPTED_TYPES = ['image/png', 'image/jpeg', 'image/webp']
+
+function triggerPortraitSelect(): void {
+  portraitInput.value?.click()
+}
+
+function onPortraitSelected(e: Event): void {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  portraitError.value = null
+
+  if (!ACCEPTED_TYPES.includes(file.type)) {
+    portraitError.value = 'Only PNG, JPG, or WebP images are allowed'
+    input.value = ''
+    return
+  }
+  if (file.size > MAX_PORTRAIT_SIZE) {
+    portraitError.value = 'Image must be under 5 MB'
+    input.value = ''
+    return
+  }
+
+  store.setPortrait(file)
+  input.value = ''
+}
+
+function removePortrait(): void {
+  store.setPortrait(null)
+  portraitError.value = null
+}
 
 const NAME_REGEX = /^[a-zA-Z\s'-]+$/
 
@@ -97,6 +133,56 @@ onMounted(() => {
         <span v-if="nameError" class="field-error">{{ nameError }}</span>
         <span v-else-if="nameValid" class="field-ok">Valid name</span>
       </div>
+    </div>
+
+    <!-- Portrait Upload -->
+    <div class="field-section portrait-section">
+      <label class="field-label">Character Portrait <span class="field-optional">(400 x 600)</span></label>
+      <div class="portrait-area">
+        <div
+          class="portrait-frame"
+          :class="{ 'portrait-frame--empty': !store.portraitPreview }"
+          @click="triggerPortraitSelect"
+        >
+          <img
+            v-if="store.portraitPreview"
+            :src="store.portraitPreview"
+            alt="Portrait preview"
+            class="portrait-img"
+          />
+          <div v-else class="portrait-placeholder">
+            <span class="portrait-plus">+</span>
+            <span class="portrait-hint">Upload Portrait</span>
+            <span class="portrait-hint-sm">PNG / JPG / WebP</span>
+          </div>
+        </div>
+        <div class="portrait-controls">
+          <button
+            v-if="store.portraitPreview"
+            class="portrait-btn portrait-btn--remove"
+            type="button"
+            @click="removePortrait"
+          >
+            Remove
+          </button>
+          <button
+            class="portrait-btn"
+            type="button"
+            @click="triggerPortraitSelect"
+          >
+            {{ store.portraitPreview ? 'Change' : 'Browse...' }}
+          </button>
+          <div v-if="portraitError" class="field-error">{{ portraitError }}</div>
+          <div class="field-hint">Recommended 400 x 600 px. Max 5 MB.</div>
+        </div>
+      </div>
+      <input
+        ref="portraitInput"
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        class="portrait-file-input"
+        @change="onPortraitSelected"
+      />
     </div>
 
     <!-- Parentage Row -->
@@ -491,6 +577,111 @@ onMounted(() => {
 
 .char-count--warn {
   color: var(--color-warning);
+}
+
+/* Portrait upload */
+.portrait-section {
+  align-items: center;
+}
+
+.portrait-area {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+}
+
+.portrait-frame {
+  width: 160px;
+  height: 240px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color var(--transition-fast);
+  background: var(--color-surface-dark);
+}
+
+.portrait-frame:hover {
+  border-color: var(--color-gold-dim);
+}
+
+.portrait-frame--empty {
+  border-style: dashed;
+}
+
+.portrait-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.portrait-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.portrait-plus {
+  font-size: 28px;
+  color: var(--color-text-muted);
+  line-height: 1;
+}
+
+.portrait-hint {
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.portrait-hint-sm {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-text-muted);
+  opacity: 0.6;
+}
+
+.portrait-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding-top: var(--space-xs);
+}
+
+.portrait-btn {
+  padding: 5px 14px;
+  background: var(--color-surface-dark);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-dim);
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: center;
+}
+
+.portrait-btn:hover {
+  border-color: var(--color-gold-dim);
+  color: var(--color-gold);
+}
+
+.portrait-btn--remove {
+  color: var(--color-text-muted);
+  border-color: var(--color-border-dim);
+}
+
+.portrait-btn--remove:hover {
+  color: var(--color-crimson-light);
+  border-color: var(--color-crimson-dark);
+}
+
+.portrait-file-input {
+  display: none;
 }
 
 /* Parentage row */

@@ -1,14 +1,19 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed } from 'vue'
 import { useCreationStore } from '@/stores/creation'
+import { useAuthStore } from '@/stores/auth'
+import { useHudStore } from '@/stores/hud'
 import { useSocket } from '@/composables/useSocket'
+import { BACKEND_URL } from '@/config'
 import StepTemplate from './StepTemplate.vue'
 import StepAptitudes from './StepAptitudes.vue'
 import StepIdentity from './StepIdentity.vue'
 import StepReview from './StepReview.vue'
 
 const store = useCreationStore()
-const { submitCharacterCreation } = useSocket()
+const authStore = useAuthStore()
+const hudStore = useHudStore()
+const { selectCharacter, requestCharacterList } = useSocket()
 
 const STEP_LABELS = ['Class', 'Aptitudes', 'Identity', 'Review']
 
@@ -33,12 +38,67 @@ const footerHint = computed(() => {
   }
 })
 
-function handleSubmit(): void {
+async function handleSubmit(): Promise<void> {
   const payload = store.getCreatePayload()
   if (!payload) return
   store.isSubmitting = true
   store.submitError = null
-  submitCharacterCreation(payload)
+
+  try {
+    const form = new FormData()
+    // Append all payload fields
+    form.append('templateKey', payload.templateKey)
+    form.append('aptitudes', JSON.stringify(payload.aptitudes))
+    form.append('name', payload.name)
+    form.append('fatherName', payload.fatherName)
+    form.append('motherName', payload.motherName)
+    if (payload.backstory) form.append('backstory', payload.backstory)
+    if (payload.houseId != null) form.append('houseId', String(payload.houseId))
+    form.append('isBastard', String(payload.isBastard))
+    form.append('isDragonSeed', String(payload.isDragonSeed))
+    form.append('requestedRole', payload.requestedRole)
+    form.append('isFeaturedRole', String(payload.isFeaturedRole))
+    if (payload.hohContact) form.append('hohContact', payload.hohContact)
+    if (payload.applicationBio) form.append('applicationBio', payload.applicationBio)
+    if (payload.publicBio) form.append('publicBio', payload.publicBio)
+    if (payload.organizationId != null) form.append('organizationId', String(payload.organizationId))
+
+    // Append portrait file if selected
+    if (store.portraitFile) {
+      form.append('portrait', store.portraitFile)
+    }
+
+    const res = await fetch(`${BACKEND_URL}/api/applications/submit`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${authStore.token}` },
+      body: form,
+    })
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      store.submitError = data.error || 'Failed to create character'
+      return
+    }
+
+    // Success — mirror the WebSocket character:created behavior
+    store.isSubmitting = false
+    store.close()
+
+    if (data.applicationStatus === 'pending') {
+      hudStore.addNotification('info', 'Application Submitted',
+        `${payload.name} is pending staff review and cannot be played until approved.`)
+      requestCharacterList()
+    } else {
+      // Tier 1: auto-select the newly created character
+      selectCharacter(data.characterId)
+      hudStore.addNotification('success', 'Character Created', `Welcome, ${payload.name}!`)
+    }
+  } catch (err) {
+    store.submitError = 'Network error — please try again'
+  } finally {
+    store.isSubmitting = false
+  }
 }
 </script>
 
