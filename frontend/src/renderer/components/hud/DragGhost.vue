@@ -33,7 +33,7 @@ const iconUrl = computed(() => {
 </script>
 
 <template>
-  <Teleport to="body">
+  <Teleport to="#hud-popover-root">
     <div
       class="drag-ghost"
       :style="{

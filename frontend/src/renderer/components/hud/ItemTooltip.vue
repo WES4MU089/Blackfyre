@@ -131,7 +131,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <Teleport to="body">
+  <Teleport to="#hud-popover-root">
     <div
       ref="el"
       class="item-tooltip"

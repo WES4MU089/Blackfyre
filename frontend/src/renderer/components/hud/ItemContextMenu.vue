@@ -99,7 +99,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <Teleport to="body">
+  <Teleport to="#hud-popover-root">
     <div
       ref="el"
       class="ctx-menu"
@@ -126,6 +126,7 @@ onBeforeUnmount(() => {
   position: fixed;
   z-index: 10000;
   min-width: 120px;
+  pointer-events: auto;
   padding: 4px 0;
   background: rgba(18, 14, 10, 0.97);
   border: 1px solid var(--color-border);

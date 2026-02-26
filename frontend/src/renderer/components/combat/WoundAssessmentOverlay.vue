@@ -29,7 +29,7 @@ function penaltyText(r: WoundAssessmentView): string {
 </script>
 
 <template>
-  <Teleport to="body">
+  <Teleport to="#hud-popover-root">
     <div v-if="visible" class="wound-overlay">
       <div class="wound-panel">
         <h3 class="wound-title">Wound Assessment</h3>
