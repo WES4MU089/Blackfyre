@@ -157,9 +157,6 @@ onMounted(async () => {
     <!-- Shop / Trade Panel -->
     <ShopPanel v-if="shopStore.isOpen" />
 
-    <!-- Container / Lockbox Panel -->
-    <ContainerPanel v-if="containerStore.isOpen" />
-
     <!-- Retainer Hire Wizard (opens from NPC dialog or panel) -->
     <RetainerHire v-if="characterStore.isHiringRetainer" />
 
@@ -170,7 +167,8 @@ onMounted(async () => {
     <NotificationPanel v-if="notificationStore.isOpen" />
 
     <!-- System panel overlay -->
-    <div v-if="hudStore.openSystemPanels.size > 0 || combatStore.activeView !== 'none' || adminStore.isOpen || socialStore.isOpen" class="hud-system-overlay">
+    <div v-if="hudStore.openSystemPanels.size > 0 || combatStore.activeView !== 'none' || adminStore.isOpen || socialStore.isOpen || containerStore.isOpen" class="hud-system-overlay">
+      <ContainerPanel v-if="containerStore.isOpen" />
       <InventoryPanel v-if="hudStore.isPanelOpen('inventory')" />
       <CharacterPanel v-if="hudStore.isPanelOpen('character')" />
       <WikiPanel v-if="hudStore.isPanelOpen('wiki')" />
