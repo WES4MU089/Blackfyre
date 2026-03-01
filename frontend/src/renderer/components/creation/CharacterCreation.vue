@@ -49,7 +49,9 @@ async function handleSubmit(): Promise<void> {
     // Append all payload fields
     form.append('templateKey', payload.templateKey)
     form.append('aptitudes', JSON.stringify(payload.aptitudes))
+    form.append('sex', payload.sex)
     form.append('name', payload.name)
+    form.append('age', String(payload.age))
     form.append('fatherName', payload.fatherName)
     form.append('motherName', payload.motherName)
     if (payload.backstory) form.append('backstory', payload.backstory)

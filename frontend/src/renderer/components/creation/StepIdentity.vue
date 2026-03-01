@@ -74,6 +74,16 @@ function removeThumbnail(): void {
   thumbnailError.value = null
 }
 
+const GAME_YEAR = 120
+
+const birthYear = computed(() => GAME_YEAR - store.characterAge)
+
+const ageError = computed(() => {
+  if (store.characterAge < 14) return 'Minimum age is 14'
+  if (store.characterAge > 100) return 'Maximum age is 100'
+  return null
+})
+
 const NAME_REGEX = /^[a-zA-Z\s'-]+$/
 
 const nameValid = computed(() => {
@@ -146,6 +156,29 @@ onMounted(() => {
       <span class="tier-text">{{ tierLabel }}</span>
     </div>
 
+    <!-- Character Sex -->
+    <div class="field-section sex-section">
+      <label class="field-label">Sex <span class="required">*</span></label>
+      <div class="sex-toggle">
+        <button
+          type="button"
+          class="sex-btn"
+          :class="{ 'sex-btn--active': store.characterSex === 'male' }"
+          @click="store.characterSex = 'male'"
+        >
+          Male
+        </button>
+        <button
+          type="button"
+          class="sex-btn"
+          :class="{ 'sex-btn--active': store.characterSex === 'female' }"
+          @click="store.characterSex = 'female'"
+        >
+          Female
+        </button>
+      </div>
+    </div>
+
     <!-- Character Name -->
     <div class="field-section">
       <label class="field-label" for="char-name">Character Name</label>
@@ -167,6 +200,24 @@ onMounted(() => {
         <span v-if="nameError" class="field-error">{{ nameError }}</span>
         <span v-else-if="nameValid" class="field-ok">Valid name</span>
       </div>
+    </div>
+
+    <!-- Character Age -->
+    <div class="field-section age-section">
+      <label class="field-label" for="char-age">Character Age</label>
+      <div class="age-row">
+        <input
+          id="char-age"
+          v-model.number="store.characterAge"
+          type="number"
+          class="field-input age-input"
+          :class="{ 'field-input--error': ageError }"
+          min="14"
+          max="100"
+        />
+        <span class="age-birth-year muted">Born {{ birthYear }} AC</span>
+      </div>
+      <div v-if="ageError" class="field-error">{{ ageError }}</div>
     </div>
 
     <!-- Portraits Row -->
@@ -526,6 +577,47 @@ onMounted(() => {
   line-height: 1.4;
 }
 
+/* Sex toggle */
+.sex-section {
+  align-items: center;
+}
+
+.sex-toggle {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  width: fit-content;
+}
+
+.sex-btn {
+  padding: 8px 28px;
+  background: var(--color-surface-dark);
+  border: none;
+  color: var(--color-text-dim);
+  font-family: var(--font-display);
+  font-size: var(--font-size-sm);
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.sex-btn + .sex-btn {
+  border-left: 1px solid var(--color-border);
+}
+
+.sex-btn:hover:not(.sex-btn--active) {
+  background: rgba(201, 168, 76, 0.05);
+  color: var(--color-text);
+}
+
+.sex-btn--active {
+  background: rgba(201, 168, 76, 0.15);
+  color: var(--color-gold);
+  font-weight: 600;
+}
+
 /* Field sections */
 .field-section {
   display: flex;
@@ -658,6 +750,38 @@ onMounted(() => {
 
 .char-count--warn {
   color: var(--color-warning);
+}
+
+/* Age field */
+.age-section {
+  max-width: 300px;
+  align-self: center;
+}
+
+.age-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.age-input {
+  width: 80px;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: var(--font-size-md);
+  color: var(--color-gold);
+  -moz-appearance: textfield;
+}
+
+.age-input::-webkit-inner-spin-button,
+.age-input::-webkit-outer-spin-button {
+  opacity: 1;
+}
+
+.age-birth-year {
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
 }
 
 /* Portraits row */

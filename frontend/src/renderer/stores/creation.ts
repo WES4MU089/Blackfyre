@@ -81,7 +81,9 @@ export const useCreationStore = defineStore('creation', () => {
   const aptitudes = ref<Record<string, number>>({})
 
   // Identity
+  const characterSex = ref<'male' | 'female' | null>(null)
   const characterName = ref('')
+  const characterAge = ref(25)
   const backstory = ref('')
   const portraitFile = ref<File | null>(null)
   const portraitPreview = ref<string | null>(null)
@@ -166,7 +168,8 @@ export const useCreationStore = defineStore('creation', () => {
   const stepValidation = computed(() => ({
     template: !!selectedTemplate.value,
     aptitudes: freeAptitudePointsRemaining.value === 0,
-    identity: characterName.value.trim().length >= 2
+    identity: characterSex.value !== null
+      && characterName.value.trim().length >= 2
       && fatherName.value.trim().length >= 1
       && motherName.value.trim().length >= 1
       && (!requiresApplication.value || applicationBio.value.trim().length >= 1),
@@ -193,7 +196,9 @@ export const useCreationStore = defineStore('creation', () => {
     currentStep.value = 'template'
     selectedTemplate.value = null
     aptitudes.value = {}
+    characterSex.value = null
     characterName.value = ''
+    characterAge.value = 25
     backstory.value = ''
     if (portraitPreview.value) {
       URL.revokeObjectURL(portraitPreview.value)
@@ -339,7 +344,9 @@ export const useCreationStore = defineStore('creation', () => {
     return {
       templateKey: selectedTemplate.value.template_key,
       aptitudes: { ...aptitudes.value },
+      sex: characterSex.value!,
       name: characterName.value.trim(),
+      age: characterAge.value,
       backstory: backstory.value.trim() || undefined,
       fatherName: fatherName.value.trim(),
       motherName: motherName.value.trim(),
@@ -364,7 +371,9 @@ export const useCreationStore = defineStore('creation', () => {
     templates,
     selectedTemplate,
     aptitudes,
+    characterSex,
     characterName,
+    characterAge,
     backstory,
     portraitFile,
     portraitPreview,
