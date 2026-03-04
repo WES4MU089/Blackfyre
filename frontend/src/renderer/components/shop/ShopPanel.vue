@@ -6,6 +6,7 @@ import { useHudStore } from '@/stores/hud'
 import { useDraggable } from '@/composables/useDraggable'
 import { getSocket } from '@/composables/useSocket'
 import { getTierColor } from '@/utils/tierColors'
+import { getItemIcon } from '@/utils/itemIcons'
 import ItemTooltip from '@/components/hud/ItemTooltip.vue'
 import dragonIcon from '@res/images/art/Currency/dragon.png'
 import stagIcon from '@res/images/art/Currency/stag.png'
@@ -56,7 +57,18 @@ function formatPrice(totalStars: number): string {
   return parts.join(' ')
 }
 
+function resolveItemIcon(item: ShopItem): string {
+  if (item.icon_url) return item.icon_url
+  const md = item.model_data as Record<string, unknown> | null
+  return getItemIcon(item.item_key, {
+    weaponType: md?.weaponType as string | undefined,
+    tier: item.tier,
+    category: item.slot_type ?? item.category,
+  })
+}
+
 function getStatSummary(item: ShopItem): string {
+  if (item.category === 'consumable') return item.description || ''
   if (!item.model_data) return ''
   const m = item.model_data
   const parts: string[] = []
@@ -164,10 +176,7 @@ const panelStyle = computed(() => {
         >
           <!-- Item icon -->
           <div class="shop-item__icon">
-            <img v-if="item.icon_url" :src="item.icon_url" :alt="item.name" />
-            <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
-              <path d="M14 2l6 6v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2h8z" />
-            </svg>
+            <img :src="resolveItemIcon(item)" :alt="item.name" />
           </div>
 
           <!-- Item details -->

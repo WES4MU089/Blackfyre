@@ -18,7 +18,7 @@ export interface ShopItem {
   model_data: Record<string, number | boolean> | null
 }
 
-export type ShopCategory = 'weapon' | 'armor' | 'shield'
+export type ShopCategory = 'weapon' | 'armor' | 'shield' | 'consumable'
 
 export interface ShopOpenPayload {
   npcName: string
@@ -40,12 +40,14 @@ export const useShopStore = defineStore('shop', () => {
   const weaponItems = computed(() => items.value.filter(i => i.category === 'weapon'))
   const armorItems = computed(() => items.value.filter(i => i.category === 'armor'))
   const shieldItems = computed(() => items.value.filter(i => i.category === 'shield'))
+  const consumableItems = computed(() => items.value.filter(i => i.category === 'consumable'))
 
   const categories = computed(() => {
     const cats: { key: ShopCategory; label: string; count: number }[] = []
     if (weaponItems.value.length > 0) cats.push({ key: 'weapon', label: 'Weapons', count: weaponItems.value.length })
     if (armorItems.value.length > 0) cats.push({ key: 'armor', label: 'Armor', count: armorItems.value.length })
     if (shieldItems.value.length > 0) cats.push({ key: 'shield', label: 'Shields', count: shieldItems.value.length })
+    if (consumableItems.value.length > 0) cats.push({ key: 'consumable', label: 'Supplies', count: consumableItems.value.length })
     return cats
   })
 
@@ -54,6 +56,7 @@ export const useShopStore = defineStore('shop', () => {
       case 'weapon': return weaponItems.value
       case 'armor': return armorItems.value
       case 'shield': return shieldItems.value
+      case 'consumable': return consumableItems.value
       default: return items.value
     }
   })
@@ -71,6 +74,7 @@ export const useShopStore = defineStore('shop', () => {
     if (weaponItems.value.length > 0) activeCategory.value = 'weapon'
     else if (armorItems.value.length > 0) activeCategory.value = 'armor'
     else if (shieldItems.value.length > 0) activeCategory.value = 'shield'
+    else if (consumableItems.value.length > 0) activeCategory.value = 'consumable'
   }
 
   function closeShop(): void {
@@ -116,6 +120,7 @@ export const useShopStore = defineStore('shop', () => {
     weaponItems,
     armorItems,
     shieldItems,
+    consumableItems,
     categories,
     activeItems,
     openShop,
