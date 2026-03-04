@@ -126,9 +126,20 @@ async function onContextAction(action: string): Promise<void> {
 // --- Drop handling ---
 async function onDrop(targetSlot: number, payload: DragPayload): Promise<void> {
   if (payload.source === 'inventory' && payload.sourceSlot != null) {
-    // Inventory → Inventory: move/swap
+    // Inventory → Inventory: move/swap or stack
     if (payload.sourceSlot !== targetSlot) {
-      await characterStore.moveItem(payload.sourceSlot, targetSlot)
+      const sourceItem = slotMap.value.get(payload.sourceSlot)
+      const targetItem = slotMap.value.get(targetSlot)
+
+      // Stack if same item and target has room
+      if (sourceItem && targetItem
+        && sourceItem.item_id === targetItem.item_id
+        && targetItem.max_stack > 1
+        && targetItem.quantity < targetItem.max_stack) {
+        await characterStore.stackItems(payload.sourceSlot, targetSlot)
+      } else {
+        await characterStore.moveItem(payload.sourceSlot, targetSlot)
+      }
     }
   } else if (payload.source === 'equipment' && payload.equipmentSlotId) {
     // Equipment → Inventory: unequip to target slot

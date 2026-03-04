@@ -531,6 +531,27 @@ export const useCharacterStore = defineStore('character', () => {
     }
   }
 
+  async function stackItems(sourceSlot: number, targetSlot: number): Promise<boolean> {
+    const charId = character.value?.id
+    if (!charId) return false
+
+    const snapshot = inventory.value.map(i => ({ ...i }))
+
+    try {
+      const res = await fetch(`${API_BASE}/api/inventory/${charId}/stack`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sourceSlot, targetSlot }),
+      })
+      const data = await res.json()
+      if (data.inventory) inventory.value = data.inventory as InventoryItem[]
+      return data.success === true
+    } catch {
+      inventory.value = snapshot
+      return false
+    }
+  }
+
   async function equipItem(inventoryId: number, slotId: string): Promise<boolean> {
     const charId = character.value?.id
     if (!charId) return false
@@ -755,6 +776,7 @@ export const useCharacterStore = defineStore('character', () => {
     unequipRetainerItem,
     allocateRetainerAptitude,
     moveItem,
+    stackItems,
     equipItem,
     unequipItem,
     useItem,
