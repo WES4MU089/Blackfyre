@@ -78,6 +78,19 @@ export function useCombat() {
     })
   }
 
+  function resolveMendChoice(chosenEffects: string[]): void {
+    if (!combatStore.sessionId) return
+    const actorCharacterId = combatStore.isRetainerTurn
+      ? combatStore.currentActorId ?? undefined
+      : undefined
+    getSocket()?.emit('combat:mend-resolve', {
+      sessionId: combatStore.sessionId,
+      actorCharacterId,
+      chosenEffects,
+    })
+    combatStore.clearPendingMendChoice()
+  }
+
   function toggleRetainers(retainerIds: number[]): void {
     if (!combatStore.currentLobbyId) return
     getSocket()?.emit('lobby:toggle-retainers', {
@@ -100,6 +113,7 @@ export function useCombat() {
     submitAction,
     yieldCombat,
     skipTurn,
+    resolveMendChoice,
     // Retainers
     toggleRetainers,
   }

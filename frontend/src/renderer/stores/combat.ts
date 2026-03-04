@@ -173,6 +173,20 @@ export const useCombatStore = defineStore('combat', () => {
   const selectedTargetId = ref<number | null>(null)
   const woundAssessments = ref<WoundAssessmentView[]>([])
 
+  // Pending mend effect choice (set when mend requires player to pick which effects to remove)
+  const pendingMendChoice = ref<{
+    sessionId: number
+    actorCharacterId: number
+    targetCharacterId: number
+    targetName: string
+    loreSuccesses: number
+    loreDice: number[]
+    healingAmount: number
+    stabilized: boolean
+    mendableEffects: string[]
+    maxPicks: number
+  } | null>(null)
+
   // Character store for identity checks
   const characterStore = useCharacterStore()
 
@@ -493,6 +507,14 @@ export const useCombatStore = defineStore('combat', () => {
     return activeCallouts.value.find(c => c.characterId === characterId) ?? null
   }
 
+  function setPendingMendChoice(data: typeof pendingMendChoice.value): void {
+    pendingMendChoice.value = data
+  }
+
+  function clearPendingMendChoice(): void {
+    pendingMendChoice.value = null
+  }
+
   function clearCombatSession(): void {
     sessionId.value = null
     combatants.value = []
@@ -506,6 +528,7 @@ export const useCombatStore = defineStore('combat', () => {
     woundAssessments.value = []
     activeCallouts.value = []
     activeView.value = 'none'
+    pendingMendChoice.value = null
   }
 
   return {
@@ -561,6 +584,10 @@ export const useCombatStore = defineStore('combat', () => {
     woundAssessments,
     selectTarget,
     clearCombatSession,
+    // Mend choice
+    pendingMendChoice,
+    setPendingMendChoice,
+    clearPendingMendChoice,
     // Callouts
     activeCallouts,
     addCallout,

@@ -302,6 +302,26 @@ export function useSocket() {
       combatStore.processRoundStart(data)
     })
 
+    socket.on('combat:mend-choose', (data: {
+      sessionId: number; actorCharacterId: number; targetCharacterId: number; targetName: string;
+      loreSuccesses: number; loreDice: number[]; healingAmount: number; stabilized: boolean;
+      mendableEffects: string[]; maxPicks: number;
+    }) => {
+      combatStore.setPendingMendChoice(data)
+    })
+
+    socket.on('combat:mend-resolved', (data: { sessionId: number; result: ActionResultView; combatants?: CombatantView[] }) => {
+      combatStore.clearPendingMendChoice()
+      // Update the last combat log entry (the partial mend) with the resolved result
+      const log = combatStore.combatLog
+      if (log.length > 0 && log[log.length - 1].actionType === 'mend') {
+        log[log.length - 1] = data.result
+      }
+      if (data.combatants) {
+        combatStore.combatants = data.combatants
+      }
+    })
+
     socket.on('combat:turn-skipped', (data: { sessionId: number; characterId: number; reason: string }) => {
       // Turn skip is informational — turn-start follows
     })

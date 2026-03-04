@@ -7,6 +7,7 @@ import CombatTeamPanel from './CombatTeamPanel.vue'
 import CombatControlPanel from './CombatControlPanel.vue'
 import CombatantTooltip from './CombatantTooltip.vue'
 import WoundAssessmentOverlay from './WoundAssessmentOverlay.vue'
+import MendChoiceOverlay from './MendChoiceOverlay.vue'
 
 const combatStore = useCombatStore()
 const characterStore = useCharacterStore()
@@ -119,6 +120,7 @@ onMounted(() => {
 
     <!-- Post-combat wound assessment results -->
     <WoundAssessmentOverlay />
+    <MendChoiceOverlay />
   </div>
 </template>
 

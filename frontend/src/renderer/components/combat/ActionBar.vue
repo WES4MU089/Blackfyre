@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useCombatStore } from '@/stores/combat'
 import { useCombat } from '@/composables/useCombat'
 
@@ -9,6 +9,7 @@ const { submitAction, yieldCombat, skipTurn } = useCombat()
 const isMyTurn = computed(() => combatStore.isMyTurn)
 const me = computed(() => combatStore.myCombatant)
 const sessionOver = computed(() => combatStore.sessionEnded)
+const pendingMend = computed(() => combatStore.pendingMendChoice !== null)
 
 // Active combatant — the character whose turn it is (self or retainer)
 const activeCombatant = computed(() => {
@@ -61,6 +62,8 @@ interface ActionDef {
   requiresTarget: boolean
 }
 
+const actionsEnabled = computed(() => isMyTurn.value && !sessionOver.value && !pendingMend.value)
+
 const actions = computed<ActionDef[]>(() => [
   {
     key: 'attack',
@@ -68,7 +71,7 @@ const actions = computed<ActionDef[]>(() => [
     tooltip: targetIsEnemy.value
       ? 'Strike the selected enemy'
       : 'Select an enemy target first',
-    enabled: isMyTurn.value && targetIsEnemy.value && !sessionOver.value,
+    enabled: actionsEnabled.value && targetIsEnemy.value,
     requiresTarget: true,
   },
   {
@@ -77,7 +80,7 @@ const actions = computed<ActionDef[]>(() => [
     tooltip: targetIsAlly.value
       ? 'Guard the selected ally from attacks'
       : 'Select an ally to protect',
-    enabled: isMyTurn.value && targetIsAlly.value && !sessionOver.value,
+    enabled: actionsEnabled.value && targetIsAlly.value,
     requiresTarget: true,
   },
   {
@@ -86,7 +89,7 @@ const actions = computed<ActionDef[]>(() => [
     tooltip: targetIsEnemy.value
       ? 'Contest Prowess to restrain the enemy (-20 defense)'
       : 'Select an enemy to grapple',
-    enabled: isMyTurn.value && targetIsEnemy.value && !sessionOver.value,
+    enabled: actionsEnabled.value && targetIsEnemy.value,
     requiresTarget: true,
   },
   {
@@ -95,14 +98,14 @@ const actions = computed<ActionDef[]>(() => [
     tooltip: isEngaged.value
       ? 'Attempt to break free (Cunning vs Prowess)'
       : 'Not engaged in melee',
-    enabled: isMyTurn.value && isEngaged.value && !sessionOver.value,
+    enabled: actionsEnabled.value && isEngaged.value,
     requiresTarget: false,
   },
   {
     key: 'brace',
     label: 'Brace',
     tooltip: 'Skip your attack for +5 defense per attacker this round',
-    enabled: isMyTurn.value && !sessionOver.value,
+    enabled: actionsEnabled.value,
     requiresTarget: false,
   },
   {
@@ -113,23 +116,38 @@ const actions = computed<ActionDef[]>(() => [
       : hasAllies.value
         ? 'Inspire allies with Command (+ATK dice)'
         : 'No allies to rally',
-    enabled: isMyTurn.value && !sessionOver.value && hasAllies.value && !hasRallyCooldown.value,
+    enabled: actionsEnabled.value && hasAllies.value && !hasRallyCooldown.value,
     requiresTarget: false,
   },
   {
     key: 'mend',
     label: 'Mend',
     tooltip: targetIsFriendly.value
-      ? 'Use a bandage — Lore check to heal + clear a status effect'
+      ? 'Use a bandage — Lore check to heal + clear ailments'
       : 'Select yourself or an ally to mend',
-    enabled: isMyTurn.value && !sessionOver.value && targetIsFriendly.value,
+    enabled: actionsEnabled.value && targetIsFriendly.value,
     requiresTarget: true,
   },
 ])
 
+const showMendConfirm = ref(false)
+
 function onAction(action: ActionDef): void {
   if (!action.enabled) return
+  if (action.key === 'mend') {
+    showMendConfirm.value = true
+    return
+  }
   submitAction(action.key, combatStore.selectedTargetId ?? undefined)
+}
+
+function confirmMend(): void {
+  showMendConfirm.value = false
+  submitAction('mend', combatStore.selectedTargetId ?? undefined)
+}
+
+function cancelMend(): void {
+  showMendConfirm.value = false
 }
 
 function onYield(): void {
@@ -182,6 +200,24 @@ function onSkip(): void {
         Yield
       </button>
     </div>
+
+    <!-- Mend confirmation overlay -->
+    <Teleport to="#hud-popover-root">
+      <div v-if="showMendConfirm" class="mend-confirm-overlay">
+        <div class="mend-confirm-panel">
+          <p class="mend-confirm-text">
+            Mending consumes <strong>one bandage</strong>. Health can only be restored
+            to this target once per combat &mdash; further mends can still clear ailments
+            and stabilize wounds.
+          </p>
+          <p class="mend-confirm-prompt">Proceed?</p>
+          <div class="mend-confirm-actions">
+            <button class="mend-btn mend-btn-cancel" @click="cancelMend">Cancel</button>
+            <button class="mend-btn mend-btn-confirm" @click="confirmMend">Mend</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -295,5 +331,83 @@ function onSkip(): void {
   border-color: rgba(139, 26, 26, 0.5);
   color: var(--color-crimson-light);
   background: rgba(139, 26, 26, 0.06);
+}
+
+/* Mend confirmation overlay */
+.mend-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.mend-confirm-panel {
+  width: 340px;
+  padding: var(--space-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-dim);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+
+.mend-confirm-text {
+  margin: 0 0 var(--space-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-dim);
+  line-height: 1.5;
+}
+
+.mend-confirm-text strong {
+  color: var(--color-gold);
+}
+
+.mend-confirm-prompt {
+  margin: 0 0 var(--space-md);
+  font-family: var(--font-display);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.mend-confirm-actions {
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: center;
+}
+
+.mend-btn {
+  padding: var(--space-xs) var(--space-md);
+  font-family: var(--font-display);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.mend-btn-cancel {
+  background: transparent;
+  border: 1px solid var(--color-border-dim);
+  color: var(--color-text-dim);
+}
+.mend-btn-cancel:hover {
+  border-color: var(--color-text-dim);
+  color: var(--color-text);
+}
+
+.mend-btn-confirm {
+  background: rgba(46, 160, 67, 0.15);
+  border: 1px solid rgba(46, 160, 67, 0.5);
+  color: #2ea043;
+}
+.mend-btn-confirm:hover {
+  background: rgba(46, 160, 67, 0.25);
+  border-color: #2ea043;
 }
 </style>
