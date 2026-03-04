@@ -35,6 +35,10 @@ export const useLauncherStore = defineStore('launcher', () => {
   const appVersion = ref('')
   const updateError = ref<string | null>(null)
 
+  // Patch notes
+  const patchNotes = ref('')
+  const patchNotesLoading = ref(false)
+
   // TOS state
   const tosAccepted = ref(false)
   const tosChecked = ref(false)
@@ -94,6 +98,26 @@ export const useLauncherStore = defineStore('launcher', () => {
 
   async function installAndRestart(): Promise<void> {
     await window.electronAPI.installUpdate()
+  }
+
+  // --- Patch Notes ---
+
+  async function fetchPatchNotes(): Promise<void> {
+    if (!appVersion.value) return
+    patchNotesLoading.value = true
+    try {
+      const res = await fetch(
+        `https://api.github.com/repos/WES4MU089/Blackfyre/releases/tags/v${appVersion.value}`,
+        { headers: { Accept: 'application/vnd.github.v3+json' } },
+      )
+      if (!res.ok) return
+      const data = await res.json()
+      patchNotes.value = data.body || ''
+    } catch {
+      // Non-critical — silently fail
+    } finally {
+      patchNotesLoading.value = false
+    }
   }
 
   // --- TOS ---
@@ -168,8 +192,12 @@ export const useLauncherStore = defineStore('launcher', () => {
     tosChecked,
     tosDocument,
     privacyDocument,
+    // Patch notes
+    patchNotes,
+    patchNotesLoading,
     // Actions
     loadAppVersion,
+    fetchPatchNotes,
     setupUpdaterListeners,
     checkForUpdates,
     downloadUpdate,

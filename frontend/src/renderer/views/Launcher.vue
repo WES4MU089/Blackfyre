@@ -31,6 +31,21 @@ const isUpdating = computed(() =>
 
 const needsRestart = computed(() => launcherStore.updateStatus === 'downloaded')
 
+// Show incoming release notes when update available, otherwise current version's notes
+const displayNotes = computed(() => {
+  if (launcherStore.releaseNotes && (launcherStore.updateStatus === 'available' || launcherStore.updateStatus === 'downloading' || launcherStore.updateStatus === 'downloaded')) {
+    return launcherStore.releaseNotes
+  }
+  return launcherStore.patchNotes
+})
+
+const notesVersion = computed(() => {
+  if (launcherStore.releaseNotes && (launcherStore.updateStatus === 'available' || launcherStore.updateStatus === 'downloading' || launcherStore.updateStatus === 'downloaded')) {
+    return launcherStore.latestVersion
+  }
+  return launcherStore.appVersion
+})
+
 function handleLaunch(): void {
   window.electronAPI.loginSuccess()
 }
@@ -42,6 +57,9 @@ function handleTosAccepted(): void {
 onMounted(async () => {
   // Load app version
   await launcherStore.loadAppVersion()
+
+  // Fetch patch notes for current version
+  launcherStore.fetchPatchNotes()
 
   // Setup updater event listeners
   launcherStore.setupUpdaterListeners()
@@ -109,6 +127,19 @@ onMounted(async () => {
 
       <!-- Update Section -->
       <UpdateProgress />
+
+      <!-- Patch Notes -->
+      <div v-if="displayNotes" class="patch-notes">
+        <div class="patch-notes-header">
+          <span class="patch-notes-title">Patch Notes</span>
+          <span class="patch-notes-version">v{{ notesVersion }}</span>
+        </div>
+        <div class="patch-notes-body">
+          <div v-for="(line, i) in displayNotes.split('\n').filter((l: string) => l.trim())" :key="i" class="patch-note-line">
+            {{ line.replace(/^[-*]\s*/, '') }}
+          </div>
+        </div>
+      </div>
 
       <!-- Version info -->
       <div class="version-info">
@@ -314,6 +345,70 @@ onMounted(async () => {
 .player-name {
   color: var(--color-gold);
   font-weight: 600;
+}
+
+/* Patch notes */
+.patch-notes {
+  width: 100%;
+  max-width: 380px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--color-border-dim);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.patch-notes-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border-dim);
+}
+
+.patch-notes-title {
+  font-family: var(--font-display);
+  font-size: 11px;
+  color: var(--color-gold);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.patch-notes-version {
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  color: var(--color-text-dim);
+}
+
+.patch-notes-body {
+  padding: 8px 12px;
+  max-height: 140px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-dim) transparent;
+}
+
+.patch-notes-body::-webkit-scrollbar {
+  width: 3px;
+}
+
+.patch-notes-body::-webkit-scrollbar-thumb {
+  background: var(--color-border-dim);
+  border-radius: 2px;
+}
+
+.patch-note-line {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  padding-left: 12px;
+  position: relative;
+}
+
+.patch-note-line::before {
+  content: '\2022';
+  position: absolute;
+  left: 0;
+  color: var(--color-gold-dim);
 }
 
 /* Version info */
