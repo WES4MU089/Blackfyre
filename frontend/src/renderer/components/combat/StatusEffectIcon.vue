@@ -19,6 +19,8 @@ const label = computed(() => {
     grappled: 'Grappled',
     grappling: 'Grappling',
     bracing: 'Bracing',
+    rallied: 'Rallied',
+    rally_cooldown: 'Rally Cooldown',
     wounded: 'Wounded',
   }
   return labels[props.type] ?? props.type
@@ -36,6 +38,8 @@ const symbol = computed(() => {
     grappled: '\u2696',   // chains/scales
     grappling: '\u270B',  // hand
     bracing: '\u26E8',    // shield
+    rallied: '\u2691',    // flag
+    rally_cooldown: '\u23F3', // hourglass
     wounded: '\u2764',    // heart
   }
   return symbols[props.type] ?? '\u2022'
@@ -49,10 +53,12 @@ const tooltip = computed(() => {
     piercing: '+10 penetration',
     engaged: 'In melee combat',
     protecting: 'Guarding an ally',
-    pressured: 'Disadvantage on defense (2+ attackers)',
-    grappled: '-20 defense, cannot disengage freely',
+    pressured: `-${props.stacks} dice to all pools (${props.stacks + 1} attackers)`,
+    grappled: '-3 defense dice (1 round)',
     grappling: 'Holding an enemy',
-    bracing: '+5 defense per attacker this round',
+    bracing: '+1 defense die per attacker this round',
+    rallied: `+${props.stacks} attack dice from rally`,
+    rally_cooldown: 'Cannot rally yet',
     wounded: '-2 dice to all combat pools (24h or until healed)',
   }
   let text = `${label.value}: ${descriptions[props.type] ?? 'Unknown effect'}`
@@ -120,5 +126,7 @@ const effectClass = computed(() => `effect-${props.type}`)
 .effect-grappled { border-color: rgba(155, 50, 212, 0.5); color: #9b32d4; }
 .effect-grappling { border-color: rgba(155, 50, 212, 0.5); color: #9b32d4; }
 .effect-bracing { border-color: rgba(45, 138, 78, 0.5); color: #2d8a4e; }
+.effect-rallied { border-color: rgba(0, 172, 193, 0.5); color: #00acc1; }
+.effect-rally_cooldown { border-color: rgba(120, 120, 120, 0.5); color: #787878; }
 .effect-wounded { border-color: rgba(196, 43, 43, 0.5); color: #c42b2b; }
 </style>

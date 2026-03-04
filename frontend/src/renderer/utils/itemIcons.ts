@@ -49,6 +49,9 @@ import shield2 from '@res/images/icons/Inventory/Weapons/64x64/Shield_tier2.png'
 import shield3 from '@res/images/icons/Inventory/Weapons/64x64/Shield_tier3.png'
 import shield4 from '@res/images/icons/Inventory/Weapons/64x64/Shield_tier4.png'
 
+// Consumables
+import bandage from '@res/images/icons/Inventory/Consumeables/64x64/Bandages.png'
+
 // Legendary / Named weapons (tier 5)
 import blackfyre from '@res/images/icons/Inventory/Weapons/64x64/Blackfyre_tier5.png'
 import darkSister from '@res/images/icons/Inventory/Weapons/64x64/DarkSister_tier5.png'
@@ -57,6 +60,7 @@ import ice from '@res/images/icons/Inventory/Weapons/64x64/Ice_tier5.png'
 
 // Explicit item_key → icon overrides (named/unique items)
 const itemIconMap: Record<string, string> = {
+  bandage: bandage,
   blackfyre: blackfyre,
   dark_sister: darkSister,
   dawn: dawn,

@@ -114,7 +114,18 @@ export interface AttackResultView {
   dodgeRiposte: {
     damage: number
     targetCharacterId: number
+    statusEffectsApplied: StatusEffectView[]
+    critEffectsApplied: string[]
   } | null
+}
+
+export interface MendResultView {
+  targetCharacterId: number
+  loreSuccesses: number
+  loreDice: number[]
+  healingAmount: number
+  stabilized: boolean
+  effectsRemoved: string[]
 }
 
 export interface ActionResultView {
@@ -127,6 +138,7 @@ export interface ActionResultView {
   targetCharacterId: number | null
   targetName: string | null
   attackResult: AttackResultView | null
+  mendResult: MendResultView | null
   statusEffectsApplied: StatusEffectView[]
   statusEffectsRemoved: { characterId: number; type: string }[]
   narrative: string

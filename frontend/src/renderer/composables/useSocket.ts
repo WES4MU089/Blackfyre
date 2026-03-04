@@ -15,6 +15,7 @@ import { useContainerStore, type ContainerOpenPayload } from '@/stores/container
 import { useAuthStore } from '@/stores/auth'
 import { useAdminStore } from '@/stores/admin'
 import { useNotificationStore } from '@/stores/notifications'
+import { useProximityStore, type NearbyPlayer } from '@/stores/proximity'
 import { BACKEND_URL } from '@/config'
 
 const SOCKET_URL = BACKEND_URL
@@ -29,6 +30,7 @@ export function getSocket(): Socket | null {
 export function useSocket() {
   const characterStore = useCharacterStore()
   const hudStore = useHudStore()
+  const proximityStore = useProximityStore()
 
   function connect(token: string): void {
     if (socket?.connected) return
@@ -179,11 +181,18 @@ export function useSocket() {
       posZ: number
     }) => {
       hudStore.updateLocation(data)
+      // Request nearby players for Target Window on each keepalive
+      socket.emit('proximity:request-nearby')
     })
 
     // Region player count
     socket.on('region:player-count', (data: { count: number }) => {
       hudStore.setRegionPlayerCount(data.count)
+    })
+
+    // Nearby players for Target Window
+    socket.on('proximity:nearby-players', (data: NearbyPlayer[]) => {
+      proximityStore.setNearbyPlayers(data)
     })
 
     // SL account linking required (no verified SL account for this Discord user)

@@ -19,6 +19,16 @@ const activeCombatant = computed(() => {
 // Check if active combatant is engaged to anyone
 const isEngaged = computed(() => (activeCombatant.value?.engagedTo.length ?? 0) > 0)
 
+// Check if active combatant has allies for rally
+const hasAllies = computed(() => combatStore.allies.length > 0)
+
+// Check if active combatant is on rally cooldown
+const hasRallyCooldown = computed(() => {
+  const ac = activeCombatant.value
+  if (!ac) return true
+  return ac.statusEffects.some(e => e.type === 'rally_cooldown')
+})
+
 // Check if a target is selected
 const hasTarget = computed(() => combatStore.selectedTargetId !== null)
 
@@ -33,6 +43,15 @@ const targetIsAlly = computed(() => {
   if (!combatStore.selectedTargetId) return false
   return combatStore.allies.some(a => a.characterId === combatStore.selectedTargetId)
 })
+
+// Check if selected target is self
+const targetIsSelf = computed(() => {
+  if (!combatStore.selectedTargetId) return false
+  return combatStore.selectedTargetId === activeCombatant.value?.characterId
+})
+
+// Check if selected target is an ally or self (for mend)
+const targetIsFriendly = computed(() => targetIsAlly.value || targetIsSelf.value)
 
 interface ActionDef {
   key: string
@@ -85,6 +104,26 @@ const actions = computed<ActionDef[]>(() => [
     tooltip: 'Skip your attack for +5 defense per attacker this round',
     enabled: isMyTurn.value && !sessionOver.value,
     requiresTarget: false,
+  },
+  {
+    key: 'rally',
+    label: 'Rally',
+    tooltip: hasRallyCooldown.value
+      ? 'Rally is on cooldown'
+      : hasAllies.value
+        ? 'Inspire allies with Command (+ATK dice)'
+        : 'No allies to rally',
+    enabled: isMyTurn.value && !sessionOver.value && hasAllies.value && !hasRallyCooldown.value,
+    requiresTarget: false,
+  },
+  {
+    key: 'mend',
+    label: 'Mend',
+    tooltip: targetIsFriendly.value
+      ? 'Use a bandage — Lore check to heal + clear a status effect'
+      : 'Select yourself or an ally to mend',
+    enabled: isMyTurn.value && !sessionOver.value && targetIsFriendly.value,
+    requiresTarget: true,
   },
 ])
 
@@ -227,6 +266,18 @@ function onSkip(): void {
   border-color: rgba(45, 138, 78, 0.5);
   color: #2d8a4e;
   background: rgba(45, 138, 78, 0.06);
+}
+
+.action-rally:hover:not(:disabled) {
+  border-color: rgba(0, 172, 193, 0.5);
+  color: #00acc1;
+  background: rgba(0, 172, 193, 0.06);
+}
+
+.action-mend:hover:not(:disabled) {
+  border-color: rgba(46, 160, 67, 0.5);
+  color: #2ea043;
+  background: rgba(46, 160, 67, 0.06);
 }
 
 /* Secondary action styles */

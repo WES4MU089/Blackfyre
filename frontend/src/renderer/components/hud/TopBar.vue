@@ -46,6 +46,7 @@ const leftSystems: SystemTab[] = [
   { id: 'combat', label: 'Combat', icon: combatIcon, tooltip: 'Combat' },
   { id: 'inventory', label: 'Inventory', icon: inventoryIcon, tooltip: 'Inventory' },
   { id: 'retainers', label: 'Retainers', icon: combatIcon, tooltip: 'Retainer Management' },
+  { id: 'target-window', label: 'Nearby', icon: '', tooltip: 'Nearby Players' },
   { id: 'social', label: 'Social', icon: '', tooltip: 'Social Viewer' },
 ]
 
@@ -70,7 +71,14 @@ const rightSystems: SystemTab[] = [
         @click="sys.id === 'social' ? toggleSocialPanel() : hudStore.toggleSystemPanel(sys.id)"
       >
         <div class="system-icon">
-          <svg v-if="sys.id === 'social'" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <svg v-if="sys.id === 'target-window'" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="22" y1="12" x2="18" y2="12"/>
+            <line x1="6" y1="12" x2="2" y2="12"/>
+            <line x1="12" y1="6" x2="12" y2="2"/>
+            <line x1="12" y1="22" x2="12" y2="18"/>
+          </svg>
+          <svg v-else-if="sys.id === 'social'" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
             <circle cx="9" cy="7" r="4"/>
             <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
