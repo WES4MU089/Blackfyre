@@ -31,12 +31,35 @@ const isUpdating = computed(() =>
 
 const needsRestart = computed(() => launcherStore.updateStatus === 'downloaded')
 
+// Strip HTML tags and extract text lines from release notes (electron-updater returns HTML)
+function parseNoteLines(raw: string): string[] {
+  // If it contains HTML tags, extract <li> contents; otherwise treat as markdown lines
+  if (/<[a-z][\s\S]*>/i.test(raw)) {
+    const lines: string[] = []
+    const liRegex = /<li[^>]*>([\s\S]*?)<\/li>/gi
+    let match: RegExpExecArray | null
+    while ((match = liRegex.exec(raw)) !== null) {
+      const text = match[1].replace(/<[^>]+>/g, '').trim()
+      if (text) lines.push(text)
+    }
+    if (lines.length > 0) return lines
+    // Fallback: strip all tags and split by newlines
+    return raw.replace(/<[^>]+>/g, '').split('\n').map(l => l.trim()).filter(Boolean)
+  }
+  return raw.split('\n').map(l => l.replace(/^[-*]\s*/, '').trim()).filter(Boolean)
+}
+
 // Show incoming release notes when update available, otherwise current version's notes
 const displayNotes = computed(() => {
   if (launcherStore.releaseNotes && (launcherStore.updateStatus === 'available' || launcherStore.updateStatus === 'downloading' || launcherStore.updateStatus === 'downloaded')) {
     return launcherStore.releaseNotes
   }
   return launcherStore.patchNotes
+})
+
+const noteLines = computed(() => {
+  if (!displayNotes.value) return []
+  return parseNoteLines(displayNotes.value)
 })
 
 const notesVersion = computed(() => {
@@ -129,14 +152,14 @@ onMounted(async () => {
       <UpdateProgress />
 
       <!-- Patch Notes -->
-      <div v-if="displayNotes" class="patch-notes">
+      <div v-if="noteLines.length > 0" class="patch-notes">
         <div class="patch-notes-header">
           <span class="patch-notes-title">Patch Notes</span>
           <span class="patch-notes-version">v{{ notesVersion }}</span>
         </div>
         <div class="patch-notes-body">
-          <div v-for="(line, i) in displayNotes.split('\n').filter((l: string) => l.trim())" :key="i" class="patch-note-line">
-            {{ line.replace(/^[-*]\s*/, '') }}
+          <div v-for="(line, i) in noteLines" :key="i" class="patch-note-line">
+            {{ line }}
           </div>
         </div>
       </div>
