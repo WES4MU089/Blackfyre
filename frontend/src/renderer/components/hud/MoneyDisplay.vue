@@ -97,7 +97,7 @@ const displayCrypto = computed(() => formatMoney(store.finances.crypto))
 
 .cash-icon { color: var(--color-gold); }
 .bank-icon { color: var(--color-armor); }
-.crypto-icon { color: var(--color-oxygen); }
+.crypto-icon { color: var(--color-teal); }
 
 .money-value {
   font-family: var(--font-mono);

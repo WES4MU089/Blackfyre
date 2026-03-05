@@ -41,21 +41,6 @@ const store = useCharacterStore()
         />
       </div>
 
-      <!-- Stamina Bar -->
-      <div class="bar-row">
-        <div class="bar-icon stamina-icon">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M9.5 2L5 9h3l-1.5 5L11 7H8L9.5 2z" />
-          </svg>
-        </div>
-        <VitalsBar
-          :value="store.vitals.stamina"
-          color="var(--color-stamina)"
-          bg-color="var(--color-stamina-bg)"
-          glow-color="var(--color-stamina-glow)"
-          size="md"
-        />
-      </div>
     </div>
   </div>
 </template>
@@ -118,7 +103,4 @@ const store = useCharacterStore()
   color: var(--color-armor);
 }
 
-.stamina-icon {
-  color: var(--color-stamina);
-}
 </style>

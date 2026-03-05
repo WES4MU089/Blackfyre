@@ -51,21 +51,8 @@
   --color-armor-bg: rgba(58, 123, 213, 0.2);
   --color-armor-glow: rgba(58, 123, 213, 0.4);
 
-  --color-stamina: #d4a932;
-  --color-stamina-bg: rgba(212, 169, 50, 0.2);
-  --color-stamina-glow: rgba(212, 169, 50, 0.4);
-
-  --color-hunger: #d48f32;
-  --color-hunger-bg: rgba(212, 143, 50, 0.2);
-
-  --color-thirst: #3296d4;
-  --color-thirst-bg: rgba(50, 150, 212, 0.2);
-
-  --color-stress: #9b32d4;
-  --color-stress-bg: rgba(155, 50, 212, 0.2);
-
-  --color-oxygen: #32d4c8;
-  --color-oxygen-bg: rgba(50, 212, 200, 0.2);
+  --color-teal: #32d4c8;
+  --color-teal-bg: rgba(50, 212, 200, 0.2);
 
   /* Notification Colors */
   --color-success: #2d8a4e;
