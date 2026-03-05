@@ -1,6 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
+export interface NearbyStatusEffect {
+  name: string
+  effectType: string
+  iconUrl: string | null
+}
+
 export interface NearbyPlayer {
   characterId: number
   characterName: string
@@ -10,6 +16,7 @@ export interface NearbyPlayer {
   maxHealth: number
   isAlive: boolean
   woundSeverity: string
+  statusEffects: NearbyStatusEffect[]
 }
 
 export const useProximityStore = defineStore('proximity', () => {

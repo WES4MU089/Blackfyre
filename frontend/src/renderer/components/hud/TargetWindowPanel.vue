@@ -2,10 +2,12 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useHudStore } from '@/stores/hud'
 import { useProximityStore, type NearbyPlayer } from '@/stores/proximity'
+import { useTargetStore } from '@/stores/target'
 import { useDraggable } from '@/composables/useDraggable'
 
 const hudStore = useHudStore()
 const proximityStore = useProximityStore()
+const targetStore = useTargetStore()
 const panelRef = ref<HTMLElement | null>(null)
 const { onDragStart } = useDraggable('target-window', panelRef, { alwaysDraggable: true })
 
@@ -95,6 +97,11 @@ function handleCtxAction(key: string): void {
   hudStore.addNotification('info', 'Coming Soon', `${key.charAt(0).toUpperCase() + key.slice(1)} is not yet available.`)
 }
 
+// --- Target selection ---
+function onSelectTarget(player: NearbyPlayer): void {
+  targetStore.setTarget(player)
+}
+
 // --- Helpers ---
 function getInitials(name: string): string {
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
@@ -140,7 +147,8 @@ function woundDotColor(severity: string): string {
         v-for="player in proximityStore.nearbyPlayers"
         :key="player.characterId"
         class="tw-row"
-        :class="{ 'tw-row--dead': !player.isAlive }"
+        :class="{ 'tw-row--dead': !player.isAlive, 'tw-row--targeted': targetStore.target?.characterId === player.characterId }"
+        @click="onSelectTarget(player)"
         @contextmenu="onContextMenu(player, $event)"
       >
         <!-- Thumbnail -->
@@ -265,11 +273,15 @@ function woundDotColor(severity: string): string {
   align-items: center;
   gap: var(--space-xs);
   padding: 4px var(--space-sm);
-  cursor: default;
+  cursor: pointer;
   transition: background var(--transition-fast);
 }
 .tw-row:hover {
   background: rgba(201, 168, 76, 0.06);
+}
+.tw-row--targeted {
+  background: rgba(201, 168, 76, 0.1);
+  border-left: 2px solid var(--color-gold-dim);
 }
 .tw-row--dead {
   opacity: 0.45;

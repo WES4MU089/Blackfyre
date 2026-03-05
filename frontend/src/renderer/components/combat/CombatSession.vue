@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useCombatStore, type CombatantView } from '@/stores/combat'
 import { useCharacterStore } from '@/stores/character'
 import { useHudStore } from '@/stores/hud'
+import { useTargetStore } from '@/stores/target'
 import CombatTeamPanel from './CombatTeamPanel.vue'
 import CombatControlPanel from './CombatControlPanel.vue'
 import CombatantTooltip from './CombatantTooltip.vue'
@@ -12,6 +13,7 @@ import MendChoiceOverlay from './MendChoiceOverlay.vue'
 const combatStore = useCombatStore()
 const characterStore = useCharacterStore()
 const hudStore = useHudStore()
+const targetStore = useTargetStore()
 
 const myCharId = computed(() => characterStore.character?.id ?? null)
 const myRetainerIds = computed(() => combatStore.myRetainerIds)
@@ -28,8 +30,30 @@ const sessionOver = computed(() => combatStore.sessionEnded)
 function onSelectCombatant(characterId: number): void {
   if (combatStore.selectedTargetId === characterId) {
     combatStore.selectTarget(null)
+    targetStore.clearTarget()
   } else {
     combatStore.selectTarget(characterId)
+    // Also set the HUD target panel if it's not our own character
+    if (characterId !== myCharId.value) {
+      const combatant = combatStore.combatants.find(c => c.characterId === characterId)
+      if (combatant) {
+        targetStore.setTarget({
+          characterId: combatant.characterId,
+          characterName: combatant.characterName,
+          thumbnailUrl: combatant.thumbnailUrl,
+          distance: 0,
+          health: combatant.currentHealth,
+          maxHealth: combatant.maxHealth,
+          isAlive: combatant.isAlive,
+          woundSeverity: 'healthy',
+          statusEffects: combatant.statusEffects.map(e => ({
+            name: e.type,
+            effectType: e.type === 'bleed' || e.type === 'poison' || e.type === 'stun' ? 'debuff' : 'buff',
+            iconUrl: null,
+          })),
+        })
+      }
+    }
   }
 }
 

@@ -9,7 +9,7 @@ import { useItemDrag } from '@/composables/useItemDrag'
 import { startAutoClickThrough, stopAutoClickThrough, resetAutoClickThrough } from '@/composables/useAutoClickThrough'
 import TopBar from '@/components/hud/TopBar.vue'
 import CharacterInfo from '@/components/hud/CharacterInfo.vue'
-import StatusEffects from '@/components/hud/StatusEffects.vue'
+import TargetPanel from '@/components/hud/TargetPanel.vue'
 import Notifications from '@/components/hud/Notifications.vue'
 import ChatPanel from '@/components/chat/ChatPanel.vue'
 import InventoryPanel from '@/components/hud/InventoryPanel.vue'
@@ -41,6 +41,7 @@ import { useNpcDialogStore } from '@/stores/npcDialog'
 import { useShopStore } from '@/stores/shop'
 import { useContainerStore } from '@/stores/container'
 import { useChatStore } from '@/stores/chat'
+import { useTargetStore } from '@/stores/target'
 import '@/styles/hud.css'
 
 const authStore = useAuthStore()
@@ -56,6 +57,7 @@ const adminStore = useAdminStore()
 const socialStore = useSocialStore()
 const notificationStore = useNotificationStore()
 const playerAppStore = usePlayerApplicationStore()
+const targetStore = useTargetStore()
 const { connect } = useSocket()
 const { isDragging: isItemDragging, cancelDrag } = useItemDrag()
 
@@ -140,10 +142,6 @@ onMounted(async () => {
         <Notifications />
       </DraggableArea>
 
-      <DraggableArea area-id="effects" label="Effects" class="hud-area-effects">
-        <StatusEffects />
-      </DraggableArea>
-
     </div>
 
     <!-- Character Creation Wizard -->
@@ -166,6 +164,9 @@ onMounted(async () => {
 
     <!-- Persistent notification panel (fixed position, outside system overlay) -->
     <NotificationPanel v-if="notificationStore.isOpen" />
+
+    <!-- Target info panel (shows when a target is selected) -->
+    <TargetPanel v-if="targetStore.target" />
 
     <!-- System panel overlay -->
     <div v-if="hudStore.openSystemPanels.size > 0 || combatStore.activeView !== 'none' || adminStore.isOpen || socialStore.isOpen || containerStore.isOpen" class="hud-system-overlay">
