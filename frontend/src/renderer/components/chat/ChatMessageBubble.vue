@@ -153,9 +153,9 @@ function escapeRegex(s: string): string {
 
     <!-- Content -->
     <div class="chat-content">
-      <!-- Header: name + timestamp -->
+      <!-- Header: name + timestamp (hide name for system-sender emotes like combat narration) -->
       <div class="chat-header">
-        <span class="chat-name" :class="{ 'chat-name--system': isSystem, 'chat-name--whisper': isWhisper }">
+        <span v-if="!(isEmote && isSystemSender)" class="chat-name" :class="{ 'chat-name--system': isSystem, 'chat-name--whisper': isWhisper }">
           {{ characterName }}
         </span>
         <span class="chat-time">{{ relativeTime }}</span>
@@ -178,7 +178,7 @@ function escapeRegex(s: string): string {
 
         <!-- Emote prefix (skipped for system senders — combat emotes are self-contained) -->
         <template v-if="isEmote && !isSystemSender">
-          <span class="chat-emote-name">{{ (message as ChatMessage).character_name }} </span>
+          <span class="chat-emote-name">{{ (message as ChatMessage).character_name }}&nbsp;</span>
         </template>
 
         <!-- Combat emote with team-colored names -->
