@@ -4,6 +4,7 @@ import { useHudStore } from '@/stores/hud'
 import { useProximityStore, type NearbyPlayer } from '@/stores/proximity'
 import { useTargetStore } from '@/stores/target'
 import { useDraggable } from '@/composables/useDraggable'
+import { hpBarColor } from '@/utils/healthColor'
 
 const hudStore = useHudStore()
 const proximityStore = useProximityStore()
@@ -112,11 +113,7 @@ function hpPercent(player: NearbyPlayer): number {
   return Math.min(100, (player.health / player.maxHealth) * 100)
 }
 
-function hpBarColor(pct: number): string {
-  if (pct > 60) return 'var(--color-health, #2d8a4e)'
-  if (pct > 30) return '#d4a932'
-  return '#c42b2b'
-}
+
 
 function woundDotColor(severity: string): string {
   switch (severity) {

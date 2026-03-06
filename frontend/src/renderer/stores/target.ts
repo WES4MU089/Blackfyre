@@ -29,7 +29,7 @@ export const useTargetStore = defineStore('target', () => {
 
   function updateTarget(t: Partial<TargetCharacter> & { characterId: number }): void {
     if (target.value && target.value.characterId === t.characterId) {
-      Object.assign(target.value, t)
+      target.value = { ...target.value, ...t }
     }
   }
 

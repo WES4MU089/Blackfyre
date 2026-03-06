@@ -5,6 +5,7 @@ import { useProximityStore } from '@/stores/proximity'
 import { useDraggable } from '@/composables/useDraggable'
 import { useHudStore } from '@/stores/hud'
 import { BACKEND_URL } from '@/config'
+import { hpBarColor } from '@/utils/healthColor'
 
 const targetStore = useTargetStore()
 const proximityStore = useProximityStore()
@@ -45,12 +46,6 @@ watchEffect(() => {
     targetStore.updateTarget(fresh)
   }
 })
-
-function hpBarColor(pct: number): string {
-  if (pct > 60) return 'var(--color-health, #2d8a4e)'
-  if (pct > 30) return '#d4a932'
-  return '#c42b2b'
-}
 
 function getInitials(name: string): string {
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)

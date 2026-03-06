@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useCombatStore } from '@/stores/combat'
+import { hpBarColor } from '@/utils/healthColor'
 import StatusEffectIcon from './StatusEffectIcon.vue'
 
 const combatStore = useCombatStore()
@@ -30,11 +31,6 @@ const hpPercent = computed(() => {
   return Math.max(0, Math.min(100, (target.value.currentHealth / target.value.maxHealth) * 100))
 })
 
-const hpBarClass = computed(() => {
-  if (hpPercent.value <= 25) return 'hp-critical'
-  if (hpPercent.value <= 50) return 'hp-low'
-  return 'hp-normal'
-})
 
 const teamLabel = computed(() =>
   target.value?.team === 1 ? 'Team 1' : 'Team 2'
@@ -59,7 +55,7 @@ function close(): void {
       <!-- HP -->
       <div class="info-hp">
         <div class="info-hp-bar-wrapper">
-          <div class="info-hp-bar" :class="hpBarClass" :style="{ width: hpPercent + '%' }" />
+          <div class="info-hp-bar" :style="{ width: hpPercent + '%', background: hpBarColor(hpPercent) }" />
           <span class="info-hp-text">{{ target.currentHealth }} / {{ target.maxHealth }}</span>
         </div>
       </div>
@@ -199,9 +195,6 @@ function close(): void {
   transition: width 0.4s ease;
   border-radius: 1px;
 }
-.info-hp-bar.hp-normal { background: var(--color-health); }
-.info-hp-bar.hp-low { background: #d48f32; }
-.info-hp-bar.hp-critical { background: var(--color-crimson-light); }
 
 .info-hp-text {
   position: absolute;

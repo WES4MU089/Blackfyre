@@ -43,9 +43,9 @@
   --color-border-ornate: rgba(201, 168, 76, 0.35);
 
   /* Status Colors - Vitals */
-  --color-health: #c42b2b;
-  --color-health-bg: rgba(196, 43, 43, 0.2);
-  --color-health-glow: rgba(196, 43, 43, 0.4);
+  --color-health: hsl(120, 65%, 38%);
+  --color-health-bg: rgba(45, 138, 78, 0.2);
+  --color-health-glow: rgba(45, 138, 78, 0.4);
 
   --color-armor: #3a7bd5;
   --color-armor-bg: rgba(58, 123, 213, 0.2);

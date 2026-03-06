@@ -8,6 +8,7 @@ import { usePlayerApplicationStore } from '@/stores/playerApplication'
 import { useDraggable } from '@/composables/useDraggable'
 import { useSocket } from '@/composables/useSocket'
 import { useItemDrag, type DragPayload } from '@/composables/useItemDrag'
+import { hpBarColor } from '@/utils/healthColor'
 import EquipmentSlot from './EquipmentSlot.vue'
 import AptitudeBar from './AptitudeBar.vue'
 import ItemTooltip from './ItemTooltip.vue'
@@ -383,7 +384,7 @@ function close() {
           <div
             class="char-hp-fill"
             :class="{ 'char-hp-fill--critical': characterStore.isCriticalHealth }"
-            :style="{ width: `${characterStore.healthPercent}%` }"
+            :style="{ width: `${characterStore.healthPercent}%`, background: hpBarColor(characterStore.healthPercent) }"
           />
         </div>
         <span class="char-hp-text">{{ Math.floor(characterStore.vitals.health) }} / {{ Math.floor(characterStore.vitals.maxHealth) }}</span>
@@ -559,7 +560,7 @@ function close() {
               <div class="retainer-hp-bar">
                 <div
                   class="retainer-hp-fill"
-                  :style="{ width: `${(ret.health / ret.maxHealth) * 100}%` }"
+                  :style="{ width: `${(ret.health / ret.maxHealth) * 100}%`, background: hpBarColor((ret.health / ret.maxHealth) * 100) }"
                 />
               </div>
               <span class="retainer-hp-text">{{ Math.floor(ret.health) }}/{{ Math.floor(ret.maxHealth) }}</span>
@@ -1160,15 +1161,14 @@ function close() {
 .char-hp-track {
   flex: 1;
   height: 6px;
-  background: var(--color-health-bg);
-  border: 1px solid rgba(196, 43, 43, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 1px;
   overflow: hidden;
 }
 
 .char-hp-fill {
   height: 100%;
-  background: linear-gradient(90deg, #8b1a1a, var(--color-health));
   border-radius: 1px;
   transition: width var(--transition-normal);
 }
@@ -1446,14 +1446,13 @@ function close() {
 .retainer-hp-bar {
   flex: 1;
   height: 4px;
-  background: rgba(196, 43, 43, 0.15);
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 2px;
   overflow: hidden;
 }
 
 .retainer-hp-fill {
   height: 100%;
-  background: var(--color-health);
   border-radius: 2px;
   transition: width var(--transition-normal);
 }

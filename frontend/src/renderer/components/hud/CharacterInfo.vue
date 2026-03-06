@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useCharacterStore } from '@/stores/character'
 import { useHudStore } from '@/stores/hud'
 import { BACKEND_URL } from '@/config'
+import { hpBarColor } from '@/utils/healthColor'
 
 const characterStore = useCharacterStore()
 const hudStore = useHudStore()
@@ -18,12 +19,6 @@ const portraitSrc = computed(() => resolvePortrait(characterStore.character?.por
 const hp = computed(() => characterStore.vitals.health)
 const maxHp = computed(() => characterStore.vitals.maxHealth)
 const hpPct = computed(() => maxHp.value > 0 ? Math.min(100, (hp.value / maxHp.value) * 100) : 0)
-
-function hpBarColor(pct: number): string {
-  if (pct > 60) return 'var(--color-health, #2d8a4e)'
-  if (pct > 30) return '#d4a932'
-  return '#c42b2b'
-}
 
 function getInitials(name: string): string {
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)

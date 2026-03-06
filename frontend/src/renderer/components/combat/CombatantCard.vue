@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { CombatantView } from '@/stores/combat'
 import { useCombatStore } from '@/stores/combat'
+import { hpBarColor } from '@/utils/healthColor'
 import StatusEffectIcon from './StatusEffectIcon.vue'
 import CombatCallout from './CombatCallout.vue'
 
@@ -26,12 +27,6 @@ const emit = defineEmits<{
 const hpPercent = computed(() => {
   if (props.combatant.maxHealth <= 0) return 0
   return Math.max(0, Math.min(100, (props.combatant.currentHealth / props.combatant.maxHealth) * 100))
-})
-
-const hpBarClass = computed(() => {
-  if (hpPercent.value <= 25) return 'hp-critical'
-  if (hpPercent.value <= 50) return 'hp-low'
-  return 'hp-normal'
 })
 
 const isClickable = computed(() => props.combatant.isAlive && !props.combatant.isYielded)
@@ -98,7 +93,7 @@ function onMouseLeave(): void {
 
     <!-- HP bar -->
     <div class="card-hp-bar-wrapper">
-      <div class="card-hp-bar" :class="hpBarClass" :style="{ width: hpPercent + '%' }" />
+      <div class="card-hp-bar" :style="{ width: hpPercent + '%', background: hpBarColor(hpPercent) }" />
       <span class="card-hp-text">{{ combatant.currentHealth }} / {{ combatant.maxHealth }}</span>
     </div>
 
@@ -257,16 +252,6 @@ function onMouseLeave(): void {
   border-radius: 1px;
 }
 
-.card-hp-bar.hp-normal {
-  background: var(--color-health);
-}
-.card-hp-bar.hp-low {
-  background: #d48f32;
-}
-.card-hp-bar.hp-critical {
-  background: var(--color-crimson-light);
-  animation: hp-pulse 1s ease-in-out infinite;
-}
 
 .card-hp-text {
   position: absolute;

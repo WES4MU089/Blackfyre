@@ -1,8 +1,15 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useCharacterStore } from '@/stores/character'
+import { hpBarColor } from '@/utils/healthColor'
 import VitalsBar from './VitalsBar.vue'
 
 const store = useCharacterStore()
+
+const healthColor = computed(() => {
+  if (store.vitals.maxHealth <= 0) return hpBarColor(0)
+  return hpBarColor(Math.min(100, (store.vitals.health / store.vitals.maxHealth) * 100))
+})
 </script>
 
 <template>
@@ -10,16 +17,16 @@ const store = useCharacterStore()
     <div class="health-bars">
       <!-- Health Bar -->
       <div class="bar-row">
-        <div class="bar-icon health-icon">
+        <div class="bar-icon health-icon" :style="{ color: healthColor }">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
             <path d="M8 14s-5.5-3.5-5.5-7.5C2.5 4 4.5 2 6.5 2c1.2 0 2.3.7 2.8 1.7L8 5.4l-1.3-1.7C7.2 2.7 8 2 9.5 2c2 0 4 2 4 4.5S8 14 8 14z" />
           </svg>
         </div>
         <VitalsBar
           :value="store.vitals.health"
-          color="var(--color-health)"
-          bg-color="var(--color-health-bg)"
-          glow-color="var(--color-health-glow)"
+          :color="healthColor"
+          bg-color="rgba(45, 138, 78, 0.2)"
+          glow-color="rgba(45, 138, 78, 0.4)"
           :critical="store.isCriticalHealth"
           size="md"
         />

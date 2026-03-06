@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useCharacterStore } from '@/stores/character'
 import { useHudStore } from '@/stores/hud'
+import { hpBarColor } from '@/utils/healthColor'
 
 const characterStore = useCharacterStore()
 const hudStore = useHudStore()
@@ -81,7 +82,7 @@ function close(): void {
           <span class="detail-value">{{ Math.round(detail.health) }} / {{ Math.round(detail.maxHealth) }}</span>
         </div>
         <div class="hp-bar">
-          <div class="hp-fill" :style="{ width: healthPercent() + '%' }" />
+          <div class="hp-fill" :style="{ width: healthPercent() + '%', background: hpBarColor(healthPercent()) }" />
         </div>
       </div>
 
@@ -234,7 +235,6 @@ function close(): void {
 
 .hp-fill {
   height: 100%;
-  background: var(--color-health, #8b1a1a);
   border-radius: 2px;
   transition: width 0.3s;
 }

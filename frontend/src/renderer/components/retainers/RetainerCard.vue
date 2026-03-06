@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { RetainerInfo } from '@/stores/character'
+import { hpBarColor } from '@/utils/healthColor'
 
 const props = defineProps<{
   retainer: RetainerInfo
@@ -34,7 +35,7 @@ function tierClass(): string {
       <span class="retainer-level">Lv. {{ retainer.level }}</span>
     </div>
     <div class="retainer-hp-bar">
-      <div class="retainer-hp-fill" :style="{ width: healthPercent() + '%' }" />
+      <div class="retainer-hp-fill" :style="{ width: healthPercent() + '%', background: hpBarColor(healthPercent()) }" />
     </div>
     <div class="retainer-hp-text">
       {{ Math.round(retainer.health) }} / {{ Math.round(retainer.maxHealth) }}
@@ -117,7 +118,6 @@ function tierClass(): string {
 
 .retainer-hp-fill {
   height: 100%;
-  background: var(--color-health, #8b1a1a);
   border-radius: 2px;
   transition: width 0.3s;
 }
