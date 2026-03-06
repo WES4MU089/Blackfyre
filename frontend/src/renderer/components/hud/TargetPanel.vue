@@ -15,6 +15,7 @@ function resolvePortrait(url: string | null): string | null {
   if (url.startsWith('http')) return url
   return `${BACKEND_URL}${url}`
 }
+
 const panelRef = ref<HTMLElement | null>(null)
 const { onDragStart } = useDraggable('target-info', panelRef, { alwaysDraggable: true })
 
@@ -29,7 +30,6 @@ const panelStyle = computed(() => {
 })
 
 const t = computed(() => targetStore.target)
-
 const portraitSrc = computed(() => t.value ? resolvePortrait(t.value.portraitUrl) : null)
 
 const hpPct = computed(() => {
@@ -62,57 +62,51 @@ function close(): void {
 </script>
 
 <template>
-  <div v-if="t" ref="panelRef" class="target-info panel-ornate animate-fade-in" :style="panelStyle">
-    <!-- Header -->
-    <div class="tp-header" @mousedown="onDragStart">
-      <span class="tp-title">Target</span>
-      <button class="tp-close" title="Close" @click="close">&times;</button>
+  <div v-if="t" ref="panelRef" class="target-info animate-fade-in" :style="panelStyle" @mousedown="onDragStart">
+    <!-- Portrait -->
+    <div class="ci-portrait">
+      <img
+        v-if="portraitSrc"
+        :src="portraitSrc"
+        :alt="t.characterName"
+        class="ci-portrait-img"
+      />
+      <div v-else class="ci-portrait-fallback">
+        <span class="ci-portrait-initial">{{ getInitials(t.characterName) }}</span>
+      </div>
     </div>
 
-    <!-- Body -->
-    <div class="tp-body">
-      <!-- Portrait -->
-      <div class="tp-portrait">
-        <img
-          v-if="portraitSrc"
-          :src="portraitSrc"
-          :alt="t.characterName"
-          class="tp-portrait-img"
-        />
-        <div v-else class="tp-portrait-fallback">
-          <span class="tp-portrait-initial">{{ getInitials(t.characterName) }}</span>
-        </div>
+    <!-- Right side -->
+    <div class="ci-details">
+      <!-- Name row -->
+      <div class="ci-name-row">
+        <span class="ci-name font-display">{{ t.characterName }}</span>
+        <span class="ci-meta">
+          <span class="ci-distance">{{ t.distance }}m</span>
+          <button class="ci-close" title="Close" @click.stop="close">&times;</button>
+        </span>
       </div>
 
-      <!-- Details -->
-      <div class="tp-details">
-        <!-- Name row -->
-        <div class="tp-name-row">
-          <span class="tp-name font-display">{{ t.characterName }}</span>
-          <span class="tp-distance">{{ t.distance }}m</span>
-        </div>
+      <!-- Health bar -->
+      <div class="ci-hp-track">
+        <div
+          class="ci-hp-fill"
+          :style="{ width: hpPct + '%', background: hpBarColor(hpPct) }"
+        />
+        <span class="ci-hp-text">{{ t.health }} / {{ t.maxHealth }}</span>
+      </div>
 
-        <!-- Health bar -->
-        <div class="tp-hp-track">
-          <div
-            class="tp-hp-fill"
-            :style="{ width: hpPct + '%', background: hpBarColor(hpPct) }"
-          />
-          <span class="tp-hp-text">{{ t.health }} / {{ t.maxHealth }}</span>
-        </div>
-
-        <!-- Status effects -->
-        <div v-if="t.statusEffects.length > 0" class="tp-effects">
-          <div
-            v-for="(effect, i) in t.statusEffects"
-            :key="effect.name + '-' + i"
-            class="tp-effect"
-            :class="effect.effectType"
-            :title="`${effect.name} (${effect.effectType})`"
-          >
-            <img v-if="effect.iconUrl" :src="effect.iconUrl" :alt="effect.name" class="tp-effect-img" />
-            <span v-else class="tp-effect-letter">{{ effect.name.charAt(0) }}</span>
-          </div>
+      <!-- Status effects -->
+      <div v-if="t.statusEffects.length > 0" class="ci-effects">
+        <div
+          v-for="(effect, i) in t.statusEffects"
+          :key="effect.name + '-' + i"
+          class="ci-effect"
+          :class="effect.effectType"
+          :title="`${effect.name} (${effect.effectType})`"
+        >
+          <img v-if="effect.iconUrl" :src="effect.iconUrl" :alt="effect.name" class="ci-effect-img" />
+          <span v-else class="ci-effect-letter">{{ effect.name.charAt(0) }}</span>
         </div>
       </div>
     </div>
@@ -121,56 +115,39 @@ function close(): void {
 
 <style scoped>
 .target-info {
-  width: 260px;
+  background: linear-gradient(
+    135deg,
+    rgba(8, 6, 12, 0.94) 0%,
+    rgba(12, 10, 18, 0.92) 100%
+  );
+  backdrop-filter: var(--blur-md);
+  -webkit-backdrop-filter: var(--blur-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
   display: flex;
-  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  box-shadow: var(--shadow-md), inset 0 1px 0 rgba(201, 168, 76, 0.06);
+  position: relative;
+  min-width: 260px;
   pointer-events: auto;
-}
-
-.tp-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-xs) var(--space-sm);
-  border-bottom: 1px solid var(--color-border);
   cursor: grab;
   user-select: none;
 }
 
-.tp-title {
-  font-family: var(--font-display);
-  font-size: var(--font-size-sm);
-  color: var(--color-gold);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+.target-info::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 12px;
+  right: 12px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-gold-dim), transparent);
 }
 
-.tp-close {
-  width: 20px;
-  height: 20px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: var(--font-size-md);
-  color: var(--color-text-muted);
-  transition: color var(--transition-fast);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.tp-close:hover {
-  color: var(--color-text-bright);
-}
-
-.tp-body {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-sm);
-  padding: var(--space-sm) var(--space-md);
-}
-
-/* Portrait — matches chat small size (60×90, 2:3 ratio) */
-.tp-portrait {
+/* Portrait — matches chat small size (60x90, 2:3 ratio) */
+.ci-portrait {
   width: 60px;
   height: 90px;
   border-radius: var(--radius-sm);
@@ -180,13 +157,13 @@ function close(): void {
   background: var(--color-surface-dark);
 }
 
-.tp-portrait-img {
+.ci-portrait-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.tp-portrait-fallback {
+.ci-portrait-fallback {
   width: 100%;
   height: 100%;
   display: flex;
@@ -195,7 +172,7 @@ function close(): void {
   background: var(--color-surface);
 }
 
-.tp-portrait-initial {
+.ci-portrait-initial {
   font-family: var(--font-display);
   font-size: var(--font-size-xl);
   color: var(--color-gold);
@@ -203,7 +180,7 @@ function close(): void {
 }
 
 /* Details column */
-.tp-details {
+.ci-details {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -212,14 +189,14 @@ function close(): void {
 }
 
 /* Name row */
-.tp-name-row {
+.ci-name-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-xs);
 }
 
-.tp-name {
+.ci-name {
   font-size: var(--font-size-md);
   color: var(--color-gold);
   letter-spacing: 0.06em;
@@ -229,15 +206,40 @@ function close(): void {
   text-overflow: ellipsis;
 }
 
-.tp-distance {
-  font-size: 9px;
-  font-family: var(--font-mono);
-  color: var(--color-text-muted);
+.ci-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
   flex-shrink: 0;
 }
 
+.ci-distance {
+  font-size: var(--font-size-xs);
+  font-family: var(--font-mono);
+  color: var(--color-text-muted);
+}
+
+.ci-close {
+  width: 16px;
+  height: 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  transition: color var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
+.ci-close:hover {
+  color: var(--color-text-bright);
+}
+
 /* HP bar */
-.tp-hp-track {
+.ci-hp-track {
   height: 10px;
   background: rgba(255, 255, 255, 0.08);
   border-radius: 2px;
@@ -245,13 +247,13 @@ function close(): void {
   position: relative;
 }
 
-.tp-hp-fill {
+.ci-hp-fill {
   height: 100%;
   border-radius: 2px;
   transition: width 0.3s ease;
 }
 
-.tp-hp-text {
+.ci-hp-text {
   position: absolute;
   top: 0;
   left: 0;
@@ -269,14 +271,14 @@ function close(): void {
 }
 
 /* Status effects */
-.tp-effects {
+.ci-effects {
   display: flex;
   gap: 3px;
   flex-wrap: wrap;
   margin-top: 1px;
 }
 
-.tp-effect {
+.ci-effect {
   width: 22px;
   height: 22px;
   display: flex;
@@ -287,21 +289,21 @@ function close(): void {
   border-radius: var(--radius-sm);
 }
 
-.tp-effect.buff {
+.ci-effect.buff {
   border-color: rgba(45, 138, 78, 0.4);
 }
 
-.tp-effect.debuff {
+.ci-effect.debuff {
   border-color: rgba(196, 43, 43, 0.4);
 }
 
-.tp-effect-img {
+.ci-effect-img {
   width: 14px;
   height: 14px;
   object-fit: contain;
 }
 
-.tp-effect-letter {
+.ci-effect-letter {
   font-family: var(--font-display);
   font-size: 9px;
   color: var(--color-gold);
