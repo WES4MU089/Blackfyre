@@ -4,8 +4,8 @@ import { useCombatStore } from '@/stores/combat'
 export function useCombat() {
   const combatStore = useCombatStore()
 
-  function createLobby(): void {
-    getSocket()?.emit('lobby:create')
+  function createLobby(isSpar: boolean = false): void {
+    getSocket()?.emit('lobby:create', { isSpar })
   }
 
   function joinLobby(lobbyId: number): void {
@@ -91,6 +91,20 @@ export function useCombat() {
     combatStore.clearPendingMendChoice()
   }
 
+  // --- Coup de grâce actions ---
+
+  function initiateCoup(targetCharacterId: number): void {
+    getSocket()?.emit('coup:initiate', { targetCharacterId })
+  }
+
+  function respondToCoup(targetCharacterId: number, response: 'intervene' | 'do-nothing'): void {
+    getSocket()?.emit('coup:respond', { targetCharacterId, response })
+  }
+
+  function cancelCoup(targetCharacterId: number): void {
+    getSocket()?.emit('coup:cancel', { targetCharacterId })
+  }
+
   function toggleRetainers(retainerIds: number[]): void {
     if (!combatStore.currentLobbyId) return
     getSocket()?.emit('lobby:toggle-retainers', {
@@ -116,5 +130,9 @@ export function useCombat() {
     resolveMendChoice,
     // Retainers
     toggleRetainers,
+    // Coup de grâce
+    initiateCoup,
+    respondToCoup,
+    cancelCoup,
   }
 }

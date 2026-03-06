@@ -352,6 +352,27 @@ export function useSocket() {
       combatStore.addCallout(data.characterId, data.text)
     })
 
+    // --- Coup de Grâce events ---
+
+    socket.on('coup:waiting', (data: { targetCharacterId: number; targetName: string; witnessCount: number; expiresAt: string }) => {
+      combatStore.setPendingCoupAttacker(data)
+    })
+
+    socket.on('coup:prompt', (data: { attackerName: string; targetCharacterId: number; targetName: string; expiresAt: string }) => {
+      combatStore.setPendingCoupWitness(data)
+    })
+
+    socket.on('coup:resolved', (data: { targetCharacterId: number; targetName: string; outcome: string; intervenerName?: string }) => {
+      combatStore.clearCoupState()
+      if (data.outcome === 'executed') {
+        hudStore.addNotification('danger', 'Execution', `${data.targetName} has been slain.`)
+      } else if (data.outcome === 'blocked') {
+        hudStore.addNotification('info', 'Intervention', `${data.intervenerName ?? 'Someone'} stepped forward to prevent the execution.`)
+      } else if (data.outcome === 'cancelled') {
+        hudStore.addNotification('info', 'Cancelled', 'The execution was called off.')
+      }
+    })
+
     socket.on('combat:error', (data: { message: string }) => {
       hudStore.addNotification('danger', 'Combat', data.message)
     })
@@ -384,7 +405,22 @@ export function useSocket() {
     })
 
     socket.on('character:death', (data: { characterId: number; cause: string }) => {
-      // Persistent notification + toast handled by notification:new from server
+      ailmentsStore.deathState = 'dead'
+      hudStore.addNotification('danger', 'Death', 'This character has perished.')
+    })
+
+    socket.on('character:ko-resolved', (data: { characterId: number; outcome: string; woundSeverity: string; survivalRoll: { pool: number; dice: number[]; successes: number } }) => {
+      ailmentsStore.onKoResolved(data as any)
+      const outcomeLabels: Record<string, string> = {
+        full_recovery: 'Full recovery — light wounds',
+        stable: 'Stable but scarred — serious wounds',
+        clinging: 'Clinging to life — severe wounds',
+      }
+      hudStore.addNotification(
+        data.outcome === 'full_recovery' ? 'success' : 'warning',
+        'Survival',
+        outcomeLabels[data.outcome] ?? 'Survived the ordeal',
+      )
     })
 
     // --- NPC Dialog events ---

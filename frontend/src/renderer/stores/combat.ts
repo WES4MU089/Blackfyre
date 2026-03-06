@@ -16,6 +16,7 @@ export interface LobbyStateView {
   hostCharacterId: number
   hostName: string
   region: string
+  isSpar: boolean
   status: 'open' | 'starting' | 'started' | 'cancelled'
   maxPlayers: number
   members: LobbyMemberView[]
@@ -75,6 +76,7 @@ export interface WoundAssessmentView {
   dicePenalty: number
   requiresTending: boolean
   infectionRisk: boolean
+  isKo: boolean
   narrative: string
 }
 
@@ -172,6 +174,22 @@ export const useCombatStore = defineStore('combat', () => {
   const sessionEnded = ref(false)
   const selectedTargetId = ref<number | null>(null)
   const woundAssessments = ref<WoundAssessmentView[]>([])
+
+  // Coup de grâce — attacker waiting for witnesses
+  const pendingCoupAttacker = ref<{
+    targetCharacterId: number
+    targetName: string
+    witnessCount: number
+    expiresAt: string
+  } | null>(null)
+
+  // Coup de grâce — witness prompt
+  const pendingCoupWitness = ref<{
+    attackerName: string
+    targetCharacterId: number
+    targetName: string
+    expiresAt: string
+  } | null>(null)
 
   // Pending mend effect choice (set when mend requires player to pick which effects to remove)
   const pendingMendChoice = ref<{
@@ -523,6 +541,19 @@ export const useCombatStore = defineStore('combat', () => {
     pendingMendChoice.value = null
   }
 
+  function setPendingCoupAttacker(data: typeof pendingCoupAttacker.value): void {
+    pendingCoupAttacker.value = data
+  }
+
+  function setPendingCoupWitness(data: typeof pendingCoupWitness.value): void {
+    pendingCoupWitness.value = data
+  }
+
+  function clearCoupState(): void {
+    pendingCoupAttacker.value = null
+    pendingCoupWitness.value = null
+  }
+
   function clearCombatSession(): void {
     sessionId.value = null
     combatants.value = []
@@ -537,6 +568,8 @@ export const useCombatStore = defineStore('combat', () => {
     activeCallouts.value = []
     activeView.value = 'none'
     pendingMendChoice.value = null
+    pendingCoupAttacker.value = null
+    pendingCoupWitness.value = null
   }
 
   return {
@@ -600,5 +633,11 @@ export const useCombatStore = defineStore('combat', () => {
     activeCallouts,
     addCallout,
     currentCallout,
+    // Coup de grâce
+    pendingCoupAttacker,
+    pendingCoupWitness,
+    setPendingCoupAttacker,
+    setPendingCoupWitness,
+    clearCoupState,
   }
 })

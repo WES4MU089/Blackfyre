@@ -32,6 +32,7 @@ import SocialPanel from '@/components/social/SocialPanel.vue'
 import TargetWindowPanel from '@/components/hud/TargetWindowPanel.vue'
 import NotificationPanel from '@/components/hud/NotificationPanel.vue'
 import ApplicationReviewModal from '@/components/hud/ApplicationReviewModal.vue'
+import CoupDeGraceOverlay from '@/components/combat/CoupDeGraceOverlay.vue'
 import { useAdminStore } from '@/stores/admin'
 import { useSocialStore } from '@/stores/social'
 import { useNotificationStore } from '@/stores/notifications'
@@ -161,6 +162,9 @@ onMounted(async () => {
 
     <!-- Player Application Review Modal -->
     <ApplicationReviewModal v-if="playerAppStore.isOpen" />
+
+    <!-- Coup de Grâce overlay (witness/attacker prompt) -->
+    <CoupDeGraceOverlay />
 
     <!-- Persistent notification panel (fixed position, outside system overlay) -->
     <NotificationPanel v-if="notificationStore.isOpen" />

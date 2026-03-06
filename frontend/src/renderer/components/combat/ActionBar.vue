@@ -64,7 +64,8 @@ interface ActionDef {
 
 const actionsEnabled = computed(() => isMyTurn.value && !sessionOver.value && !pendingMend.value)
 
-const actions = computed<ActionDef[]>(() => [
+// Row 1: Target actions — Attack, Protect, Grapple
+const row1 = computed<ActionDef[]>(() => [
   {
     key: 'attack',
     label: 'Attack',
@@ -92,15 +93,10 @@ const actions = computed<ActionDef[]>(() => [
     enabled: actionsEnabled.value && targetIsEnemy.value,
     requiresTarget: true,
   },
-  {
-    key: 'disengage',
-    label: 'Disengage',
-    tooltip: isEngaged.value
-      ? 'Attempt to break free (Cunning vs Prowess)'
-      : 'Not engaged in melee',
-    enabled: actionsEnabled.value && isEngaged.value,
-    requiresTarget: false,
-  },
+])
+
+// Row 2: Tactical — Brace, Rally, Mend
+const row2 = computed<ActionDef[]>(() => [
   {
     key: 'brace',
     label: 'Brace',
@@ -127,6 +123,19 @@ const actions = computed<ActionDef[]>(() => [
       : 'Select yourself or an ally to mend',
     enabled: actionsEnabled.value && targetIsFriendly.value,
     requiresTarget: true,
+  },
+])
+
+// Row 3: Situational — Disengage, Skip, Yield
+const row3Actions = computed<ActionDef[]>(() => [
+  {
+    key: 'disengage',
+    label: 'Retreat',
+    tooltip: isEngaged.value
+      ? 'Attempt to break free (Cunning vs Prowess)'
+      : 'Not engaged in melee',
+    enabled: actionsEnabled.value && isEngaged.value,
+    requiresTarget: false,
   },
 ])
 
@@ -163,10 +172,10 @@ function onSkip(): void {
 
 <template>
   <div class="action-bar">
-    <!-- Main 5 actions -->
-    <div class="action-buttons">
+    <!-- Row 1: Target actions -->
+    <div class="action-row">
       <button
-        v-for="action in actions"
+        v-for="action in row1"
         :key="action.key"
         class="action-btn"
         :class="[
@@ -181,8 +190,40 @@ function onSkip(): void {
       </button>
     </div>
 
-    <!-- Secondary actions -->
-    <div class="action-secondary">
+    <!-- Row 2: Tactical actions -->
+    <div class="action-row">
+      <button
+        v-for="action in row2"
+        :key="action.key"
+        class="action-btn"
+        :class="[
+          `action-${action.key}`,
+          { 'needs-target': action.requiresTarget && !hasTarget && isMyTurn },
+        ]"
+        :disabled="!action.enabled"
+        :title="action.tooltip"
+        @click="onAction(action)"
+      >
+        {{ action.label }}
+      </button>
+    </div>
+
+    <!-- Row 3: Situational + turn management -->
+    <div class="action-row">
+      <button
+        v-for="action in row3Actions"
+        :key="action.key"
+        class="action-btn"
+        :class="[
+          `action-${action.key}`,
+          { 'needs-target': action.requiresTarget && !hasTarget && isMyTurn },
+        ]"
+        :disabled="!action.enabled"
+        :title="action.tooltip"
+        @click="onAction(action)"
+      >
+        {{ action.label }}
+      </button>
       <button
         class="action-btn action-skip"
         :disabled="!isMyTurn || sessionOver"
@@ -224,25 +265,18 @@ function onSkip(): void {
 <style scoped>
 .action-bar {
   display: flex;
-  align-items: center;
-  gap: var(--space-sm);
+  flex-direction: column;
+  gap: 4px;
   padding: var(--space-xs) 0;
 }
 
-.action-buttons {
+.action-row {
   display: flex;
   gap: 4px;
-  flex: 1;
-}
-
-.action-secondary {
-  display: flex;
-  gap: 4px;
-  flex-shrink: 0;
 }
 
 .action-btn {
-  padding: var(--space-xs) var(--space-sm);
+  padding: 5px 0;
   font-family: var(--font-display);
   font-size: var(--font-size-xs);
   text-transform: uppercase;
@@ -255,6 +289,7 @@ function onSkip(): void {
   transition: all var(--transition-fast);
   flex: 1;
   white-space: nowrap;
+  text-align: center;
 }
 
 .action-btn:hover:not(:disabled) {
@@ -316,14 +351,12 @@ function onSkip(): void {
   background: rgba(46, 160, 67, 0.06);
 }
 
-/* Secondary action styles */
+/* Row 3 specific styles */
 .action-skip {
-  flex: none !important;
   background: transparent;
 }
 
 .action-yield {
-  flex: none !important;
   border-color: rgba(139, 26, 26, 0.3);
   color: var(--color-text-dim);
 }

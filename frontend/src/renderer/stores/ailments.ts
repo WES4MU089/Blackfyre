@@ -27,10 +27,14 @@ export const useAilmentsStore = defineStore('ailments', () => {
   const ailments = ref<CharacterAilment[]>([])
   const woundSeverity = ref<AilmentState['woundSeverity']>('healthy')
   const woundHealsAt = ref<string | null>(null)
+  const deathState = ref<'alive' | 'ko' | 'dead'>('alive')
+  const koExpiresAt = ref<string | null>(null)
+  const tendingLocked = ref(false)
   const isLoading = ref(false)
 
   const hasActiveAilments = computed(() => ailments.value.length > 0)
   const hasWounds = computed(() => woundSeverity.value !== 'healthy')
+  const isKo = computed(() => deathState.value === 'ko')
 
   const primaryAilment = computed(() =>
     ailments.value.length > 0 ? ailments.value[0] : null
@@ -44,6 +48,9 @@ export const useAilmentsStore = defineStore('ailments', () => {
       const data = await res.json()
       woundSeverity.value = data.woundSeverity ?? 'healthy'
       woundHealsAt.value = data.woundHealsAt ?? null
+      deathState.value = data.deathState ?? 'alive'
+      koExpiresAt.value = data.koExpiresAt ?? null
+      tendingLocked.value = data.tendingLocked ?? false
       ailments.value = (data.ailments ?? []).map((a: Record<string, unknown>) => ({
         id: a.id,
         ailmentKey: a.ailmentKey,
@@ -89,24 +96,40 @@ export const useAilmentsStore = defineStore('ailments', () => {
     ailments.value = ailments.value.filter(a => a.id !== data.ailmentId)
   }
 
-  function onWoundUpdated(data: { woundSeverity: AilmentState['woundSeverity']; woundHealsAt: string | null }): void {
+  function onWoundUpdated(data: { woundSeverity: AilmentState['woundSeverity']; woundHealsAt?: string | null; deathState?: 'alive' | 'ko' | 'dead'; koExpiresAt?: string | null }): void {
     woundSeverity.value = data.woundSeverity
-    woundHealsAt.value = data.woundHealsAt
+    if (data.woundHealsAt !== undefined) woundHealsAt.value = data.woundHealsAt
+    if (data.deathState !== undefined) deathState.value = data.deathState
+    if (data.koExpiresAt !== undefined) koExpiresAt.value = data.koExpiresAt
+  }
+
+  function onKoResolved(data: { outcome: string; woundSeverity: AilmentState['woundSeverity'] }): void {
+    deathState.value = 'alive'
+    koExpiresAt.value = null
+    tendingLocked.value = false
+    woundSeverity.value = data.woundSeverity
   }
 
   function clear(): void {
     ailments.value = []
     woundSeverity.value = 'healthy'
     woundHealsAt.value = null
+    deathState.value = 'alive'
+    koExpiresAt.value = null
+    tendingLocked.value = false
   }
 
   return {
     ailments,
     woundSeverity,
     woundHealsAt,
+    deathState,
+    koExpiresAt,
+    tendingLocked,
     isLoading,
     hasActiveAilments,
     hasWounds,
+    isKo,
     primaryAilment,
     fetchAilments,
     onAilmentOnset,
@@ -114,6 +137,7 @@ export const useAilmentsStore = defineStore('ailments', () => {
     onAilmentImproved,
     onAilmentCured,
     onWoundUpdated,
+    onKoResolved,
     clear,
   }
 })

@@ -62,8 +62,8 @@ function onCancelLobby(): void {
   cancelLobby()
 }
 
-function onCreateLobby(): void {
-  createLobby()
+function onCreateLobby(spar: boolean = false): void {
+  createLobby(spar)
 }
 
 function onRefreshLobbies(): void {
@@ -122,9 +122,14 @@ function onToggleRetainer(retainerId: number): void {
           <span class="lobby-region-name">{{ hudStore.simName || 'Unknown' }}</span>
         </div>
 
-        <button class="btn-ornate btn-create" @click="onCreateLobby">
-          Create Lobby
-        </button>
+        <div class="lobby-create-row">
+          <button class="btn-ornate btn-create" @click="onCreateLobby(false)">
+            Create Lobby
+          </button>
+          <button class="btn-ornate btn-spar" @click="onCreateLobby(true)">
+            Create Spar
+          </button>
+        </div>
 
         <div class="lobby-divider" />
 
@@ -152,9 +157,12 @@ function onToggleRetainer(retainerId: number): void {
       <div v-else-if="combatStore.lobbyState" class="lobby-active">
         <div class="lobby-status-bar">
           <span class="lobby-id">Lobby #{{ combatStore.lobbyState.lobbyId }}</span>
-          <span class="lobby-status-badge" :class="`status-${combatStore.lobbyState.status}`">
-            {{ combatStore.lobbyState.status }}
-          </span>
+          <div class="lobby-status-badges">
+            <span v-if="combatStore.lobbyState.isSpar" class="spar-badge">SPAR</span>
+            <span class="lobby-status-badge" :class="`status-${combatStore.lobbyState.status}`">
+              {{ combatStore.lobbyState.status }}
+            </span>
+          </div>
         </div>
 
         <!-- Teams -->
@@ -417,6 +425,39 @@ function onToggleRetainer(retainerId: number): void {
 .status-starting { background: rgba(201, 168, 76, 0.2); color: var(--color-gold); }
 .status-started { background: rgba(139, 26, 26, 0.2); color: var(--color-crimson); }
 .status-cancelled { background: rgba(100, 100, 100, 0.2); color: var(--color-text-dim); }
+
+.lobby-status-badges {
+  display: flex;
+  gap: var(--space-xs);
+  align-items: center;
+}
+
+.spar-badge {
+  padding: 1px var(--space-xs);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xxs, 0.6rem);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  background: rgba(91, 155, 213, 0.2);
+  color: #5b9bd5;
+}
+
+.lobby-create-row {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.lobby-create-row .btn-ornate {
+  flex: 1;
+}
+
+.btn-spar {
+  border-color: rgba(91, 155, 213, 0.4);
+  color: #5b9bd5;
+}
+.btn-spar:hover {
+  background: rgba(91, 155, 213, 0.1);
+}
 
 /* Teams */
 .teams-container {

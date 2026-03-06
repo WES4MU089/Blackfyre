@@ -1,13 +1,38 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useCombatStore, type WoundAssessmentView } from '@/stores/combat'
+import { useCharacterStore } from '@/stores/character'
+import { useCombat } from '@/composables/useCombat'
 
 const combatStore = useCombatStore()
+const characterStore = useCharacterStore()
+const { initiateCoup } = useCombat()
 
 const results = computed(() => combatStore.woundAssessments)
 const visible = computed(() => combatStore.sessionEnded && results.value.length > 0)
 
+function canInitiateCoup(r: WoundAssessmentView): boolean {
+  if (!r.isKo) return false
+  if (!characterStore.character) return false
+  // Must be on opposing team
+  const myTeam = combatStore.myCombatTeam
+  if (myTeam === null) return false
+  const target = combatStore.combatants.find(c => c.characterId === r.characterId)
+  if (!target || target.team === myTeam) return false
+  // My character must be alive (survived combat)
+  const me = combatStore.myCombatant
+  if (!me || !me.isAlive) return false
+  // No pending coup for this target
+  if (combatStore.pendingCoupAttacker?.targetCharacterId === r.characterId) return false
+  return true
+}
+
+function onInitiateCoup(characterId: number): void {
+  initiateCoup(characterId)
+}
+
 function severityLabel(r: WoundAssessmentView): string {
+  if (r.isKo) return 'KNOCKED OUT'
   switch (r.severity) {
     case 'light': return 'LIGHT WOUNDS'
     case 'serious': return 'SERIOUS WOUNDS'
@@ -51,8 +76,18 @@ function penaltyText(r: WoundAssessmentView): string {
             </span>
             <span v-if="penaltyText(r)" class="penalty-text">{{ penaltyText(r) }}</span>
           </div>
+          <div v-if="r.isKo" class="ko-warning">
+            Survival check in 24 hours
+          </div>
+          <button
+            v-if="canInitiateCoup(r)"
+            class="btn-coup"
+            @click="onInitiateCoup(r.characterId)"
+          >
+            Coup de Gr&acirc;ce
+          </button>
           <p class="narrative">{{ r.narrative }}</p>
-          <div v-if="r.infectionRisk" class="infection-warning">
+          <div v-if="r.infectionRisk && !r.isKo" class="infection-warning">
             Seek tending or infection will set in
           </div>
         </div>
@@ -216,5 +251,47 @@ function penaltyText(r: WoundAssessmentView): string {
   background: rgba(200, 120, 48, 0.1);
   border: 1px solid rgba(200, 120, 48, 0.3);
   border-radius: 3px;
+}
+
+.ko-warning {
+  font-size: 10px;
+  color: #cc2222;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 3px 6px;
+  margin-bottom: 4px;
+  background: rgba(204, 34, 34, 0.1);
+  border: 1px solid rgba(204, 34, 34, 0.3);
+  border-radius: 3px;
+  animation: ko-flash 2s ease-in-out infinite;
+}
+
+@keyframes ko-flash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.btn-coup {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 6px 12px;
+  font-family: var(--font-display, 'Cinzel', serif);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #cc2222;
+  background: rgba(139, 26, 26, 0.15);
+  border: 1px solid rgba(139, 26, 26, 0.5);
+  border-radius: var(--radius-sm, 4px);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-coup:hover {
+  background: rgba(139, 26, 26, 0.3);
+  border-color: #cc2222;
 }
 </style>

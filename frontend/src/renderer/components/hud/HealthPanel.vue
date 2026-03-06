@@ -21,7 +21,13 @@ onUnmounted(() => {
 // --- Wound status ---
 
 const woundSeverity = computed(() => ailmentsStore.woundSeverity)
-const isHealthy = computed(() => woundSeverity.value === 'healthy' && ailmentsStore.ailments.length === 0)
+const isKo = computed(() => ailmentsStore.isKo)
+const isHealthy = computed(() => !isKo.value && woundSeverity.value === 'healthy' && ailmentsStore.ailments.length === 0)
+
+function koTimeRemaining(): string {
+  if (!ailmentsStore.koExpiresAt) return ''
+  return formatTimeRemaining(ailmentsStore.koExpiresAt)
+}
 
 const severityLabel: Record<string, string> = {
   healthy: 'Healthy',
@@ -98,6 +104,19 @@ function stageLabel(a: CharacterAilment): string {
       </div>
 
       <template v-else>
+        <!-- KO Banner -->
+        <div v-if="isKo" class="ko-banner">
+          <div class="ko-title">INCAPACITATED</div>
+          <div class="ko-subtitle">Survival check in</div>
+          <div class="ko-countdown">{{ koTimeRemaining() }}</div>
+          <div v-if="ailmentsStore.tendingLocked" class="ko-tended-badge">
+            Tended &mdash; awaiting fate
+          </div>
+          <div v-else class="ko-untended-hint">
+            Awaiting tending
+          </div>
+        </div>
+
         <!-- Wound Status Section -->
         <div class="health-section">
           <div class="health-section-title">Wound Status</div>
@@ -514,5 +533,68 @@ function stageLabel(a: CharacterAilment): string {
   color: var(--color-text-dim);
   font-style: italic;
   line-height: 1.5;
+}
+
+/* KO Banner */
+.ko-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 12px;
+  margin-bottom: 12px;
+  background: rgba(139, 26, 26, 0.12);
+  border: 1px solid rgba(139, 26, 26, 0.35);
+  border-radius: var(--radius-sm);
+}
+
+.ko-title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: #cc2222;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  margin-bottom: 4px;
+  animation: ko-pulse 2s ease-in-out infinite;
+}
+
+@keyframes ko-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.ko-subtitle {
+  font-family: var(--font-body);
+  font-size: 9px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.ko-countdown {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 4px 0 8px;
+}
+
+.ko-tended-badge {
+  font-family: var(--font-display);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-gold);
+  background: rgba(201, 168, 76, 0.12);
+  border: 1px solid rgba(201, 168, 76, 0.25);
+  border-radius: 3px;
+  padding: 2px 8px;
+}
+
+.ko-untended-hint {
+  font-family: var(--font-body);
+  font-size: 9px;
+  color: var(--color-text-dim);
+  font-style: italic;
 }
 </style>
