@@ -13,11 +13,16 @@ const CLICK_THROUGH_DELAY = 120
 
 function checkInteractive(x: number, y: number): boolean {
   const el = document.elementFromPoint(x, y)
-  if (!el) return false
   // elementFromPoint skips pointer-events: none elements.
   // If it returns html/body, the cursor is over empty space.
-  if (el === document.documentElement || el === document.body) return false
-  return true
+  if (el && el !== document.documentElement && el !== document.body) return true
+
+  // Teleported overlays inside pointer-events: none containers may not be found
+  // by elementFromPoint. If any overlay is active, keep the window interactive.
+  const popoverRoot = document.getElementById('hud-popover-root')
+  if (popoverRoot && popoverRoot.children.length > 0) return true
+
+  return false
 }
 
 function setInteractive(): void {
