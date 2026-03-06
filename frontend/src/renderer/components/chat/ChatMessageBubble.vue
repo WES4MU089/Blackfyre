@@ -39,6 +39,20 @@ const characterName = computed(() => {
   return (props.message as ChatMessage).character_name
 })
 
+// SL display name (shown beneath character name)
+const slName = computed(() => {
+  if (isWhisper.value) {
+    const w = props.message as WhisperMessage
+    const myCharId = chatStore.sessionPlayers.find(
+      p => p.sessionId === chatStore.mySessionId
+    )?.characterId
+    return myCharId === w.sender_character_id
+      ? w.target_sl_name
+      : w.sender_sl_name
+  }
+  return (props.message as ChatMessage).sl_name
+})
+
 function resolvePortrait(url: string | null): string | null {
   if (!url) return null
   if (url.startsWith('http')) return url
@@ -158,6 +172,7 @@ function escapeRegex(s: string): string {
         <span v-if="!(isEmote && isSystemSender)" class="chat-name" :class="{ 'chat-name--system': isSystem, 'chat-name--whisper': isWhisper }">
           {{ characterName }}
         </span>
+        <span v-if="slName && !(isEmote && isSystemSender)" class="chat-sl-name">{{ slName }}</span>
         <span class="chat-time">{{ relativeTime }}</span>
       </div>
 
@@ -302,6 +317,13 @@ function escapeRegex(s: string): string {
 
 .chat-name--whisper {
   color: #a78bfa;
+}
+
+.chat-sl-name {
+  font-family: var(--font-body);
+  font-size: 9px;
+  color: var(--color-text-muted);
+  opacity: 0.7;
 }
 
 .chat-time {

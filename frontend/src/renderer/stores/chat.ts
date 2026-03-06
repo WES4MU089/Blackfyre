@@ -10,6 +10,7 @@ export interface ChatMessage {
   tab: string
   character_id: number
   character_name: string
+  sl_name?: string | null
   portrait_url: string | null
   content: string
   message_type: string
@@ -26,9 +27,11 @@ export interface WhisperMessage {
   tab: 'whispers'
   sender_character_id: number
   sender_name: string
+  sender_sl_name?: string | null
   sender_portrait_url: string | null
   target_character_id: number
   target_name: string
+  target_sl_name?: string | null
   target_portrait_url: string | null
   content: string
   region: string
