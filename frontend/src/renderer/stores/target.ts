@@ -6,6 +6,7 @@ export interface TargetCharacter {
   characterId: number
   characterName: string
   thumbnailUrl: string | null
+  portraitUrl: string | null
   distance: number
   health: number
   maxHealth: number

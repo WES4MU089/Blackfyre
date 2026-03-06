@@ -4,10 +4,17 @@ import { useTargetStore } from '@/stores/target'
 import { useProximityStore } from '@/stores/proximity'
 import { useDraggable } from '@/composables/useDraggable'
 import { useHudStore } from '@/stores/hud'
+import { BACKEND_URL } from '@/config'
 
 const targetStore = useTargetStore()
 const proximityStore = useProximityStore()
 const hudStore = useHudStore()
+
+function resolvePortrait(url: string | null): string | null {
+  if (!url) return null
+  if (url.startsWith('http')) return url
+  return `${BACKEND_URL}${url}`
+}
 const panelRef = ref<HTMLElement | null>(null)
 const { onDragStart } = useDraggable('target-info', panelRef, { alwaysDraggable: true })
 
@@ -22,6 +29,8 @@ const panelStyle = computed(() => {
 })
 
 const t = computed(() => targetStore.target)
+
+const portraitSrc = computed(() => t.value ? resolvePortrait(t.value.portraitUrl) : null)
 
 const hpPct = computed(() => {
   if (!t.value || t.value.maxHealth <= 0) return 0
@@ -65,12 +74,14 @@ function close(): void {
       <!-- Portrait -->
       <div class="tp-portrait">
         <img
-          v-if="t.thumbnailUrl"
-          :src="t.thumbnailUrl"
+          v-if="portraitSrc"
+          :src="portraitSrc"
           :alt="t.characterName"
           class="tp-portrait-img"
         />
-        <span v-else class="tp-portrait-initials">{{ getInitials(t.characterName) }}</span>
+        <div v-else class="tp-portrait-fallback">
+          <span class="tp-portrait-initial">{{ getInitials(t.characterName) }}</span>
+        </div>
       </div>
 
       <!-- Details -->
@@ -158,18 +169,15 @@ function close(): void {
   padding: var(--space-sm) var(--space-md);
 }
 
-/* Portrait */
+/* Portrait — matches chat small size (60×90, 2:3 ratio) */
 .tp-portrait {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-full);
+  width: 60px;
+  height: 90px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
   flex-shrink: 0;
-  background: rgba(201, 168, 76, 0.1);
-  border: 2px solid var(--color-border-ornate);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border: 1px solid var(--color-border-dim);
+  background: var(--color-surface-dark);
 }
 
 .tp-portrait-img {
@@ -178,12 +186,20 @@ function close(): void {
   object-fit: cover;
 }
 
-.tp-portrait-initials {
+.tp-portrait-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface);
+}
+
+.tp-portrait-initial {
   font-family: var(--font-display);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xl);
+  color: var(--color-gold);
   font-weight: 700;
-  color: var(--color-gold-dim);
-  letter-spacing: 0.05em;
 }
 
 /* Details column */

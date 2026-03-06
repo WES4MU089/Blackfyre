@@ -41,6 +41,7 @@ function onSelectCombatant(characterId: number): void {
           characterId: combatant.characterId,
           characterName: combatant.characterName,
           thumbnailUrl: combatant.thumbnailUrl,
+          portraitUrl: null,
           distance: 0,
           health: combatant.currentHealth,
           maxHealth: combatant.maxHealth,

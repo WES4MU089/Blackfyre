@@ -2,9 +2,18 @@
 import { computed } from 'vue'
 import { useCharacterStore } from '@/stores/character'
 import { useHudStore } from '@/stores/hud'
+import { BACKEND_URL } from '@/config'
 
 const characterStore = useCharacterStore()
 const hudStore = useHudStore()
+
+function resolvePortrait(url: string | undefined): string | null {
+  if (!url) return null
+  if (url.startsWith('http')) return url
+  return `${BACKEND_URL}${url}`
+}
+
+const portraitSrc = computed(() => resolvePortrait(characterStore.character?.portrait_url))
 
 const hp = computed(() => characterStore.vitals.health)
 const maxHp = computed(() => characterStore.vitals.maxHealth)
@@ -26,12 +35,14 @@ function getInitials(name: string): string {
     <!-- Portrait -->
     <div class="ci-portrait">
       <img
-        v-if="characterStore.character?.portrait_url"
-        :src="characterStore.character.portrait_url"
+        v-if="portraitSrc"
+        :src="portraitSrc"
         :alt="characterStore.character?.name"
         class="ci-portrait-img"
       />
-      <span v-else class="ci-portrait-initials">{{ getInitials(characterStore.character?.name || '?') }}</span>
+      <div v-else class="ci-portrait-fallback">
+        <span class="ci-portrait-initial">{{ getInitials(characterStore.character?.name || '?') }}</span>
+      </div>
     </div>
 
     <!-- Right side -->
@@ -101,18 +112,15 @@ function getInitials(name: string): string {
   background: linear-gradient(90deg, transparent, var(--color-gold-dim), transparent);
 }
 
-/* Portrait */
+/* Portrait — matches chat small size (60×90, 2:3 ratio) */
 .ci-portrait {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-full);
+  width: 60px;
+  height: 90px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
   flex-shrink: 0;
-  background: rgba(201, 168, 76, 0.1);
-  border: 2px solid var(--color-border-ornate);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border: 1px solid var(--color-border-dim);
+  background: var(--color-surface-dark);
 }
 
 .ci-portrait-img {
@@ -121,12 +129,20 @@ function getInitials(name: string): string {
   object-fit: cover;
 }
 
-.ci-portrait-initials {
+.ci-portrait-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface);
+}
+
+.ci-portrait-initial {
   font-family: var(--font-display);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xl);
+  color: var(--color-gold);
   font-weight: 700;
-  color: var(--color-gold-dim);
-  letter-spacing: 0.05em;
 }
 
 /* Details column */
