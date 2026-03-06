@@ -484,27 +484,35 @@ export const useCombatStore = defineStore('combat', () => {
     selectedTargetId.value = characterId
   }
 
-  // ── Combat callouts (NPC speech bubbles) ──
+  // ── Combat callouts (JRPG dialogue box) ──
 
   interface ActiveCallout {
     characterId: number
+    characterName: string
+    thumbnailUrl: string | null
+    team: number
     text: string
     id: number
   }
 
   let nextCalloutId = 0
   const activeCallouts = ref<ActiveCallout[]>([])
+  const currentCallout = computed(() => activeCallouts.value[0] ?? null)
 
   function addCallout(characterId: number, text: string): void {
+    const combatant = combatants.value.find(c => c.characterId === characterId)
     const id = nextCalloutId++
-    activeCallouts.value.push({ characterId, text, id })
+    activeCallouts.value = [{
+      characterId,
+      characterName: combatant?.characterName ?? 'Unknown',
+      thumbnailUrl: combatant?.thumbnailUrl ?? null,
+      team: combatant?.team ?? 1,
+      text,
+      id,
+    }]
     setTimeout(() => {
       activeCallouts.value = activeCallouts.value.filter(c => c.id !== id)
     }, 4000)
-  }
-
-  function getCalloutFor(characterId: number): ActiveCallout | null {
-    return activeCallouts.value.find(c => c.characterId === characterId) ?? null
   }
 
   function setPendingMendChoice(data: typeof pendingMendChoice.value): void {
@@ -591,6 +599,6 @@ export const useCombatStore = defineStore('combat', () => {
     // Callouts
     activeCallouts,
     addCallout,
-    getCalloutFor,
+    currentCallout,
   }
 })

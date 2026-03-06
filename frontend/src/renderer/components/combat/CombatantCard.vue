@@ -1,12 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { CombatantView } from '@/stores/combat'
-import { useCombatStore } from '@/stores/combat'
 import { hpBarColor } from '@/utils/healthColor'
 import StatusEffectIcon from './StatusEffectIcon.vue'
-import CombatCallout from './CombatCallout.vue'
-
-const combatStore = useCombatStore()
 
 const props = defineProps<{
   combatant: CombatantView
@@ -30,8 +26,6 @@ const hpPercent = computed(() => {
 })
 
 const isClickable = computed(() => props.combatant.isAlive && !props.combatant.isYielded)
-
-const activeCallout = computed(() => combatStore.getCalloutFor(props.combatant.characterId))
 
 function onClick(): void {
   if (isClickable.value) {
@@ -75,9 +69,6 @@ function onMouseLeave(): void {
     @mousemove="onMouseMove"
     @mouseleave="onMouseLeave"
   >
-    <!-- Callout bubble (floats above card) -->
-    <CombatCallout v-if="activeCallout" :key="activeCallout.id" :text="activeCallout.text" />
-
     <!-- Name row -->
     <div class="card-name-row">
       <div v-if="combatant.thumbnailUrl" class="card-portrait">
