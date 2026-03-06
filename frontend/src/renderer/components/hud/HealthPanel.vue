@@ -11,7 +11,7 @@ const tick = ref(0)
 let tickInterval: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
-  tickInterval = setInterval(() => { tick.value++ }, 60_000)
+  tickInterval = setInterval(() => { tick.value++ }, 1_000)
 })
 
 onUnmounted(() => {
