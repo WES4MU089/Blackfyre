@@ -242,23 +242,21 @@ function onSkip(): void {
       </button>
     </div>
 
-    <!-- Mend confirmation overlay -->
-    <Teleport to="#hud-popover-root">
-      <div v-if="showMendConfirm" class="mend-confirm-overlay">
-        <div class="mend-confirm-panel">
-          <p class="mend-confirm-text">
-            Mending consumes <strong>one bandage</strong>. Health can only be restored
-            to this target once per combat &mdash; further mends can still clear ailments
-            and stabilize wounds.
-          </p>
-          <p class="mend-confirm-prompt">Proceed?</p>
-          <div class="mend-confirm-actions">
-            <button class="mend-btn mend-btn-cancel" @click="cancelMend">Cancel</button>
-            <button class="mend-btn mend-btn-confirm" @click="confirmMend">Mend</button>
-          </div>
+    <!-- Mend confirmation overlay (not teleported — must stay inside pointer-events:auto ancestor) -->
+    <div v-if="showMendConfirm" class="mend-confirm-overlay">
+      <div class="mend-confirm-panel">
+        <p class="mend-confirm-text">
+          Mending consumes <strong>one bandage</strong>. Health can only be restored
+          to this target once per combat &mdash; further mends can still clear ailments
+          and stabilize wounds.
+        </p>
+        <p class="mend-confirm-prompt">Proceed?</p>
+        <div class="mend-confirm-actions">
+          <button class="mend-btn mend-btn-cancel" @click="cancelMend">Cancel</button>
+          <button class="mend-btn mend-btn-confirm" @click="confirmMend">Mend</button>
         </div>
       </div>
-    </Teleport>
+    </div>
   </div>
 </template>
 
@@ -375,6 +373,7 @@ function onSkip(): void {
   align-items: center;
   justify-content: center;
   background: rgba(0, 0, 0, 0.6);
+  pointer-events: auto;
 }
 
 .mend-confirm-panel {
