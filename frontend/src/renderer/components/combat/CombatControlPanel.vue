@@ -7,6 +7,7 @@ import TurnIndicator from './TurnIndicator.vue'
 import TargetInfoPanel from './TargetInfoPanel.vue'
 import ActionBar from './ActionBar.vue'
 import CombatLog from './CombatLog.vue'
+import CombatDialogueBox from './CombatDialogueBox.vue'
 
 const props = defineProps<{
   sessionOver: boolean
@@ -48,6 +49,9 @@ const sizeStyle = computed(() => ({
 
 <template>
   <div class="combat-controls-wrapper" :style="panelStyle">
+    <!-- Dialogue box docked above panel -->
+    <CombatDialogueBox />
+
     <div
       ref="panelRef"
       class="combat-controls panel-ornate animate-fade-in"

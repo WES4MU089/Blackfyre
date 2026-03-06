@@ -9,7 +9,6 @@ import CombatControlPanel from './CombatControlPanel.vue'
 import CombatantTooltip from './CombatantTooltip.vue'
 import WoundAssessmentOverlay from './WoundAssessmentOverlay.vue'
 import MendChoiceOverlay from './MendChoiceOverlay.vue'
-import CombatDialogueBox from './CombatDialogueBox.vue'
 
 const combatStore = useCombatStore()
 const characterStore = useCharacterStore()
@@ -97,9 +96,6 @@ onMounted(() => {
 
 <template>
   <div class="combat-session-orchestrator">
-    <!-- Combat dialogue (JRPG-style, centered top) -->
-    <CombatDialogueBox />
-
     <!-- Team Blue (left) -->
     <CombatTeamPanel
       area-id="combat-team-blue"

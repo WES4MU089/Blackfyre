@@ -71,7 +71,7 @@ The bonding roll uses the standard d6 dice pool system. Roll a number of d6s equ
 | **Favored Aptitude** | 1-10 | The bonder's score in the dragon's favored aptitude |
 | **Lore Assistance** | 0-2 | An **assisting player** with high Lore performs the ritual. Lore check (d6, 4+) from the assistant — not the bonder. Bonus = floor(assistant's Lore / 5) |
 | **Faith Assistance** | 0-3 | An **assisting player** with high Faith performs an invocation. Faith check (d6, 4+) from the assistant — not the bonder. Bonus = floor(assistant's Faith / 5). R'hllor: +1 additional |
-| **Personal Sacrifice** | 0-4 | See Section 5. Cap of +4 regardless of combination. |
+| **Personal Sacrifice** | 0-4 | See Section 5. Choose one sacrifice type per attempt. |
 | **Group Assistance** | 0-4 | Up to 4 assistants, each contributing +1 on a successful assist roll |
 
 **Important:** Lore and Faith bonuses come from **assisting players**, not from the bonder themselves — unless the favored aptitude happens to be Lore or Faith (in which case the bonder's own score already contributes via the Favored Aptitude row). The bonder's personal Lore or Faith score does not add bonus dice.
@@ -176,8 +176,6 @@ When a critical failure occurs, roll **1d20 + the dragon's Ferocity**:
 - Vhagar (Ferocity 10): d20 + 10 = range 11-30. Minimum result is Maimed. Death at roll 16+.
 - The Cannibal (Ferocity 10): Same as Vhagar — minimum Maimed, Death at roll 16+. But the Cannibal's DC 10 and critical threshold of 3 mean you are *far more likely* to crit fail in the first place.
 
-**Grey Ghost exception:** Grey Ghost (Ferocity 2) does not attack on critical failure. He flees. A critical failure against Grey Ghost means he vanishes — permanently unavailable for any future bonding attempt by anyone. He is not hostile. He is simply gone.
-
 ---
 
 ## 5. Personal Sacrifice
@@ -195,7 +193,7 @@ Sacrifice represents the bonder's willingness to pay a permanent price for the b
 
 ### 5.2 Sacrifice Constraints
 
-- **Maximum sacrifice bonus: +4 dice.** Sacrifices do not stack beyond this cap. You cannot combine minor bloodletting (+1) and self-maiming (+3) and human sacrifice (+4) for +8. The cap is +4 total from all sacrifice sources combined.
+- **Choose one sacrifice only.** Sacrifices do not combine. A bonder picks a single option from the table above — you cannot stack minor bloodletting (+1) with self-maiming (+3) for +4. One sacrifice per attempt.
 - **Human sacrifice is an Act of Tyranny.** It carries severe narrative and political consequences. Word will spread. The Faith will condemn you. Houses will turn against you. This is blood magic of the darkest kind.
 - **The sacrificed person must have Dragonseed blood.** This is not an arbitrary cruelty — it is blood magic. The dragon responds to the blood of Old Valyria. Sacrificing a commoner, a Stark, or a Lannister does nothing. You are destroying a potential future dragonrider.
 - **Self-maiming penalties apply immediately**, before the bonding roll affects anything else. If you sacrifice a hand, you are permanently at -1 Prowess or Fortitude whether or not the bond succeeds.
@@ -354,8 +352,7 @@ Dragon eggs that hatch in the presence of a Dragonseed child may bond automatica
 A character who fails with one dragon may attempt another, subject to:
 - Staff approval for the new attempt
 - The same preparation requirements apply fresh — ritual, sacrifice, etc. must be arranged again
-- Previous failures are narrative knowledge. Other characters (and staff) know you failed.
-- There is no mechanical penalty for a previous failure, but the narrative consequences are real.
+- There is no mechanical penalty for a previous failure.
 
 ---
 
@@ -366,7 +363,7 @@ A character who fails with one dragon may attempt another, subject to:
 - **Act of Tyranny** framework applies to human sacrifice consequences
 - **War Priest** ability (Faith-based) may provide Faith Invocation assistance during bonding
 - **Dragon movement speed** (0.01 px/s) and combat stats are unaffected by the bonding method — the bond grants the rider, not power to the dragon
-- **Rider bonus** (+offense from Prowess/Command, +defense from Cunning/Fortitude) activates upon successful bond and applies to all dragon combat going forward
+- **Rider bonus** (+offense from Prowess/Command, +defense from Cunning/Fortitude) activates only when the rider is actively riding the dragon in combat. A bonded dragon fighting without its rider does not receive rider bonuses.
 
 ---
 
@@ -382,7 +379,7 @@ The Cannibal has never been bonded in the entire history of dragonkind. He kills
 
 ### Why Cap Sacrifice at +4?
 
-Without a cap, sacrifice becomes the dominant strategy — just maim yourself more for more dice. The cap ensures that sacrifice is *one tool among several*, not the only path. A character who sacrifices a hand (+3) and does nothing else is still worse off than a character who does minor bloodletting (+1), brings three assistants (+3), and performs a ritual (+1). Preparation is holistic.
+Without a cap, sacrifice becomes the dominant strategy — just maim yourself more for more dice. The single-choice constraint ensures that sacrifice is *one tool among several*, not the only path. A character who sacrifices a hand (+3) and does nothing else is still worse off than a character who does minor bloodletting (+1), brings three assistants (+3), and performs a ritual (+1). Preparation is holistic.
 
 ### Why Can Assistants Be Non-Dragonseeds?
 

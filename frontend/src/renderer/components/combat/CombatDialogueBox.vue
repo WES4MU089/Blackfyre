@@ -42,10 +42,11 @@ function getInitials(name: string): string {
 
 <style scoped>
 .combat-dialogue-box {
-  position: fixed;
-  top: 60px;
-  left: 50%;
-  transform: translateX(-50%);
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  margin-bottom: var(--space-xs);
   z-index: 55;
   pointer-events: none;
 
@@ -53,8 +54,6 @@ function getInitials(name: string): string {
   align-items: center;
   gap: var(--space-md);
   padding: var(--space-sm) var(--space-md);
-  min-width: 320px;
-  max-width: 520px;
 
   background: rgba(8, 6, 12, 0.92);
   backdrop-filter: var(--blur-md);
@@ -145,10 +144,10 @@ function getInitials(name: string): string {
 }
 .dialogue-box-enter-from {
   opacity: 0;
-  transform: translateX(-50%) translateY(-12px);
+  transform: translateY(8px);
 }
 .dialogue-box-leave-to {
   opacity: 0;
-  transform: translateX(-50%) translateY(-8px);
+  transform: translateY(8px);
 }
 </style>
