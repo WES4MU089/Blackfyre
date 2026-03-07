@@ -68,7 +68,15 @@ function scrollToSection(catId: string, sectionId: string) {
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-const panelStyle = computed(() => ({
+const positionStyle = computed(() => {
+  const pos = hudStore.hudPositions['wiki']
+  if (pos && pos.x != null && pos.y != null) {
+    return { position: 'fixed' as const, left: `${pos.x}px`, top: `${pos.y}px` }
+  }
+  return undefined
+})
+
+const sizeStyle = computed(() => ({
   width: currentWidth.value + 'px',
   height: currentHeight.value + 'px',
 }))
@@ -79,12 +87,12 @@ function close() {
 </script>
 
 <template>
-  <div class="wiki-panel-wrapper" :style="panelStyle">
+  <div class="wiki-panel-wrapper" :style="positionStyle">
     <div
       ref="panelRef"
       class="wiki-panel panel-ornate animate-fade-in"
       :class="{ 'is-dragging': isDragging || isResizing }"
-      :style="panelStyle"
+      :style="sizeStyle"
     >
       <!-- Header (drag handle) -->
       <div class="wiki-header" @mousedown="onDragStart">
@@ -458,8 +466,7 @@ function close() {
 
 <style scoped>
 .wiki-panel-wrapper {
-  position: fixed;
-  z-index: 100;
+  pointer-events: none;
 }
 
 .wiki-panel {
