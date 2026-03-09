@@ -3,7 +3,6 @@ import { onMounted, onBeforeUnmount, ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useCharacterStore } from '@/stores/character'
 import { useHudStore } from '@/stores/hud'
-import { useCreationStore } from '@/stores/creation'
 import { useSocket } from '@/composables/useSocket'
 import { useItemDrag } from '@/composables/useItemDrag'
 import { startAutoClickThrough, stopAutoClickThrough, resetAutoClickThrough } from '@/composables/useAutoClickThrough'
@@ -19,7 +18,6 @@ import DragGhost from '@/components/hud/DragGhost.vue'
 import DraggableArea from '@/components/hud/DraggableArea.vue'
 import BottomBar from '@/components/hud/BottomBar.vue'
 import SLLinkingModal from '@/components/modals/SLLinkingModal.vue'
-import CharacterCreation from '@/components/creation/CharacterCreation.vue'
 import CombatLobby from '@/components/combat/CombatLobby.vue'
 import CombatSession from '@/components/combat/CombatSession.vue'
 import NPCDialog from '@/components/npc/NPCDialog.vue'
@@ -48,7 +46,6 @@ import '@/styles/hud.css'
 const authStore = useAuthStore()
 const characterStore = useCharacterStore()
 const hudStore = useHudStore()
-const creationStore = useCreationStore()
 const combatStore = useCombatStore()
 const npcDialogStore = useNpcDialogStore()
 const shopStore = useShopStore()
@@ -144,9 +141,6 @@ onMounted(async () => {
       </DraggableArea>
 
     </div>
-
-    <!-- Character Creation Wizard -->
-    <CharacterCreation v-if="creationStore.isOpen" />
 
     <!-- SL Account Linking Modal -->
     <SLLinkingModal v-if="hudStore.slLinkingCode" />

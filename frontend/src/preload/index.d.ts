@@ -42,6 +42,9 @@ export interface ElectronAPI {
 
   // App version
   getAppVersion: () => Promise<string>
+
+  // Shell
+  openExternal: (url: string) => Promise<void>
 }
 
 declare global {

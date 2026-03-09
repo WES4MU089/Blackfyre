@@ -69,5 +69,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   // App version
-  getAppVersion: (): Promise<string> => ipcRenderer.invoke('app:get-version')
+  getAppVersion: (): Promise<string> => ipcRenderer.invoke('app:get-version'),
+
+  // Shell
+  openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:open-external', url)
 })

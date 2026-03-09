@@ -2,7 +2,6 @@ import { ref, onUnmounted } from 'vue'
 import { io, Socket } from 'socket.io-client'
 import { useCharacterStore, type CharacterListEntry, type RetainerTierInfo } from '@/stores/character'
 import { useHudStore } from '@/stores/hud'
-import { useCreationStore, type ClassTemplate } from '@/stores/creation'
 import {
   useCombatStore,
   type LobbyStateView, type LobbyListEntry,
@@ -131,12 +130,8 @@ export function useSocket() {
         !c.application_status || c.application_status === 'none' || c.application_status === 'approved'
       )
       if (playableChars.length === 0 && data.length === 0) {
-        // Auto-trigger creation wizard if player has no characters at all
-        const creationStore = useCreationStore()
-        if (!creationStore.isOpen) {
-          creationStore.open()
-          requestTemplates()
-        }
+        // No characters — open portal character creation in default browser
+        window.electronAPI.openExternal('https://dragonsdominion.cloud/portal/my/applications/new')
       } else if (!characterStore.character) {
         // Auto-select last played character only if no character is active yet
         const lastId = await window.electronAPI.getLastCharacter()
@@ -205,38 +200,6 @@ export function useSocket() {
       hudStore.clearSLLinking()
       hudStore.addNotification('success', 'Account Linked', 'Your Second Life avatar is now connected to Blackfyre.')
       console.log('SL account linked:', data)
-    })
-
-    // Character creation - templates list response
-    socket.on('templates:list', (data: ClassTemplate[]) => {
-      const creationStore = useCreationStore()
-      creationStore.templates = data
-    })
-
-    // Character creation - success response
-    socket.on('character:created', (data: { characterId: number; characterName: string; applicationStatus?: string; tier?: number }) => {
-      const creationStore = useCreationStore()
-      creationStore.isSubmitting = false
-      creationStore.close()
-
-      if (data.applicationStatus === 'pending') {
-        // Tier 2/3: application submitted, character not playable yet
-        hudStore.addNotification('info', 'Application Submitted', `${data.characterName} is pending staff review and cannot be played until approved.`)
-        // Refresh character list to show pending badge
-        socket?.emit('characters:list')
-      } else {
-        // Tier 1: auto-select the newly created character
-        socket?.emit('character:select', { characterId: data.characterId })
-        window.electronAPI.setLastCharacter(data.characterId)
-        hudStore.addNotification('success', 'Character Created', `Welcome, ${data.characterName}!`)
-      }
-    })
-
-    // Character creation - error response
-    socket.on('character:create:error', (data: { message: string; field?: string }) => {
-      const creationStore = useCreationStore()
-      creationStore.isSubmitting = false
-      creationStore.submitError = data.message
     })
 
     // --- Combat Lobby events ---
@@ -587,19 +550,6 @@ export function useSocket() {
     socket?.emit('hud:sync')
   }
 
-  function requestTemplates(): void {
-    socket?.emit('templates:list')
-  }
-
-  function submitCharacterCreation(payload: {
-    templateKey: string
-    aptitudes: Record<string, number>
-    name: string
-    backstory?: string
-  }): void {
-    socket?.emit('character:create', payload)
-  }
-
   function selectNpcOption(optionId: string): void {
     socket?.emit('npc:select-option', { optionId })
   }
@@ -645,8 +595,6 @@ export function useSocket() {
     selectCharacter,
     requestCharacterList,
     requestSync,
-    requestTemplates,
-    submitCharacterCreation,
     selectNpcOption,
     closeNpcDialog,
     closeShop,

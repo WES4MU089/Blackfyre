@@ -516,6 +516,10 @@ ipcMain.handle('app:get-version', () => {
   return app.getVersion()
 })
 
+ipcMain.handle('shell:open-external', (_event, url: string) => {
+  return shell.openExternal(url)
+})
+
 // App lifecycle
 app.whenReady().then(() => {
   createTray()

@@ -2,7 +2,6 @@
 import { computed, ref, onMounted, watch } from 'vue'
 import { useCharacterStore, type EquippedItem, type InventoryItem } from '@/stores/character'
 import { useHudStore } from '@/stores/hud'
-import { useCreationStore } from '@/stores/creation'
 import { useAilmentsStore } from '@/stores/ailments'
 import { usePlayerApplicationStore } from '@/stores/playerApplication'
 import { useDraggable } from '@/composables/useDraggable'
@@ -19,10 +18,9 @@ import paperdollImg from '@res/images/art/paperdoll.png'
 
 const characterStore = useCharacterStore()
 const hudStore = useHudStore()
-const creationStore = useCreationStore()
 const ailmentsStore = useAilmentsStore()
 const playerAppStore = usePlayerApplicationStore()
-const { selectCharacter, requestCharacterList, requestTemplates, dismissRetainer, deleteCharacter, allocateAptitude } = useSocket()
+const { selectCharacter, requestCharacterList, dismissRetainer, deleteCharacter, allocateAptitude } = useSocket()
 const panelRef = ref<HTMLElement | null>(null)
 const { isDragging, onDragStart } = useDraggable('character', panelRef, { alwaysDraggable: true })
 
@@ -58,8 +56,7 @@ function switchCharacter(characterId: number) {
 
 function openCreationWizard() {
   showCharacterDropdown.value = false
-  creationStore.open()
-  requestTemplates()
+  window.electronAPI.openExternal('https://dragonsdominion.cloud/portal/my/applications/new')
 }
 
 function viewApplication(characterId: number) {
