@@ -43,12 +43,24 @@ export function useSocket() {
       auth: { token }
     })
 
+    let hasConnectedBefore = false
+
     socket.on('connect', () => {
       isConnected.value = true
       hudStore.setConnected(true)
       // characters:list and hud:sync are sent by server after JWT auth completes,
       // so we don't emit them here — they'd race and fail before auth is done.
       startPing()
+
+      // On reconnect, reset click-through state so the auto-detect can
+      // resync cleanly. Notifications and UI updates during reconnection
+      // can leave the window stuck in interactive mode.
+      if (hasConnectedBefore) {
+        import('./useAutoClickThrough').then(({ resetAutoClickThrough }) => {
+          resetAutoClickThrough()
+        })
+      }
+      hasConnectedBefore = true
     })
 
     socket.on('disconnect', (reason) => {
