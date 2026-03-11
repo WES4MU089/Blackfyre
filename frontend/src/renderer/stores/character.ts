@@ -738,6 +738,12 @@ export const useCharacterStore = defineStore('character', () => {
     showPerkSelection.value = false
   }
 
+  function clearPerks(): void {
+    perks.value = []
+    availablePerkSlot.value = null
+    showPerkSelection.value = false
+  }
+
   function clear(): void {
     character.value = null
     characterList.value = []
@@ -821,6 +827,7 @@ export const useCharacterStore = defineStore('character', () => {
     addPerk,
     openPerkSelection,
     closePerkSelection,
+    clearPerks,
     clear
   }
 })

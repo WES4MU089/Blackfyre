@@ -507,6 +507,11 @@ export function useSocket() {
       hudStore.addNotification('success', 'Perk Unlocked', `Perk slot ${data.slot} unlocked! Choose a new combat perk.`)
     })
 
+    socket.on('perks:reset', () => {
+      characterStore.clearPerks()
+      hudStore.addNotification('info', 'Perks Reset', 'Your perk selections have been cleared.')
+    })
+
     // --- Point allocation responses ---
     socket.on('aptitude:updated', (data: { aptitudeKey: string; newValue: number; unspentAptitudePoints: number }) => {
       characterStore.applyAptitudeAllocation(data)
