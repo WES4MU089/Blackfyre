@@ -501,6 +501,12 @@ export function useSocket() {
       // Persistent notification + toast handled by notification:new from server
     })
 
+    // --- Perk unlock ---
+    socket.on('xp:perk-unlock', (data: { slot: number; level: number }) => {
+      characterStore.openPerkSelection(data.slot)
+      hudStore.addNotification('success', 'Perk Unlocked', `Perk slot ${data.slot} unlocked! Choose a new combat perk.`)
+    })
+
     // --- Point allocation responses ---
     socket.on('aptitude:updated', (data: { aptitudeKey: string; newValue: number; unspentAptitudePoints: number }) => {
       characterStore.applyAptitudeAllocation(data)

@@ -104,6 +104,7 @@ export interface AttackResultView {
   critEffectsApplied: string[]
   statusEffectsApplied: StatusEffectView[]
   bonuses: string[]
+  perkTriggers: string[]
 
   // Counter-attack (defense reversal with shield)
   counterAttack: {
@@ -143,6 +144,7 @@ export interface ActionResultView {
   mendResult: MendResultView | null
   statusEffectsApplied: StatusEffectView[]
   statusEffectsRemoved: { characterId: number; type: string }[]
+  perkTriggers: string[]
   narrative: string
   opportunityAttacks: ActionResultView[]
 }
@@ -440,8 +442,10 @@ export const useCombatStore = defineStore('combat', () => {
         targetCharacterId: null,
         targetName: null,
         attackResult: null,
+        mendResult: null,
         statusEffectsApplied: [],
         statusEffectsRemoved: [],
+        perkTriggers: [],
         narrative,
         opportunityAttacks: [],
       })

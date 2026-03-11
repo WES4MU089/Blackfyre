@@ -116,6 +116,14 @@ export interface RetainerTierInfo {
   description: string | null
 }
 
+export interface PerkSlot {
+  key: string
+  slot: number
+  name: string
+  category: 'offensive' | 'defensive' | 'utility'
+  description: string
+}
+
 export interface RetainerDetailInfo {
   characterId: number
   name: string
@@ -188,6 +196,9 @@ export const useCharacterStore = defineStore('character', () => {
     ancillary2: null,
   })
   const retainers = ref<RetainerInfo[]>([])
+  const perks = ref<PerkSlot[]>([])
+  const availablePerkSlot = ref<number | null>(null)
+  const showPerkSelection = ref(false)
 
   // Retainer management state
   const retainerDetail = ref<RetainerDetailInfo | null>(null)
@@ -244,6 +255,7 @@ export const useCharacterStore = defineStore('character', () => {
     if (data.aptitudes) aptitudes.value = data.aptitudes as Aptitude[]
     if (data.equipment) equipment.value = data.equipment as Record<string, EquippedItem | null>
     if (data.retainers) retainers.value = data.retainers as RetainerInfo[]
+    if (data.perks) perks.value = data.perks as PerkSlot[]
   }
 
   function setCharacterList(list: CharacterListEntry[]): void {
@@ -711,6 +723,21 @@ export const useCharacterStore = defineStore('character', () => {
     unspentAptitudePoints.value = data.unspentAptitudePoints
   }
 
+  function addPerk(perk: PerkSlot): void {
+    perks.value = [...perks.value, perk]
+    availablePerkSlot.value = null
+    showPerkSelection.value = false
+  }
+
+  function openPerkSelection(slot: number): void {
+    availablePerkSlot.value = slot
+    showPerkSelection.value = true
+  }
+
+  function closePerkSelection(): void {
+    showPerkSelection.value = false
+  }
+
   function clear(): void {
     character.value = null
     characterList.value = []
@@ -731,6 +758,9 @@ export const useCharacterStore = defineStore('character', () => {
     retainerDetail.value = null
     retainerHireTier.value = null
     isHiringRetainer.value = false
+    perks.value = []
+    availablePerkSlot.value = null
+    showPerkSelection.value = false
   }
 
   return {
@@ -785,6 +815,12 @@ export const useCharacterStore = defineStore('character', () => {
     updateCharacterXp,
     applyLevelUp,
     applyAptitudeAllocation,
+    perks,
+    availablePerkSlot,
+    showPerkSelection,
+    addPerk,
+    openPerkSelection,
+    closePerkSelection,
     clear
   }
 })

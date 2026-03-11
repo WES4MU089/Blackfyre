@@ -14,7 +14,10 @@ import ItemTooltip from './ItemTooltip.vue'
 import ItemContextMenu from './ItemContextMenu.vue'
 import StatsPanel from './StatsPanel.vue'
 import HealthPanel from './HealthPanel.vue'
+import PerkSelectionModal from './PerkSelectionModal.vue'
 import paperdollImg from '@res/images/art/paperdoll.png'
+import { getPerkIcon, PERK_SLOT_LEVELS } from '@/utils/perkIcons'
+import type { PerkSlot } from '@/stores/character'
 
 const characterStore = useCharacterStore()
 const hudStore = useHudStore()
@@ -24,7 +27,7 @@ const { selectCharacter, requestCharacterList, dismissRetainer, deleteCharacter,
 const panelRef = ref<HTMLElement | null>(null)
 const { isDragging, onDragStart } = useDraggable('character', panelRef, { alwaysDraggable: true })
 
-const activeTab = ref<'equipment' | 'retainer' | 'health'>('equipment')
+const activeTab = ref<'equipment' | 'retainer' | 'health' | 'perks'>('equipment')
 const showStats = ref(false)
 const showHealth = computed(() => activeTab.value === 'health')
 
@@ -62,6 +65,12 @@ function openCreationWizard() {
 function viewApplication(characterId: number) {
   showCharacterDropdown.value = false
   playerAppStore.open(characterId)
+}
+
+const perkSlotLevels = PERK_SLOT_LEVELS
+
+function getPerkForSlot(slotNum: number): PerkSlot | null {
+  return characterStore.perks.find(p => p.slot === slotNum) ?? null
 }
 
 const panelStyle = computed(() => {
@@ -413,6 +422,14 @@ function close() {
         Health
         <span v-if="woundBadgeClass" class="health-badge" :class="woundBadgeClass">&bull;</span>
       </button>
+      <button
+        class="char-tab"
+        :class="{ 'char-tab--active': activeTab === 'perks' }"
+        @click="activeTab = 'perks'"
+      >
+        Perks
+        <span class="perk-count">{{ characterStore.perks.length }}/3</span>
+      </button>
     </div>
 
     <!-- Equipment tab -->
@@ -584,6 +601,54 @@ function close() {
         </div>
       </div>
     </template>
+
+    <!-- Perks tab -->
+    <template v-if="activeTab === 'perks'">
+      <div class="perks-tab">
+        <div
+          v-for="slotNum in 3"
+          :key="slotNum"
+          class="perk-slot"
+          :class="{
+            'perk-slot--filled': getPerkForSlot(slotNum) != null,
+            'perk-slot--available': !getPerkForSlot(slotNum) && characterStore.level >= perkSlotLevels[slotNum],
+            'perk-slot--locked': !getPerkForSlot(slotNum) && characterStore.level < perkSlotLevels[slotNum],
+          }"
+        >
+          <template v-if="getPerkForSlot(slotNum)">
+            <img
+              v-if="getPerkIcon(getPerkForSlot(slotNum)!.key)"
+              :src="getPerkIcon(getPerkForSlot(slotNum)!.key)!"
+              class="perk-slot-icon"
+              :alt="getPerkForSlot(slotNum)!.name"
+            />
+            <div class="perk-slot-info">
+              <div class="perk-slot-header">
+                <span class="perk-slot-name">{{ getPerkForSlot(slotNum)!.name }}</span>
+                <span class="perk-slot-category" :class="`perk-cat--${getPerkForSlot(slotNum)!.category}`">
+                  {{ getPerkForSlot(slotNum)!.category }}
+                </span>
+              </div>
+              <span class="perk-slot-desc">{{ getPerkForSlot(slotNum)!.description }}</span>
+            </div>
+          </template>
+          <template v-else-if="characterStore.level >= perkSlotLevels[slotNum]">
+            <div class="perk-slot-empty">
+              <span class="perk-slot-empty-label">Slot {{ slotNum }} — Available</span>
+              <button class="perk-choose-btn" @click="characterStore.openPerkSelection(slotNum)">
+                Choose Perk
+              </button>
+            </div>
+          </template>
+          <template v-else>
+            <div class="perk-slot-locked">
+              <span class="perk-slot-locked-label">Slot {{ slotNum }} — Locked</span>
+              <span class="perk-slot-locked-hint">Unlocks at level {{ perkSlotLevels[slotNum] }}</span>
+            </div>
+          </template>
+        </div>
+      </div>
+    </template>
     </div>
 
     <!-- Stats side panel -->
@@ -615,6 +680,9 @@ function close() {
     @action="onContextAction"
     @close="closeContextMenu"
   />
+
+  <!-- Perk selection modal -->
+  <PerkSelectionModal v-if="characterStore.showPerkSelection" />
 </template>
 
 <style scoped>
@@ -1695,5 +1763,142 @@ function close() {
   color: var(--color-text-dim);
   font-style: italic;
   text-align: center;
+}
+
+/* ── Perks tab ── */
+
+.perk-count {
+  font-size: 9px;
+  color: var(--color-text-dim);
+  margin-left: 4px;
+}
+
+.perks-tab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+}
+
+.perk-slot {
+  display: flex;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+  border: 1px solid var(--color-border-dim);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.2);
+  min-height: 60px;
+  align-items: center;
+}
+
+.perk-slot--filled {
+  border-color: var(--color-gold-dim);
+  background: rgba(201, 168, 76, 0.04);
+}
+
+.perk-slot--available {
+  border-color: rgba(201, 168, 76, 0.3);
+  border-style: dashed;
+}
+
+.perk-slot--locked {
+  opacity: 0.5;
+}
+
+.perk-slot-icon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-dim);
+}
+
+.perk-slot-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.perk-slot-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.perk-slot-name {
+  font-family: var(--font-display);
+  font-size: var(--font-size-sm);
+  color: var(--color-gold);
+}
+
+.perk-slot-category {
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 1px 4px;
+  border-radius: 2px;
+  border: 1px solid;
+}
+
+.perk-cat--offensive {
+  color: #e06c75;
+  border-color: rgba(224, 108, 117, 0.3);
+}
+
+.perk-cat--defensive {
+  color: #5b9bd5;
+  border-color: rgba(91, 155, 213, 0.3);
+}
+
+.perk-cat--utility {
+  color: #6ec86e;
+  border-color: rgba(110, 200, 110, 0.3);
+}
+
+.perk-slot-desc {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+.perk-slot-empty,
+.perk-slot-locked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  gap: var(--space-xs);
+}
+
+.perk-slot-empty-label,
+.perk-slot-locked-label {
+  font-family: var(--font-display);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.perk-slot-locked-hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-dim);
+  font-style: italic;
+}
+
+.perk-choose-btn {
+  font-family: var(--font-display);
+  font-size: var(--font-size-xs);
+  color: var(--color-gold);
+  background: rgba(201, 168, 76, 0.08);
+  border: 1px solid var(--color-gold-dim);
+  border-radius: var(--radius-sm);
+  padding: var(--space-xs) var(--space-md);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.perk-choose-btn:hover {
+  background: rgba(201, 168, 76, 0.15);
+  border-color: var(--color-gold);
 }
 </style>

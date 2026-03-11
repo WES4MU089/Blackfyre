@@ -147,6 +147,17 @@ function formatVerbose(entry: ActionResultView): string | null {
   return lines.join('<br>')
 }
 
+function getPerkTriggers(entry: ActionResultView): string[] {
+  const triggers = new Set<string>()
+  if (entry.perkTriggers) {
+    for (const t of entry.perkTriggers) triggers.add(t)
+  }
+  if (entry.attackResult?.perkTriggers) {
+    for (const t of entry.attackResult.perkTriggers) triggers.add(t)
+  }
+  return Array.from(triggers)
+}
+
 function entryClasses(entry: ActionResultView): Record<string, boolean> {
   const team = getEntryTeam(entry)
   const hitQuality = entry.attackResult?.hitQuality ?? null
@@ -191,6 +202,11 @@ function entryClasses(entry: ActionResultView): Record<string, boolean> {
             <span class="log-narrative" v-html="formatNarrative(entry)"></span>
             <span v-if="entry.attackResult?.hitQuality === 'critical'" class="log-crit-badge">CRIT</span>
             <span v-else-if="entry.attackResult?.hitQuality === 'strong'" class="log-strong-badge">STRONG</span>
+            <span
+              v-for="perk in getPerkTriggers(entry)"
+              :key="perk"
+              class="log-perk-badge"
+            >{{ perk }}</span>
           </div>
           <div
             v-if="verboseMode && entry.attackResult"
@@ -429,5 +445,19 @@ function entryClasses(entry: ActionResultView): Record<string, boolean> {
   letter-spacing: 0.05em;
   flex-shrink: 0;
   align-self: center;
+}
+
+.log-perk-badge {
+  font-size: 7px;
+  font-family: var(--font-mono);
+  color: #b89d5a;
+  border: 1px solid rgba(184, 157, 90, 0.25);
+  background: rgba(184, 157, 90, 0.06);
+  padding: 0 3px;
+  border-radius: 2px;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+  align-self: center;
+  text-transform: uppercase;
 }
 </style>
