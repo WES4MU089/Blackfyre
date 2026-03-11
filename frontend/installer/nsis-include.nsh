@@ -1,4 +1,4 @@
-!macro customInit
-  ; Kill any running instance of the app before installing
-  nsExec::ExecToLog 'taskkill /f /im "Dragon'"'"'s Dominion.exe"'
+!macro customCheckAppRunning
+  ; Override the default "app is running" check to skip it entirely.
+  ; NSIS was falsely detecting the installer itself as a running instance.
 !macroend

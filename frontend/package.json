@@ -38,7 +38,7 @@
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "include": "installer/nsis-include.nsh",
-      "artifactName": "DragonsDominion-${version}-setup.exe"
+      "artifactName": "DD-Setup-${version}.exe"
     },
     "publish": {
       "provider": "github",
