@@ -2,11 +2,17 @@
 import { ref, computed } from 'vue'
 import { useCharacterStore } from '@/stores/character'
 import { useHudStore } from '@/stores/hud'
+import { useAuthStore } from '@/stores/auth'
 import { getPerkIcon } from '@/utils/perkIcons'
 import { BACKEND_URL } from '@/config'
 
 const characterStore = useCharacterStore()
 const hudStore = useHudStore()
+const authStore = useAuthStore()
+
+function authHeaders(): Record<string, string> {
+  return { Authorization: `Bearer ${authStore.token}` }
+}
 
 const selectedPerk = ref<string | null>(null)
 const isSubmitting = ref(false)
@@ -29,7 +35,9 @@ async function fetchPerks() {
   const charId = characterStore.character?.id
   if (!charId) return
   try {
-    const res = await fetch(`${BACKEND_URL}/api/characters/${charId}/perks`)
+    const res = await fetch(`${BACKEND_URL}/api/characters/${charId}/perks`, {
+      headers: authHeaders(),
+    })
     const data = await res.json()
     allPerks.value = data.allPerks ?? []
   } catch {
@@ -58,7 +66,7 @@ async function confirmSelection() {
   try {
     const res = await fetch(`${BACKEND_URL}/api/characters/${charId}/perk`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify({ perkKey: selectedPerk.value }),
     })
     const data = await res.json()
