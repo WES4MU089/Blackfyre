@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted, onBeforeUnmount } from 'vue'
 import { useHudStore } from '@/stores/hud'
+import { acquireInteractionLock, releaseInteractionLock } from '@/composables/useInteractionLock'
 
 const hudStore = useHudStore()
 
@@ -38,8 +39,13 @@ async function copyCommand(): Promise<void> {
 }
 
 onMounted(() => {
+  acquireInteractionLock()
   updateCountdown()
   timer = setInterval(updateCountdown, 1000)
+})
+
+onBeforeUnmount(() => {
+  releaseInteractionLock()
 })
 
 onUnmounted(() => {

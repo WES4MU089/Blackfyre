@@ -1,13 +1,23 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import { useCombatStore } from '@/stores/combat'
 import { useCombat } from '@/composables/useCombat'
+import { acquireInteractionLock, releaseInteractionLock } from '@/composables/useInteractionLock'
 
 const combatStore = useCombatStore()
 const { resolveMendChoice } = useCombat()
 
 const pending = computed(() => combatStore.pendingMendChoice)
 const selected = ref<string[]>([])
+
+watch(() => !!pending.value, (v) => {
+  if (v) acquireInteractionLock()
+  else releaseInteractionLock()
+}, { immediate: true })
+
+onUnmounted(() => {
+  if (pending.value) releaseInteractionLock()
+})
 
 function toggleEffect(effect: string): void {
   const idx = selected.value.indexOf(effect)

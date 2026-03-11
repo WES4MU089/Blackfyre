@@ -68,8 +68,14 @@ function scheduleClickThrough(): void {
 
   clickThroughTimer = setTimeout(() => {
     clickThroughTimer = null
-    // Re-check: mouse may have moved back over a widget during the delay
-    if (mouseDown) return
+    // Re-check: mouse may have moved back over a widget, a modal may have
+    // opened, or a drag started during the delay
+    if (mouseDown || isInteractionLocked()) return
+    const hudStore = useHudStore()
+    if (hudStore.layoutEditMode) return
+    // Final elementFromPoint check before switching
+    const stillInteractive = checkInteractive(lastMouseX, lastMouseY)
+    if (stillInteractive) return
     isOverInteractive = false
     seq++
     window.electronAPI.setAutoClickThrough(false, seq)

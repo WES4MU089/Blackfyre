@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useCharacterStore } from '@/stores/character'
 import { useHudStore } from '@/stores/hud'
 import { useAuthStore } from '@/stores/auth'
 import { getPerkIcon } from '@/utils/perkIcons'
 import { BACKEND_URL } from '@/config'
+import { acquireInteractionLock, releaseInteractionLock } from '@/composables/useInteractionLock'
 
 const characterStore = useCharacterStore()
 const hudStore = useHudStore()
@@ -48,6 +49,15 @@ async function fetchPerks() {
 }
 
 fetchPerks()
+
+// Keep the window interactive while this modal is open
+onMounted(() => {
+  acquireInteractionLock()
+})
+
+onBeforeUnmount(() => {
+  releaseInteractionLock()
+})
 
 const offensivePerks = computed(() => allPerks.value.filter(p => p.category === 'offensive'))
 const defensivePerks = computed(() => allPerks.value.filter(p => p.category === 'defensive'))
@@ -98,7 +108,7 @@ function close() {
 </script>
 
 <template>
-  <Teleport to="body">
+  <Teleport to="#hud-popover-root">
     <div class="perk-modal-overlay" @click.self="close">
       <div class="perk-modal">
         <div class="perk-modal-header">

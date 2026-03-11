@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted } from 'vue'
+import { ref, computed, watch, onUnmounted, onMounted, onBeforeUnmount } from 'vue'
 import { useCombatStore } from '@/stores/combat'
 import { useCombat } from '@/composables/useCombat'
+import { acquireInteractionLock, releaseInteractionLock } from '@/composables/useInteractionLock'
 
 const combatStore = useCombatStore()
 const { respondToExecution, cancelExecution } = useCombat()
@@ -32,9 +33,11 @@ function updateCountdown(): void {
 
 watch(visible, (v) => {
   if (v) {
+    acquireInteractionLock()
     updateCountdown()
     countdownInterval = setInterval(updateCountdown, 1000)
   } else {
+    releaseInteractionLock()
     if (countdownInterval) {
       clearInterval(countdownInterval)
       countdownInterval = null
@@ -44,6 +47,7 @@ watch(visible, (v) => {
 
 onUnmounted(() => {
   if (countdownInterval) clearInterval(countdownInterval)
+  if (visible.value) releaseInteractionLock()
 })
 
 function onIntervene(): void {

@@ -1,9 +1,18 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { usePlayerApplicationStore } from '@/stores/playerApplication'
+import { acquireInteractionLock, releaseInteractionLock } from '@/composables/useInteractionLock'
 
 const store = usePlayerApplicationStore()
 const commentBody = ref('')
+
+onMounted(() => {
+  acquireInteractionLock()
+})
+
+onBeforeUnmount(() => {
+  releaseInteractionLock()
+})
 
 const ROLE_LABELS: Record<string, string> = {
   member: 'Member',

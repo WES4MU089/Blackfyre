@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch, onUnmounted } from 'vue'
 import { useCombatStore, type WoundAssessmentView } from '@/stores/combat'
 import { useCharacterStore } from '@/stores/character'
 import { useCombat } from '@/composables/useCombat'
+import { acquireInteractionLock, releaseInteractionLock } from '@/composables/useInteractionLock'
 
 const combatStore = useCombatStore()
 const characterStore = useCharacterStore()
@@ -10,6 +11,15 @@ const { initiateExecution } = useCombat()
 
 const results = computed(() => combatStore.woundAssessments)
 const visible = computed(() => combatStore.sessionEnded && results.value.length > 0)
+
+watch(visible, (v) => {
+  if (v) acquireInteractionLock()
+  else releaseInteractionLock()
+}, { immediate: true })
+
+onUnmounted(() => {
+  if (visible.value) releaseInteractionLock()
+})
 
 function canInitiateExecution(r: WoundAssessmentView): boolean {
   if (!r.isKo) return false
