@@ -1,5 +1,5 @@
 import { useHudStore } from '@/stores/hud'
-import { isInteractionLocked } from './useInteractionLock'
+import { isInteractionLocked, resetAllInteractionLocks } from './useInteractionLock'
 
 let isOverInteractive = false
 let seq = 0
@@ -23,6 +23,11 @@ const MOUSE_DOWN_TIMEOUT = 3000
 // state is correct and fixes desync.
 const RECOVERY_INTERVAL = 2000
 
+// If the interaction lock is stuck for this many consecutive recovery
+// checks without any visible interactive element, force-reset it.
+const STUCK_LOCK_THRESHOLD = 3
+let stuckLockCounter = 0
+
 function checkInteractive(x: number, y: number): boolean {
   const el = document.elementFromPoint(x, y)
   // elementFromPoint skips pointer-events: none elements.
@@ -30,9 +35,15 @@ function checkInteractive(x: number, y: number): boolean {
   if (el && el !== document.documentElement && el !== document.body) return true
 
   // Teleported overlays inside pointer-events: none containers may not be found
-  // by elementFromPoint. If any overlay is active, keep the window interactive.
+  // by elementFromPoint. Check if any VISIBLE overlay child is active.
   const popoverRoot = document.getElementById('hud-popover-root')
-  if (popoverRoot && popoverRoot.children.length > 0) return true
+  if (popoverRoot) {
+    for (let i = 0; i < popoverRoot.children.length; i++) {
+      const child = popoverRoot.children[i] as HTMLElement
+      // Skip hidden/invisible children (e.g. stale teleport remnants)
+      if (child.offsetParent !== null || child.getClientRects().length > 0) return true
+    }
+  }
 
   return false
 }
@@ -139,11 +150,32 @@ function onWindowBlur(): void {
  * Catches any desync caused by missed events or Electron IPC races.
  */
 function recoveryCheck(): void {
-  if (!isOverInteractive) return
-
   const hudStore = useHudStore()
-  if (hudStore.layoutEditMode || isInteractionLocked()) return
+  if (hudStore.layoutEditMode) return
   if (mouseDown) return
+
+  // Detect stuck interaction locks: if locked but no visible interactive
+  // element exists under cursor or in popover root, count consecutive misses.
+  if (isInteractionLocked()) {
+    if (lastMouseX === 0 && lastMouseY === 0) return
+    const interactive = checkInteractive(lastMouseX, lastMouseY)
+    if (!interactive) {
+      stuckLockCounter++
+      if (stuckLockCounter >= STUCK_LOCK_THRESHOLD) {
+        console.warn('[click-through] Interaction lock stuck — force-resetting all locks')
+        resetAllInteractionLocks()
+        stuckLockCounter = 0
+        forceClickThrough()
+      }
+    } else {
+      stuckLockCounter = 0
+    }
+    return
+  }
+
+  stuckLockCounter = 0
+
+  if (!isOverInteractive) return
 
   // Re-check cursor position
   if (lastMouseX === 0 && lastMouseY === 0) return
@@ -194,4 +226,5 @@ export function resetAutoClickThrough(): void {
   seq = 0
   mouseDown = false
   mouseDownSince = 0
+  stuckLockCounter = 0
 }

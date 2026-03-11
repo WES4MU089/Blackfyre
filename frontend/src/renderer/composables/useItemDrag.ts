@@ -26,6 +26,7 @@ let startY = 0
 let pendingPayload: DragPayload | null = null
 let activated = false
 let dragSafetyTimer: ReturnType<typeof setTimeout> | null = null
+let lockToken: number | null = null
 
 function onMouseMove(e: MouseEvent): void {
   if (!activated && pendingPayload) {
@@ -35,7 +36,7 @@ function onMouseMove(e: MouseEvent): void {
       activated = true
       isDragging.value = true
       dragPayload.value = pendingPayload
-      acquireInteractionLock()
+      lockToken = acquireInteractionLock()
     }
   }
 
@@ -78,7 +79,10 @@ export function useItemDrag() {
         isDragging.value = false
         dragPayload.value = null
         cleanup()
-        releaseInteractionLock()
+        if (lockToken !== null) {
+          releaseInteractionLock(lockToken)
+          lockToken = null
+        }
       }
     }, DRAG_TIMEOUT_MS)
   }
@@ -86,21 +90,25 @@ export function useItemDrag() {
   /** Call on mouseup over a valid drop target. Returns the payload and resets state. */
   function endDrag(): DragPayload | null {
     const payload = dragPayload.value
-    const wasActive = isDragging.value
     isDragging.value = false
     dragPayload.value = null
     cleanup()
-    if (wasActive) releaseInteractionLock()
+    if (lockToken !== null) {
+      releaseInteractionLock(lockToken)
+      lockToken = null
+    }
     return payload
   }
 
   /** Cancel drag without completing a drop */
   function cancelDrag(): void {
-    const wasActive = isDragging.value
     isDragging.value = false
     dragPayload.value = null
     cleanup()
-    if (wasActive) releaseInteractionLock()
+    if (lockToken !== null) {
+      releaseInteractionLock(lockToken)
+      lockToken = null
+    }
   }
 
   return {

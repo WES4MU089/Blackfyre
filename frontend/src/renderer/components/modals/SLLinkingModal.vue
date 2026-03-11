@@ -38,14 +38,18 @@ async function copyCommand(): Promise<void> {
   }
 }
 
+let lockToken: number | null = null
 onMounted(() => {
-  acquireInteractionLock()
+  lockToken = acquireInteractionLock()
   updateCountdown()
   timer = setInterval(updateCountdown, 1000)
 })
 
 onBeforeUnmount(() => {
-  releaseInteractionLock()
+  if (lockToken !== null) {
+    releaseInteractionLock(lockToken)
+    lockToken = null
+  }
 })
 
 onUnmounted(() => {

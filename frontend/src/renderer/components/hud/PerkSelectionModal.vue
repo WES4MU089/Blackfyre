@@ -51,12 +51,16 @@ async function fetchPerks() {
 fetchPerks()
 
 // Keep the window interactive while this modal is open
+let lockToken: number | null = null
 onMounted(() => {
-  acquireInteractionLock()
+  lockToken = acquireInteractionLock()
 })
 
 onBeforeUnmount(() => {
-  releaseInteractionLock()
+  if (lockToken !== null) {
+    releaseInteractionLock(lockToken)
+    lockToken = null
+  }
 })
 
 const offensivePerks = computed(() => allPerks.value.filter(p => p.category === 'offensive'))

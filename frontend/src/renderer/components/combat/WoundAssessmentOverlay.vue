@@ -12,13 +12,22 @@ const { initiateExecution } = useCombat()
 const results = computed(() => combatStore.woundAssessments)
 const visible = computed(() => combatStore.sessionEnded && results.value.length > 0)
 
+let lockToken: number | null = null
+
 watch(visible, (v) => {
-  if (v) acquireInteractionLock()
-  else releaseInteractionLock()
+  if (v) {
+    lockToken = acquireInteractionLock()
+  } else if (lockToken !== null) {
+    releaseInteractionLock(lockToken)
+    lockToken = null
+  }
 }, { immediate: true })
 
 onUnmounted(() => {
-  if (visible.value) releaseInteractionLock()
+  if (lockToken !== null) {
+    releaseInteractionLock(lockToken)
+    lockToken = null
+  }
 })
 
 function canInitiateExecution(r: WoundAssessmentView): boolean {

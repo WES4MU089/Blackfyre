@@ -31,13 +31,18 @@ function updateCountdown(): void {
   remaining.value = `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
+let lockToken: number | null = null
+
 watch(visible, (v) => {
   if (v) {
-    acquireInteractionLock()
+    lockToken = acquireInteractionLock()
     updateCountdown()
     countdownInterval = setInterval(updateCountdown, 1000)
   } else {
-    releaseInteractionLock()
+    if (lockToken !== null) {
+      releaseInteractionLock(lockToken)
+      lockToken = null
+    }
     if (countdownInterval) {
       clearInterval(countdownInterval)
       countdownInterval = null
@@ -47,7 +52,10 @@ watch(visible, (v) => {
 
 onUnmounted(() => {
   if (countdownInterval) clearInterval(countdownInterval)
-  if (visible.value) releaseInteractionLock()
+  if (lockToken !== null) {
+    releaseInteractionLock(lockToken)
+    lockToken = null
+  }
 })
 
 function onIntervene(): void {

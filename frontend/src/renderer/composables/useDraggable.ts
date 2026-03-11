@@ -15,6 +15,7 @@ export function useDraggable(areaId: string, elementRef: Ref<HTMLElement | null>
   let startMouseY = 0
   let startElX = 0
   let startElY = 0
+  let lockToken: number | null = null
 
   function onDragStart(e: MouseEvent) {
     if (!options?.alwaysDraggable && !hudStore.layoutEditMode) return
@@ -23,7 +24,7 @@ export function useDraggable(areaId: string, elementRef: Ref<HTMLElement | null>
     e.stopPropagation()
 
     isDragging.value = true
-    acquireInteractionLock()
+    lockToken = acquireInteractionLock()
 
     const rect = elementRef.value.getBoundingClientRect()
     startMouseX = e.clientX
@@ -60,7 +61,10 @@ export function useDraggable(areaId: string, elementRef: Ref<HTMLElement | null>
 
   function onDragEnd() {
     isDragging.value = false
-    releaseInteractionLock()
+    if (lockToken !== null) {
+      releaseInteractionLock(lockToken)
+      lockToken = null
+    }
     document.removeEventListener('mousemove', onDragMove)
     document.removeEventListener('mouseup', onDragEnd)
     document.body.style.cursor = ''
@@ -75,6 +79,10 @@ export function useDraggable(areaId: string, elementRef: Ref<HTMLElement | null>
   onBeforeUnmount(() => {
     document.removeEventListener('mousemove', onDragMove)
     document.removeEventListener('mouseup', onDragEnd)
+    if (lockToken !== null) {
+      releaseInteractionLock(lockToken)
+      lockToken = null
+    }
   })
 
   return { isDragging, onDragStart }

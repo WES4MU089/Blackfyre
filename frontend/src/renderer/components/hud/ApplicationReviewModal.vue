@@ -6,12 +6,16 @@ import { acquireInteractionLock, releaseInteractionLock } from '@/composables/us
 const store = usePlayerApplicationStore()
 const commentBody = ref('')
 
+let lockToken: number | null = null
 onMounted(() => {
-  acquireInteractionLock()
+  lockToken = acquireInteractionLock()
 })
 
 onBeforeUnmount(() => {
-  releaseInteractionLock()
+  if (lockToken !== null) {
+    releaseInteractionLock(lockToken)
+    lockToken = null
+  }
 })
 
 const ROLE_LABELS: Record<string, string> = {

@@ -10,13 +10,22 @@ const { resolveMendChoice } = useCombat()
 const pending = computed(() => combatStore.pendingMendChoice)
 const selected = ref<string[]>([])
 
+let lockToken: number | null = null
+
 watch(() => !!pending.value, (v) => {
-  if (v) acquireInteractionLock()
-  else releaseInteractionLock()
+  if (v) {
+    lockToken = acquireInteractionLock()
+  } else if (lockToken !== null) {
+    releaseInteractionLock(lockToken)
+    lockToken = null
+  }
 }, { immediate: true })
 
 onUnmounted(() => {
-  if (pending.value) releaseInteractionLock()
+  if (lockToken !== null) {
+    releaseInteractionLock(lockToken)
+    lockToken = null
+  }
 })
 
 function toggleEffect(effect: string): void {

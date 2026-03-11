@@ -36,11 +36,13 @@ export function useResizable(
     return Math.max(min, Math.min(max, value))
   }
 
+  let lockToken: number | null = null
+
   function onResizeStart(e: MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
     isResizing.value = true
-    acquireInteractionLock()
+    lockToken = acquireInteractionLock()
     resizeStartX = e.clientX
     resizeStartY = e.clientY
     resizeStartW = currentWidth.value
@@ -61,7 +63,10 @@ export function useResizable(
 
   function onResizeEnd() {
     isResizing.value = false
-    releaseInteractionLock()
+    if (lockToken !== null) {
+      releaseInteractionLock(lockToken)
+      lockToken = null
+    }
     document.removeEventListener('mousemove', onResizeMove)
     document.removeEventListener('mouseup', onResizeEnd)
     document.body.style.cursor = ''
@@ -75,6 +80,10 @@ export function useResizable(
   onBeforeUnmount(() => {
     document.removeEventListener('mousemove', onResizeMove)
     document.removeEventListener('mouseup', onResizeEnd)
+    if (lockToken !== null) {
+      releaseInteractionLock(lockToken)
+      lockToken = null
+    }
   })
 
   // Load persisted size on creation
