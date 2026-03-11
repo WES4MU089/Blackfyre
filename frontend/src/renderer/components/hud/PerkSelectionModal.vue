@@ -231,6 +231,7 @@ function close() {
   align-items: center;
   justify-content: center;
   z-index: 9000;
+  pointer-events: auto;
 }
 
 .perk-modal {
