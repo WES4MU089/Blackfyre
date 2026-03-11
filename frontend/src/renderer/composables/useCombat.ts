@@ -91,18 +91,18 @@ export function useCombat() {
     combatStore.clearPendingMendChoice()
   }
 
-  // --- Coup de grâce actions ---
+  // --- Execution actions ---
 
-  function initiateCoup(targetCharacterId: number): void {
-    getSocket()?.emit('coup:initiate', { targetCharacterId })
+  function initiateExecution(targetCharacterId: number): void {
+    getSocket()?.emit('execute:initiate', { targetCharacterId })
   }
 
-  function respondToCoup(targetCharacterId: number, response: 'intervene' | 'do-nothing'): void {
-    getSocket()?.emit('coup:respond', { targetCharacterId, response })
+  function respondToExecution(targetCharacterId: number, response: 'intervene' | 'do-nothing'): void {
+    getSocket()?.emit('execute:respond', { targetCharacterId, response })
   }
 
-  function cancelCoup(targetCharacterId: number): void {
-    getSocket()?.emit('coup:cancel', { targetCharacterId })
+  function cancelExecution(targetCharacterId: number): void {
+    getSocket()?.emit('execute:cancel', { targetCharacterId })
   }
 
   function toggleRetainers(retainerIds: number[]): void {
@@ -130,9 +130,9 @@ export function useCombat() {
     resolveMendChoice,
     // Retainers
     toggleRetainers,
-    // Coup de grâce
-    initiateCoup,
-    respondToCoup,
-    cancelCoup,
+    // Execution
+    initiateExecution,
+    respondToExecution,
+    cancelExecution,
   }
 }

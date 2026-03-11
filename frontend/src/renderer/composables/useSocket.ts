@@ -327,18 +327,18 @@ export function useSocket() {
       combatStore.addCallout(data.characterId, data.text)
     })
 
-    // --- Coup de Grâce events ---
+    // --- Execution events ---
 
-    socket.on('coup:waiting', (data: { targetCharacterId: number; targetName: string; witnessCount: number; expiresAt: string }) => {
-      combatStore.setPendingCoupAttacker(data)
+    socket.on('execute:waiting', (data: { targetCharacterId: number; targetName: string; witnessCount: number; expiresAt: string }) => {
+      combatStore.setPendingExecuteAttacker(data)
     })
 
-    socket.on('coup:prompt', (data: { attackerName: string; targetCharacterId: number; targetName: string; expiresAt: string }) => {
-      combatStore.setPendingCoupWitness(data)
+    socket.on('execute:prompt', (data: { attackerName: string; targetCharacterId: number; targetName: string; expiresAt: string }) => {
+      combatStore.setPendingExecuteWitness(data)
     })
 
-    socket.on('coup:resolved', (data: { targetCharacterId: number; targetName: string; outcome: string; intervenerName?: string }) => {
-      combatStore.clearCoupState()
+    socket.on('execute:resolved', (data: { targetCharacterId: number; targetName: string; outcome: string; intervenerName?: string }) => {
+      combatStore.clearExecuteState()
       if (data.outcome === 'executed') {
         hudStore.addNotification('danger', 'Execution', `${data.targetName} has been slain.`)
       } else if (data.outcome === 'blocked') {

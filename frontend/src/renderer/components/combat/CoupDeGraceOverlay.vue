@@ -4,10 +4,10 @@ import { useCombatStore } from '@/stores/combat'
 import { useCombat } from '@/composables/useCombat'
 
 const combatStore = useCombatStore()
-const { respondToCoup, cancelCoup } = useCombat()
+const { respondToExecution, cancelExecution } = useCombat()
 
-const attackerData = computed(() => combatStore.pendingCoupAttacker)
-const witnessData = computed(() => combatStore.pendingCoupWitness)
+const attackerData = computed(() => combatStore.pendingExecuteAttacker)
+const witnessData = computed(() => combatStore.pendingExecuteWitness)
 const visible = computed(() => attackerData.value !== null || witnessData.value !== null)
 
 // Countdown timer
@@ -48,37 +48,37 @@ onUnmounted(() => {
 
 function onIntervene(): void {
   if (!witnessData.value) return
-  respondToCoup(witnessData.value.targetCharacterId, 'intervene')
+  respondToExecution(witnessData.value.targetCharacterId, 'intervene')
 }
 
 function onDoNothing(): void {
   if (!witnessData.value) return
-  respondToCoup(witnessData.value.targetCharacterId, 'do-nothing')
+  respondToExecution(witnessData.value.targetCharacterId, 'do-nothing')
 }
 
 function onCancel(): void {
   if (!attackerData.value) return
-  cancelCoup(attackerData.value.targetCharacterId)
+  cancelExecution(attackerData.value.targetCharacterId)
 }
 </script>
 
 <template>
   <Teleport to="#hud-popover-root">
-    <div v-if="visible" class="coup-overlay">
-      <div class="coup-panel">
-        <h3 class="coup-title">Coup de Gr&acirc;ce</h3>
+    <div v-if="visible" class="execute-overlay">
+      <div class="execute-panel">
+        <h3 class="execute-title">Execute</h3>
 
         <!-- Witness mode -->
         <template v-if="witnessData">
-          <p class="coup-desc">
+          <p class="execute-desc">
             <span class="name-highlight">{{ witnessData.attackerName }}</span>
             is attempting to execute
             <span class="name-highlight">{{ witnessData.targetName }}</span>.
           </p>
-          <p class="coup-timer">
+          <p class="execute-timer">
             You have <span class="timer-value">{{ remaining }}</span> to respond.
           </p>
-          <div class="coup-actions">
+          <div class="execute-actions">
             <button class="btn-intervene" @click="onIntervene">Intervene</button>
             <button class="btn-do-nothing" @click="onDoNothing">Do Nothing</button>
           </div>
@@ -86,12 +86,12 @@ function onCancel(): void {
 
         <!-- Attacker mode -->
         <template v-else-if="attackerData">
-          <p class="coup-desc">
+          <p class="execute-desc">
             Nearby witnesses have been alerted.
             <br>Awaiting response...
           </p>
-          <p class="coup-timer-large">{{ remaining }}</p>
-          <div class="coup-actions">
+          <p class="execute-timer-large">{{ remaining }}</p>
+          <div class="execute-actions">
             <button class="btn-cancel" @click="onCancel">Cancel</button>
           </div>
         </template>
@@ -101,7 +101,7 @@ function onCancel(): void {
 </template>
 
 <style scoped>
-.coup-overlay {
+.execute-overlay {
   position: fixed;
   top: 50%;
   left: 50%;
@@ -110,7 +110,7 @@ function onCancel(): void {
   pointer-events: auto;
 }
 
-.coup-panel {
+.execute-panel {
   background: linear-gradient(180deg, rgba(20, 15, 10, 0.95), rgba(30, 22, 14, 0.92));
   border: 1px solid rgba(139, 26, 26, 0.6);
   border-radius: var(--radius-md, 6px);
@@ -121,7 +121,7 @@ function onCancel(): void {
   text-align: center;
 }
 
-.coup-title {
+.execute-title {
   margin: 0 0 12px;
   font-family: var(--font-display, 'Cinzel', serif);
   font-size: 15px;
@@ -132,7 +132,7 @@ function onCancel(): void {
   padding-bottom: 10px;
 }
 
-.coup-desc {
+.execute-desc {
   margin: 0 0 8px;
   font-size: 12px;
   color: var(--color-text-muted, #a09580);
@@ -144,7 +144,7 @@ function onCancel(): void {
   font-weight: 600;
 }
 
-.coup-timer {
+.execute-timer {
   margin: 0 0 16px;
   font-size: 12px;
   color: var(--color-text-dim, #8a7d6b);
@@ -157,7 +157,7 @@ function onCancel(): void {
   color: #cc2222;
 }
 
-.coup-timer-large {
+.execute-timer-large {
   margin: 8px 0 16px;
   font-family: var(--font-display, 'Cinzel', serif);
   font-size: 28px;
@@ -166,7 +166,7 @@ function onCancel(): void {
   letter-spacing: 0.05em;
 }
 
-.coup-actions {
+.execute-actions {
   display: flex;
   gap: 10px;
   justify-content: center;

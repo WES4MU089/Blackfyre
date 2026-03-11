@@ -177,16 +177,16 @@ export const useCombatStore = defineStore('combat', () => {
   const selectedTargetId = ref<number | null>(null)
   const woundAssessments = ref<WoundAssessmentView[]>([])
 
-  // Coup de grâce — attacker waiting for witnesses
-  const pendingCoupAttacker = ref<{
+  // Execution — attacker waiting for witnesses
+  const pendingExecuteAttacker = ref<{
     targetCharacterId: number
     targetName: string
     witnessCount: number
     expiresAt: string
   } | null>(null)
 
-  // Coup de grâce — witness prompt
-  const pendingCoupWitness = ref<{
+  // Execution — witness prompt
+  const pendingExecuteWitness = ref<{
     attackerName: string
     targetCharacterId: number
     targetName: string
@@ -545,17 +545,17 @@ export const useCombatStore = defineStore('combat', () => {
     pendingMendChoice.value = null
   }
 
-  function setPendingCoupAttacker(data: typeof pendingCoupAttacker.value): void {
-    pendingCoupAttacker.value = data
+  function setPendingExecuteAttacker(data: typeof pendingExecuteAttacker.value): void {
+    pendingExecuteAttacker.value = data
   }
 
-  function setPendingCoupWitness(data: typeof pendingCoupWitness.value): void {
-    pendingCoupWitness.value = data
+  function setPendingExecuteWitness(data: typeof pendingExecuteWitness.value): void {
+    pendingExecuteWitness.value = data
   }
 
-  function clearCoupState(): void {
-    pendingCoupAttacker.value = null
-    pendingCoupWitness.value = null
+  function clearExecuteState(): void {
+    pendingExecuteAttacker.value = null
+    pendingExecuteWitness.value = null
   }
 
   function clearCombatSession(): void {
@@ -572,8 +572,8 @@ export const useCombatStore = defineStore('combat', () => {
     activeCallouts.value = []
     activeView.value = 'none'
     pendingMendChoice.value = null
-    pendingCoupAttacker.value = null
-    pendingCoupWitness.value = null
+    pendingExecuteAttacker.value = null
+    pendingExecuteWitness.value = null
   }
 
   return {
@@ -637,11 +637,11 @@ export const useCombatStore = defineStore('combat', () => {
     activeCallouts,
     addCallout,
     currentCallout,
-    // Coup de grâce
-    pendingCoupAttacker,
-    pendingCoupWitness,
-    setPendingCoupAttacker,
-    setPendingCoupWitness,
-    clearCoupState,
+    // Execution
+    pendingExecuteAttacker,
+    pendingExecuteWitness,
+    setPendingExecuteAttacker,
+    setPendingExecuteWitness,
+    clearExecuteState,
   }
 })

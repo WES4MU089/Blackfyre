@@ -157,7 +157,7 @@ onMounted(async () => {
     <!-- Player Application Review Modal -->
     <ApplicationReviewModal v-if="playerAppStore.isOpen" />
 
-    <!-- Coup de Grâce overlay (witness/attacker prompt) -->
+    <!-- Execution overlay (witness/attacker prompt) -->
     <CoupDeGraceOverlay />
 
     <!-- Persistent notification panel (fixed position, outside system overlay) -->

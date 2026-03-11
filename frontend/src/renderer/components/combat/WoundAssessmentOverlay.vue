@@ -6,12 +6,12 @@ import { useCombat } from '@/composables/useCombat'
 
 const combatStore = useCombatStore()
 const characterStore = useCharacterStore()
-const { initiateCoup } = useCombat()
+const { initiateExecution } = useCombat()
 
 const results = computed(() => combatStore.woundAssessments)
 const visible = computed(() => combatStore.sessionEnded && results.value.length > 0)
 
-function canInitiateCoup(r: WoundAssessmentView): boolean {
+function canInitiateExecution(r: WoundAssessmentView): boolean {
   if (!r.isKo) return false
   if (!characterStore.character) return false
   // Must be on opposing team
@@ -22,13 +22,13 @@ function canInitiateCoup(r: WoundAssessmentView): boolean {
   // My character must be alive (survived combat)
   const me = combatStore.myCombatant
   if (!me || !me.isAlive) return false
-  // No pending coup for this target
-  if (combatStore.pendingCoupAttacker?.targetCharacterId === r.characterId) return false
+  // No pending execution for this target
+  if (combatStore.pendingExecuteAttacker?.targetCharacterId === r.characterId) return false
   return true
 }
 
-function onInitiateCoup(characterId: number): void {
-  initiateCoup(characterId)
+function onInitiateExecution(characterId: number): void {
+  initiateExecution(characterId)
 }
 
 function severityLabel(r: WoundAssessmentView): string {
@@ -80,11 +80,11 @@ function penaltyText(r: WoundAssessmentView): string {
             Survival check in 24 hours
           </div>
           <button
-            v-if="canInitiateCoup(r)"
-            class="btn-coup"
-            @click="onInitiateCoup(r.characterId)"
+            v-if="canInitiateExecution(r)"
+            class="btn-execute"
+            @click="onInitiateExecution(r.characterId)"
           >
-            Coup de Gr&acirc;ce
+            Execute
           </button>
           <p class="narrative">{{ r.narrative }}</p>
           <div v-if="r.infectionRisk && !r.isKo" class="infection-warning">
@@ -272,7 +272,7 @@ function penaltyText(r: WoundAssessmentView): string {
   50% { opacity: 0.5; }
 }
 
-.btn-coup {
+.btn-execute {
   display: block;
   width: 100%;
   margin-top: 6px;
@@ -290,7 +290,7 @@ function penaltyText(r: WoundAssessmentView): string {
   transition: all 0.15s ease;
 }
 
-.btn-coup:hover {
+.btn-execute:hover {
   background: rgba(139, 26, 26, 0.3);
   border-color: #cc2222;
 }
