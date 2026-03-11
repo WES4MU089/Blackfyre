@@ -37,7 +37,6 @@
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
-      "include": "installer/nsis-include.nsh",
       "artifactName": "DD-Setup-${version}.exe"
     },
     "publish": {
