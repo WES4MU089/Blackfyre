@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { useHudStore } from '@/stores/hud'
+import { useAuthStore } from '@/stores/auth'
 import { useDraggable } from '@/composables/useDraggable'
 import { useResizable } from '@/composables/useResizable'
+import { BACKEND_URL } from '@/config'
 
 const hudStore = useHudStore()
+const authStore = useAuthStore()
 const panelRef = ref<HTMLElement | null>(null)
 const { isDragging, onDragStart } = useDraggable('wiki', panelRef, { alwaysDraggable: true })
 const { isResizing, onResizeStart, currentWidth, currentHeight } = useResizable(
@@ -12,61 +15,245 @@ const { isResizing, onResizeStart, currentWidth, currentHeight } = useResizable(
   { minWidth: 400, maxWidth: 900, minHeight: 300, maxHeight: 900 },
 )
 
-interface WikiSection {
-  id: string
-  label: string
+// ─── Types ─────────────────────────────────────────────────────────────────
+
+interface TocEntry {
+  slug: string
+  title: string
+  section: string | null
 }
 
-interface WikiCategory {
-  id: string
-  label: string
-  sections: WikiSection[]
+interface TocCategory {
+  id: number
+  slug: string
+  name: string
+  icon: string | null
+  entries: TocEntry[]
 }
 
-const categories: WikiCategory[] = [
-  {
-    id: 'combat',
-    label: 'Combat',
-    sections: [
-      { id: 'overview', label: 'Overview' },
-      { id: 'attack', label: 'Attacking' },
-      { id: 'defense', label: 'Defending' },
-      { id: 'weapons', label: 'Weapons' },
-      { id: 'armor', label: 'Armor & Shields' },
-      { id: 'damage', label: 'Damage' },
-      { id: 'status', label: 'Status Effects' },
-      { id: 'special', label: 'Maneuvers' },
-      { id: 'initiative', label: 'Initiative' },
-    ],
-  },
-]
+interface FullEntry {
+  id: number
+  slug: string
+  title: string
+  content: string
+  summary: string | null
+  image_url: string | null
+  created_at: string
+  updated_at: string
+  category_slug: string
+  category_name: string
+}
 
-const activeCategory = ref('combat')
-const activeSection = ref('overview')
-const expandedCategories = ref<Set<string>>(new Set(['combat']))
+// ─── State ─────────────────────────────────────────────────────────────────
 
-function toggleCategory(catId: string) {
-  if (expandedCategories.value.has(catId)) {
-    expandedCategories.value.delete(catId)
+const categories = ref<TocCategory[]>([])
+const expandedCategories = reactive(new Set<string>())
+const activeEntrySlug = ref<string | null>(null)
+const activeCategorySlug = ref<string | null>(null)
+
+const entry = ref<FullEntry | null>(null)
+const tocLoading = ref(true)
+const entryLoading = ref(false)
+const error = ref('')
+
+// In-memory entry cache
+const entryCache = new Map<string, FullEntry>()
+
+// ─── API Helpers ───────────────────────────────────────────────────────────
+
+function authHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (authStore.token) headers['Authorization'] = `Bearer ${authStore.token}`
+  return headers
+}
+
+async function apiFetch<T>(path: string): Promise<T> {
+  const res = await fetch(`${BACKEND_URL}${path}`, { headers: authHeaders() })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+// ─── Markdown Renderer (ported from Portal Codex.vue) ──────────────────────
+
+function renderContent(raw: string): string {
+  const lines = raw.split('\n')
+  const output: string[] = []
+  let inCodeBlock = false
+  let codeLines: string[] = []
+  let inTable = false
+  let tableRows: string[][] = []
+  let inParagraph = false
+  let inBlockquote = false
+  let bqLines: string[] = []
+
+  function escapeHtml(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  }
+
+  function formatInline(s: string): string {
+    return escapeHtml(s)
+      .replace(/\{\{(\w+):([^}]+)\}\}/g, '<span class="wiki-$1">$2</span>')
+      .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/~~(.+?)~~/g, '<del>$1</del>')
+  }
+
+  function closeParagraph() {
+    if (inParagraph) { output.push('</p>'); inParagraph = false }
+  }
+
+  function flushBlockquote() {
+    if (!inBlockquote || bqLines.length === 0) return
+    inBlockquote = false
+    const text = bqLines.map(l => formatInline(l)).join('<br />')
+    output.push(`<div class="wiki-tip"><div class="wiki-tip-label">Note</div><p class="wiki-tip-text">${text}</p></div>`)
+    bqLines = []
+  }
+
+  function flushTable() {
+    if (!inTable || tableRows.length === 0) return
+    inTable = false
+    let html = '<table><thead><tr>'
+    const headers = tableRows[0]
+    for (const h of headers) html += `<th>${formatInline(h.trim())}</th>`
+    html += '</tr></thead><tbody>'
+    const startRow = tableRows.length > 1 && /^[\s|:-]+$/.test(tableRows[1].join('|')) ? 2 : 1
+    for (let i = startRow; i < tableRows.length; i++) {
+      html += '<tr>'
+      for (const cell of tableRows[i]) html += `<td>${formatInline(cell.trim())}</td>`
+      html += '</tr>'
+    }
+    html += '</tbody></table>'
+    output.push(html)
+    tableRows = []
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+
+    // Fenced code blocks
+    if (line.trimStart().startsWith('```')) {
+      if (inCodeBlock) {
+        output.push(`<div class="wiki-formula"><pre>${escapeHtml(codeLines.join('\n'))}</pre></div>`)
+        codeLines = []
+        inCodeBlock = false
+      } else {
+        closeParagraph(); flushBlockquote(); flushTable()
+        inCodeBlock = true
+      }
+      continue
+    }
+    if (inCodeBlock) { codeLines.push(line); continue }
+
+    // Blockquote lines
+    const bqMatch = line.match(/^>\s?(.*)$/)
+    if (bqMatch) {
+      closeParagraph(); flushTable()
+      if (!inBlockquote) inBlockquote = true
+      bqLines.push(bqMatch[1])
+      continue
+    } else {
+      flushBlockquote()
+    }
+
+    // Table rows
+    if (/^\|(.+)\|$/.test(line.trim())) {
+      if (!inTable) { closeParagraph(); inTable = true }
+      const cells = line.trim().slice(1, -1).split('|')
+      tableRows.push(cells)
+      continue
+    } else {
+      flushTable()
+    }
+
+    // Blank line
+    if (line.trim() === '') { closeParagraph(); continue }
+
+    // Horizontal rule → wiki divider
+    if (/^---+$/.test(line.trim())) {
+      closeParagraph()
+      output.push('<div class="wiki-divider"></div>')
+      continue
+    }
+
+    // Headers
+    const h5 = line.match(/^#{5}\s+(.+)$/)
+    if (h5) { closeParagraph(); output.push(`<h6 class="wiki-subtitle">${formatInline(h5[1])}</h6>`); continue }
+    const h4 = line.match(/^#{4}\s+(.+)$/)
+    if (h4) { closeParagraph(); output.push(`<h5 class="wiki-subtitle">${formatInline(h4[1])}</h5>`); continue }
+    const h3 = line.match(/^#{3}\s+(.+)$/)
+    if (h3) { closeParagraph(); output.push(`<h4 class="wiki-subtitle">${formatInline(h3[1])}</h4>`); continue }
+    const h2 = line.match(/^#{2}\s+(.+)$/)
+    if (h2) { closeParagraph(); output.push(`<h3 class="wiki-subtitle">${formatInline(h2[1])}</h3>`); continue }
+    const h1 = line.match(/^#{1}\s+(.+)$/)
+    if (h1) { closeParagraph(); output.push(`<h2 class="wiki-section-title">${formatInline(h1[1])}</h2>`); continue }
+
+    // List items
+    const li = line.match(/^(\s*)[-*]\s+(.+)$/)
+    if (li) { closeParagraph(); output.push(`<li>${formatInline(li[2])}</li>`); continue }
+
+    // Regular text → paragraph
+    if (!inParagraph) {
+      output.push('<p class="wiki-text">')
+      inParagraph = true
+      output.push(formatInline(line))
+    } else {
+      output.push('<br />' + formatInline(line))
+    }
+  }
+
+  closeParagraph(); flushBlockquote(); flushTable()
+
+  let html = output.join('\n')
+  html = html.replace(/((?:<li>.*?<\/li>\n?)+)/gs, '<ul class="wiki-list">$1</ul>')
+  return html
+}
+
+// ─── TOC Navigation ────────────────────────────────────────────────────────
+
+function toggleCategory(slug: string) {
+  if (expandedCategories.has(slug)) {
+    expandedCategories.delete(slug)
   } else {
-    expandedCategories.value.add(catId)
-  }
-  activeCategory.value = catId
-  // Scroll to top of category content
-  const cat = categories.find(c => c.id === catId)
-  if (cat && cat.sections.length > 0) {
-    activeSection.value = cat.sections[0].id
-    const el = document.getElementById(`wiki-${cat.sections[0].id}`)
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    expandedCategories.add(slug)
   }
 }
 
-function scrollToSection(catId: string, sectionId: string) {
-  activeCategory.value = catId
-  activeSection.value = sectionId
-  const el = document.getElementById(`wiki-${sectionId}`)
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+async function selectEntry(categorySlug: string, entrySlug: string) {
+  activeCategorySlug.value = categorySlug
+  activeEntrySlug.value = entrySlug
+  expandedCategories.add(categorySlug)
+
+  // Check cache first
+  const cached = entryCache.get(entrySlug)
+  if (cached) {
+    entry.value = cached
+    await nextTick()
+    const contentEl = panelRef.value?.querySelector('.wiki-content')
+    if (contentEl) contentEl.scrollTop = 0
+    return
+  }
+
+  entryLoading.value = true
+  error.value = ''
+  try {
+    const data = await apiFetch<{ entry: FullEntry }>(`/api/codex/entries/${entrySlug}`)
+    entry.value = data.entry
+    entryCache.set(entrySlug, data.entry)
+    await nextTick()
+    const contentEl = panelRef.value?.querySelector('.wiki-content')
+    if (contentEl) contentEl.scrollTop = 0
+  } catch (e: any) {
+    error.value = e.message || 'Failed to load entry'
+    entry.value = null
+  } finally {
+    entryLoading.value = false
+  }
 }
+
+// ─── Position & Size ───────────────────────────────────────────────────────
 
 const positionStyle = computed(() => {
   const pos = hudStore.hudPositions['wiki']
@@ -84,6 +271,27 @@ const sizeStyle = computed(() => ({
 function close() {
   hudStore.toggleSystemPanel('wiki')
 }
+
+// ─── Mount ─────────────────────────────────────────────────────────────────
+
+onMounted(async () => {
+  try {
+    const data = await apiFetch<{ categories: TocCategory[] }>('/api/codex/toc')
+    categories.value = data.categories
+    // Auto-expand first category and select first entry
+    if (data.categories.length > 0) {
+      const firstCat = data.categories[0]
+      expandedCategories.add(firstCat.slug)
+      if (firstCat.entries.length > 0) {
+        await selectEntry(firstCat.slug, firstCat.entries[0].slug)
+      }
+    }
+  } catch (e: any) {
+    error.value = e.message || 'Failed to load codex'
+  } finally {
+    tocLoading.value = false
+  }
+})
 </script>
 
 <template>
@@ -104,348 +312,51 @@ function close() {
       <div class="wiki-body">
         <!-- Table of Contents -->
         <nav class="wiki-toc">
-          <div v-for="cat in categories" :key="cat.id" class="wiki-toc-category">
-            <button
-              class="wiki-toc-cat-header"
-              :class="{ 'wiki-toc-cat-header--active': activeCategory === cat.id }"
-              @click="toggleCategory(cat.id)"
-            >
-              <span class="wiki-toc-chevron" :class="{ 'wiki-toc-chevron--open': expandedCategories.has(cat.id) }">&#9656;</span>
-              {{ cat.label }}
-            </button>
-            <div v-if="expandedCategories.has(cat.id)" class="wiki-toc-sections">
+          <div v-if="tocLoading" class="wiki-toc-loading">Loading...</div>
+          <template v-else>
+            <div v-for="cat in categories" :key="cat.id" class="wiki-toc-category">
               <button
-                v-for="s in cat.sections"
-                :key="s.id"
-                class="wiki-toc-item"
-                :class="{ 'wiki-toc-item--active': activeCategory === cat.id && activeSection === s.id }"
-                @click="scrollToSection(cat.id, s.id)"
+                class="wiki-toc-cat-header"
+                :class="{ 'wiki-toc-cat-header--active': activeCategorySlug === cat.slug }"
+                @click="toggleCategory(cat.slug)"
               >
-                {{ s.label }}
+                <span class="wiki-toc-chevron" :class="{ 'wiki-toc-chevron--open': expandedCategories.has(cat.slug) }">&#9656;</span>
+                {{ cat.name }}
               </button>
+              <div v-if="expandedCategories.has(cat.slug)" class="wiki-toc-sections">
+                <button
+                  v-for="e in cat.entries"
+                  :key="e.slug"
+                  class="wiki-toc-item"
+                  :class="{ 'wiki-toc-item--active': activeEntrySlug === e.slug }"
+                  @click="selectEntry(cat.slug, e.slug)"
+                >
+                  {{ e.title }}
+                </button>
+              </div>
             </div>
-          </div>
+          </template>
         </nav>
 
-        <!-- Content -->
+        <!-- Content Area -->
         <div class="wiki-content">
+          <!-- Loading -->
+          <div v-if="entryLoading" class="wiki-content-status">Loading entry...</div>
 
-          <!-- Overview -->
-          <section id="wiki-overview" class="wiki-section">
-            <h3 class="wiki-section-title">Overview</h3>
-            <p class="wiki-text">
-              Combat is resolved through <span class="kw">contested rolls</span>. When steel meets
-              steel, both attacker and defender roll the dice, and their aptitudes tip the balance.
-              Higher aptitudes mean more consistent results.
-            </p>
-            <p class="wiki-text">
-              Combat begins with an <span class="kw">initiative</span> roll that locks in the turn
-              order for the entire fight. Each round, combatants take turns attacking, defending,
-              or using special maneuvers. Combat continues until one side falls, yields, or retreats.
-            </p>
-            <p class="wiki-text">
-              Your choice of weapon, armor, and aptitude investment shapes your fighting identity.
-              There is no single "best" build &mdash; every advantage comes with a trade-off.
-            </p>
-          </section>
+          <!-- Error -->
+          <div v-else-if="error && activeEntrySlug" class="wiki-content-status wiki-content-error">{{ error }}</div>
 
-          <div class="wiki-divider" />
+          <!-- Entry -->
+          <template v-else-if="entry">
+            <h3 class="wiki-entry-title">{{ entry.title }}</h3>
+            <div class="wiki-entry-body" v-html="renderContent(entry.content)" />
+          </template>
 
-          <!-- Attacking -->
-          <section id="wiki-attack" class="wiki-section">
-            <h3 class="wiki-section-title">Attacking</h3>
-            <p class="wiki-text">
-              Your attack roll combines raw fortune with martial talent. <span class="kw">Prowess</span>
-              represents your natural combat ability &mdash; every point matters.
-            </p>
-            <div class="wiki-formula">
-              Attack = d100 + (Prowess &times; 5)
-            </div>
-            <p class="wiki-text">
-              A knight with Prowess 9 adds +45 to every attack roll. A less seasoned
-              fighter with Prowess 5 adds only +25. That gap is significant &mdash;
-              the veteran warrior will consistently land hits that the novice cannot.
-            </p>
-            <p class="wiki-text">
-              Two-handed weapons gain an <span class="kw">Overwhelm</span> bonus when fighting
-              shielded opponents: +10 to the attack roll, and the shield's blocking power is halved.
-            </p>
-          </section>
-
-          <div class="wiki-divider" />
-
-          <!-- Defending -->
-          <section id="wiki-defense" class="wiki-section">
-            <h3 class="wiki-section-title">Defending</h3>
-            <p class="wiki-text">
-              Your defense depends on what you wear. The aptitude used to defend is determined by
-              your armor class:
-            </p>
-            <ul class="wiki-list">
-              <li><span class="kw">Heavy Armor</span> &rarr; <span class="kw">Fortitude</span> &mdash; stand firm, absorb impacts through sheer endurance</li>
-              <li><span class="kw">Medium Armor</span> &rarr; best of <span class="kw">Fortitude</span> or <span class="kw">Cunning</span> &mdash; a flexible blend of toughness and agility</li>
-              <li><span class="kw">Light Armor</span> &rarr; <span class="kw">Cunning</span> &mdash; read your opponent, evade, and exploit openings</li>
-            </ul>
-            <p class="wiki-text">
-              <span class="kw">Shields</span> add a block bonus on top of your defense roll. Heavier
-              shields offer more protection, but come with encumbrance that slows your initiative.
-            </p>
-            <div class="wiki-tip">
-              <div class="wiki-tip-label">Strategy</div>
-              <p class="wiki-tip-text">
-                Your armor choice shapes your entire build. A plate-clad knight invests in Fortitude
-                to stand immovable, while a leather-clad duelist invests in Cunning to never be
-                where the blade falls.
-              </p>
-            </div>
-          </section>
-
-          <div class="wiki-divider" />
-
-          <!-- Weapons -->
-          <section id="wiki-weapons" class="wiki-section">
-            <h3 class="wiki-section-title">Weapons</h3>
-            <p class="wiki-text">
-              Weapons are divided into four families, each with a distinct role in combat.
-            </p>
-
-            <h4 class="wiki-subtitle">Blades</h4>
-            <p class="wiki-text">
-              Longswords, bastard swords, greatswords, and daggers. Bladed weapons deal
-              <span class="kw">slashing</span> damage that is devastating against lightly armored
-              targets &mdash; cutting through leather and cloth with ease. On a critical hit,
-              blades inflict <span class="status-bleed">Bleeding</span>, dealing sustained damage
-              over time.
-            </p>
-
-            <h4 class="wiki-subtitle">Blunt</h4>
-            <p class="wiki-text">
-              Maces, warhammers, and greataxes. Blunt weapons excel against
-              <span class="kw">heavy armor</span>, ignoring a portion of plate protection through
-              concussive force. They deal less against light and medium armor. On a critical hit,
-              blunt weapons <span class="status-stun">Stun</span> the target, causing them to lose
-              their next action.
-            </p>
-
-            <h4 class="wiki-subtitle">Polearms</h4>
-            <p class="wiki-text">
-              Spears, halberds, and other long-reaching weapons. Polearms offer excellent
-              penetration and are versatile against all armor types. On a critical hit, they deliver a
-              <span class="status-pierce">Piercing</span> strike that punches through armor gaps for
-              bonus damage.
-            </p>
-
-            <h4 class="wiki-subtitle">Archery</h4>
-            <p class="wiki-text">
-              Bows and crossbows for ranged engagements. Archery allows striking from afar but offers
-              no shield and limited melee options.
-            </p>
-
-            <h4 class="wiki-subtitle">Material Quality</h4>
-            <p class="wiki-text">
-              Weapons come in five material tiers, each progressively better. Higher-tier weapons
-              hit harder, penetrate deeper, and degrade slower.
-            </p>
-            <ul class="wiki-list">
-              <li><span class="tier-rusty">Rusty</span> &mdash; Corroded and unreliable</li>
-              <li><span class="tier-iron">Iron</span> &mdash; Common, serviceable</li>
-              <li><span class="tier-steel">Steel</span> &mdash; Solid, well-forged</li>
-              <li><span class="tier-cf">Castle-Forged</span> &mdash; Masterwork quality</li>
-              <li><span class="tier-vs">Valyrian Steel</span> &mdash; Legendary, nearly indestructible</li>
-            </ul>
-          </section>
-
-          <div class="wiki-divider" />
-
-          <!-- Armor & Shields -->
-          <section id="wiki-armor" class="wiki-section">
-            <h3 class="wiki-section-title">Armor &amp; Shields</h3>
-
-            <h4 class="wiki-subtitle">Armor Classes</h4>
-            <ul class="wiki-list">
-              <li>
-                <span class="kw">Light Armor</span> &mdash; Minimal protection, but enables
-                <span class="kw">dodge rolls</span> based on Cunning. Vulnerable to slashing attacks.
-                Best for agile, evasion-focused fighters.
-              </li>
-              <li>
-                <span class="kw">Medium Armor</span> &mdash; Balanced protection with a small dodge
-                chance. Uses the higher of Fortitude or Cunning for defense. A versatile choice
-                for hybrid builds.
-              </li>
-              <li>
-                <span class="kw">Heavy Armor</span> &mdash; Maximum protection, no dodge. Relies
-                purely on Fortitude. Vulnerable to blunt weapons that bypass plate through
-                concussive force.
-              </li>
-            </ul>
-
-            <h4 class="wiki-subtitle">Shields</h4>
-            <p class="wiki-text">
-              Shields come in three classes: <span class="kw">Bucklers</span> (light),
-              <span class="kw">Heaters</span> (medium), and <span class="kw">Tower Shields</span>
-              (heavy). Each adds a block bonus to your defense roll and makes critical hits
-              harder for your opponent to land.
-            </p>
-            <p class="wiki-text">
-              However, shields have counters. Two-handed weapons gain an Overwhelm bonus that halves
-              your shield's block value. Daggers wielded by lightly-armored fighters can slip past
-              shields entirely.
-            </p>
-
-            <div class="wiki-tip">
-              <div class="wiki-tip-label">Strategy</div>
-              <p class="wiki-tip-text">
-                A tower shield makes you nearly impervious to one-handed attacks, but a warrior
-                with a greathammer will batter right through it. Choose your shield based on what
-                you expect to face.
-              </p>
-            </div>
-          </section>
-
-          <div class="wiki-divider" />
-
-          <!-- Damage & Wounds -->
-          <section id="wiki-damage" class="wiki-section">
-            <h3 class="wiki-section-title">Damage &amp; Wounds</h3>
-            <p class="wiki-text">
-              When a hit lands, your weapon's <span class="kw">penetration</span> is compared
-              against the target's armor <span class="kw">mitigation</span>. The difference
-              determines how much of your damage gets through.
-            </p>
-            <ul class="wiki-list">
-              <li><span class="dmg-deflect">Deflected</span> &mdash; Barely scratched (very low damage)</li>
-              <li><span class="dmg-glance">Glancing</span> &mdash; A shallow cut</li>
-              <li><span class="dmg-partial">Partial</span> &mdash; Some force gets through</li>
-              <li><span class="dmg-reduced">Reduced</span> &mdash; Armor absorbs the worst of it</li>
-              <li><span class="dmg-solid">Solid</span> &mdash; A clean strike, full damage</li>
-              <li><span class="dmg-clean">Clean</span> &mdash; Armor barely helps</li>
-              <li><span class="dmg-devas">Devastating</span> &mdash; Armor offers no meaningful resistance</li>
-            </ul>
-
-            <h4 class="wiki-subtitle">Critical Hits</h4>
-            <p class="wiki-text">
-              When your attack roll is exceptionally high, you land a <span class="kw">critical
-              hit</span> &mdash; dealing 25% bonus damage and triggering your weapon's special
-              effect (bleeding, stun, sunder, or piercing). Higher Prowess makes crits more likely.
-              Shields make crits harder to land against the bearer.
-            </p>
-
-            <h4 class="wiki-subtitle">Wound Penalties</h4>
-            <p class="wiki-text">
-              As a fighter takes damage, their effectiveness decreases. Below 75% health,
-              attack and defense rolls begin to suffer penalties that grow more severe as health
-              drops. A fighter at death's door is far less dangerous than one fresh to the field.
-            </p>
-          </section>
-
-          <div class="wiki-divider" />
-
-          <!-- Status Effects -->
-          <section id="wiki-status" class="wiki-section">
-            <h3 class="wiki-section-title">Status Effects</h3>
-            <p class="wiki-text">
-              Critical hits and certain maneuvers inflict status effects that alter the course
-              of battle. Effects stack in severity &mdash; multiple bleeds or sunders compound
-              rapidly.
-            </p>
-            <ul class="wiki-list">
-              <li>
-                <span class="status-bleed">Bleeding</span> &mdash; Open wounds that deal damage
-                each round. Stacks up to 3 times. Caused by blade criticals.
-              </li>
-              <li>
-                <span class="status-stun">Stunned</span> &mdash; Dazed by a crushing blow, the
-                fighter loses their next action. Caused by blunt weapon criticals.
-              </li>
-              <li>
-                <span class="status-sunder">Sundered</span> &mdash; Armor is damaged and provides
-                less protection. Stacks up to 3 times. Caused by axe criticals.
-              </li>
-              <li>
-                <span class="status-pierce">Piercing</span> &mdash; A precise thrust finds the gaps
-                in armor, granting significant bonus penetration on the critical strike. Caused by
-                polearm criticals.
-              </li>
-            </ul>
-
-            <div class="wiki-tip">
-              <div class="wiki-tip-label">Strategy</div>
-              <p class="wiki-tip-text">
-                Bleeding accumulates &mdash; three stacks deal 15 damage per round, which can
-                decide a prolonged fight. Stun is powerful but brief. Sunder weakens armor
-                permanently for the remainder of the engagement. Choose your weapon based on
-                the effect you want.
-              </p>
-            </div>
-          </section>
-
-          <div class="wiki-divider" />
-
-          <!-- Special Maneuvers -->
-          <section id="wiki-special" class="wiki-section">
-            <h3 class="wiki-section-title">Special Maneuvers</h3>
-
-            <h4 class="wiki-subtitle">Dodge &amp; Riposte</h4>
-            <p class="wiki-text">
-              Fighters without shields in <span class="kw">light armor</span> have a chance to
-              dodge attacks entirely, based on their Cunning. <span class="kw">Medium armor</span>
-              offers a smaller dodge chance. On a successful dodge, the defender gets a free
-              <span class="kw">riposte</span> &mdash; a swift counter-strike that lands
-              automatically.
-            </p>
-
-            <h4 class="wiki-subtitle">Counter-Attacks</h4>
-            <p class="wiki-text">
-              When you successfully block an attack, there is a chance for a
-              <span class="kw">defensive critical</span> &mdash; a devastating counter-blow
-              that lands automatically and bypasses the attacker's armor entirely. Higher Prowess
-              increases this chance.
-            </p>
-
-            <h4 class="wiki-subtitle">Two-Handed Overwhelm</h4>
-            <p class="wiki-text">
-              Two-handed weapons gain a significant attack bonus against shielded opponents and
-              halve their shield's blocking power. This makes greatswords, greathammers, and
-              polearms the natural counter to heavily shielded builds.
-            </p>
-
-            <h4 class="wiki-subtitle">Dagger Mastery</h4>
-            <p class="wiki-text">
-              Daggers are unique &mdash; fast and precise. Lightly-armored dagger fighters can
-              slip past shields entirely, and on a critical hit, they gain a free bonus strike.
-              Daggers also have a chance to find gaps in armor on high attack rolls. However,
-              these bonuses only apply when wearing light armor &mdash; a knight in plate gains
-              none of these tricks.
-            </p>
-          </section>
-
-          <div class="wiki-divider" />
-
-          <!-- Initiative & Turns -->
-          <section id="wiki-initiative" class="wiki-section">
-            <h3 class="wiki-section-title">Initiative &amp; Turns</h3>
-            <p class="wiki-text">
-              At the start of combat, all combatants roll for <span class="kw">initiative</span>
-              to determine turn order. This order is locked in for the entire fight &mdash;
-              <span class="kw">Cunning</span> is the primary driver, with
-              <span class="kw">Prowess</span> contributing as well.
-            </p>
-            <div class="wiki-formula">
-              Initiative = d100 + (Cunning &times; 3) + (Prowess &times; 2) &minus; Encumbrance
-            </div>
-            <p class="wiki-text">
-              <span class="kw">Encumbrance</span> from heavy armor and weapons slows your
-              initiative but does not reduce your defense. A lightly-equipped fighter will
-              consistently act before a plate-clad knight &mdash; speed versus durability.
-            </p>
-            <p class="wiki-text">
-              In multiplayer combat, all combatants roll initiative once and act each round in
-              order from highest to lowest. The combat order does not change between rounds.
-            </p>
-          </section>
-
-
+          <!-- Welcome State -->
+          <div v-else class="wiki-welcome">
+            <h3 class="wiki-entry-title">The Codex</h3>
+            <p class="wiki-text">Select a topic from the table of contents to begin reading.</p>
+          </div>
         </div>
       </div>
 
@@ -530,7 +441,7 @@ function close() {
 
 /* Table of Contents sidebar */
 .wiki-toc {
-  width: 120px;
+  width: 140px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -538,6 +449,19 @@ function close() {
   padding: var(--space-sm) 0;
   border-right: 1px solid var(--color-border-dim);
   overflow-y: auto;
+}
+
+.wiki-toc::-webkit-scrollbar { width: 3px; }
+.wiki-toc::-webkit-scrollbar-track { background: transparent; }
+.wiki-toc::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 2px;
+}
+
+.wiki-toc-loading {
+  padding: var(--space-sm);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
 }
 
 /* Category header */
@@ -628,16 +552,18 @@ function close() {
   border-radius: 2px;
 }
 
-/* Sections */
-.wiki-section {
-  margin-bottom: var(--space-lg);
+.wiki-content-status {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  padding: var(--space-md);
 }
 
-.wiki-section:last-child {
-  margin-bottom: 0;
+.wiki-content-error {
+  color: var(--color-crimson);
 }
 
-.wiki-section-title {
+/* Entry title */
+.wiki-entry-title {
   font-family: var(--font-display);
   font-size: var(--font-size-md);
   color: var(--color-gold);
@@ -648,15 +574,46 @@ function close() {
   border-bottom: 1px solid var(--color-border-dim);
 }
 
-.wiki-subtitle {
+/* Welcome */
+.wiki-welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+}
+
+/* ─── Rendered Content Typography ────────────────────────────────────────── */
+
+.wiki-entry-body :deep(.wiki-section-title) {
   font-family: var(--font-display);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-md);
+  color: var(--color-gold);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin: var(--space-lg) 0 var(--space-sm) 0;
+  padding-bottom: var(--space-xs);
+  border-bottom: 1px solid var(--color-border-dim);
+}
+
+.wiki-entry-body :deep(.wiki-section-title:first-child) {
+  margin-top: 0;
+}
+
+.wiki-entry-body :deep(.wiki-subtitle) {
+  font-family: var(--font-display);
   color: var(--color-gold-dark);
   letter-spacing: 0.08em;
   margin: var(--space-sm) 0 var(--space-xs) 0;
 }
 
-.wiki-text {
+.wiki-entry-body :deep(h3.wiki-subtitle) { font-size: var(--font-size-sm); }
+.wiki-entry-body :deep(h4.wiki-subtitle) { font-size: var(--font-size-sm); }
+.wiki-entry-body :deep(h5.wiki-subtitle) { font-size: var(--font-size-xs); }
+.wiki-entry-body :deep(h6.wiki-subtitle) { font-size: var(--font-size-xs); }
+
+.wiki-entry-body :deep(.wiki-text) {
   font-family: var(--font-body);
   font-size: var(--font-size-sm);
   color: var(--color-text);
@@ -664,32 +621,42 @@ function close() {
   margin: 0 0 var(--space-sm) 0;
 }
 
-.wiki-text:last-child {
+.wiki-entry-body :deep(.wiki-text:last-child) {
   margin-bottom: 0;
 }
 
-/* Formula callout */
-.wiki-formula {
-  display: block;
+.wiki-entry-body :deep(strong) {
+  color: var(--color-text-bright);
+  font-weight: 600;
+}
+
+.wiki-entry-body :deep(em) {
+  font-style: italic;
+}
+
+.wiki-entry-body :deep(code) {
   font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--color-gold-light);
-  background: rgba(201, 168, 76, 0.08);
-  border: 1px solid var(--color-border-dim);
-  border-radius: var(--radius-sm);
-  padding: 6px 10px;
-  margin: var(--space-xs) 0 var(--space-sm) 0;
-  text-align: center;
+  font-size: 0.9em;
+  background: rgba(201, 168, 76, 0.1);
+  border: 1px solid rgba(201, 168, 76, 0.2);
+  border-radius: 3px;
+  padding: 1px 4px;
+  color: var(--color-gold);
+}
+
+.wiki-entry-body :deep(del) {
+  text-decoration: line-through;
+  opacity: 0.6;
 }
 
 /* Lists */
-.wiki-list {
+.wiki-entry-body :deep(.wiki-list) {
   list-style: none;
   padding: 0;
   margin: var(--space-xs) 0 var(--space-sm) 0;
 }
 
-.wiki-list li {
+.wiki-entry-body :deep(.wiki-list li) {
   position: relative;
   padding-left: 14px;
   font-family: var(--font-body);
@@ -699,7 +666,7 @@ function close() {
   margin-bottom: 4px;
 }
 
-.wiki-list li::before {
+.wiki-entry-body :deep(.wiki-list li::before) {
   content: '\2756';
   position: absolute;
   left: 0;
@@ -708,44 +675,41 @@ function close() {
   top: 3px;
 }
 
-/* Keywords */
-.kw {
-  color: var(--color-gold);
-  font-weight: 600;
-}
-
-/* Status effect colors */
-.status-bleed { color: #c42b2b; font-weight: 600; }
-.status-stun { color: #d4a932; font-weight: 600; }
-.status-sunder { color: #3a7bd5; font-weight: 600; }
-.status-pierce { color: #9b32d4; font-weight: 600; }
-
-/* Damage labels */
-.dmg-deflect { color: #6b6051; font-weight: 600; }
-.dmg-glance { color: #7a7e8b; font-weight: 600; }
-.dmg-partial { color: #a89b85; font-weight: 600; }
-.dmg-reduced { color: #e8dcc8; font-weight: 600; }
-.dmg-solid { color: #c9a84c; font-weight: 600; }
-.dmg-clean { color: #e0c878; font-weight: 600; }
-.dmg-devas { color: #c42b2b; font-weight: 600; }
-
-/* Tier colors */
-.tier-rusty { color: #6b6051; }
-.tier-iron { color: #7a7e8b; }
-.tier-steel { color: #a89b85; }
-.tier-cf { color: #c9a84c; }
-.tier-vs { color: #e0c878; text-shadow: 0 0 6px rgba(224, 200, 120, 0.3); }
-
 /* Ornamental divider */
-.wiki-divider {
+.wiki-entry-body :deep(.wiki-divider) {
   width: 60%;
   height: 1px;
   margin: var(--space-md) auto;
   background: linear-gradient(90deg, transparent, var(--color-gold-dim), transparent);
 }
 
+/* Formula / code blocks */
+.wiki-entry-body :deep(.wiki-formula) {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-gold-light);
+  background: rgba(201, 168, 76, 0.08);
+  border: 1px solid var(--color-border-dim);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  margin: var(--space-xs) 0 var(--space-sm) 0;
+  overflow-x: auto;
+}
+
+.wiki-entry-body :deep(.wiki-formula pre) {
+  margin: 0;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  white-space: pre-wrap;
+}
+
 /* Tip callout */
-.wiki-tip {
+.wiki-entry-body :deep(.wiki-tip) {
   padding: var(--space-sm) var(--space-md);
   background: rgba(201, 168, 76, 0.04);
   border-left: 2px solid var(--color-gold-dim);
@@ -753,7 +717,7 @@ function close() {
   margin: var(--space-sm) 0;
 }
 
-.wiki-tip-label {
+.wiki-entry-body :deep(.wiki-tip-label) {
   font-family: var(--font-display);
   font-size: 9px;
   color: var(--color-gold);
@@ -762,12 +726,67 @@ function close() {
   margin-bottom: 2px;
 }
 
-.wiki-tip-text {
+.wiki-entry-body :deep(.wiki-tip-text) {
   font-family: var(--font-body);
   font-size: var(--font-size-xs);
   color: var(--color-text-dim);
   line-height: 1.5;
   margin: 0;
+}
+
+/* Tables */
+.wiki-entry-body :deep(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: var(--space-md);
+  font-size: var(--font-size-xs);
+}
+
+.wiki-entry-body :deep(th) {
+  background: var(--color-gold-glow);
+  color: var(--color-gold);
+  font-family: var(--font-display);
+  font-weight: 600;
+  text-align: left;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--color-border-dim);
+}
+
+.wiki-entry-body :deep(td) {
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--color-border-dim);
+  color: var(--color-text-dim);
+}
+
+.wiki-entry-body :deep(tr:nth-child(even) td) {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Custom span classes for inline keywords and effects */
+.wiki-entry-body :deep(.wiki-kw) { color: var(--color-gold); font-weight: 600; }
+.wiki-entry-body :deep(.wiki-bleed) { color: #c42b2b; font-weight: 600; }
+.wiki-entry-body :deep(.wiki-stun) { color: #d4a932; font-weight: 600; }
+.wiki-entry-body :deep(.wiki-sunder) { color: #3a7bd5; font-weight: 600; }
+.wiki-entry-body :deep(.wiki-pierce) { color: #9b32d4; font-weight: 600; }
+.wiki-entry-body :deep(.wiki-deflect) { color: #6b6051; font-weight: 600; }
+.wiki-entry-body :deep(.wiki-glance) { color: #7a7e8b; font-weight: 600; }
+.wiki-entry-body :deep(.wiki-partial) { color: #a89b85; font-weight: 600; }
+.wiki-entry-body :deep(.wiki-reduced) { color: #e8dcc8; font-weight: 600; }
+.wiki-entry-body :deep(.wiki-solid) { color: #c9a84c; font-weight: 600; }
+.wiki-entry-body :deep(.wiki-clean) { color: #e0c878; font-weight: 600; }
+.wiki-entry-body :deep(.wiki-devas) { color: #c42b2b; font-weight: 600; }
+.wiki-entry-body :deep(.wiki-rusty) { color: #6b6051; }
+.wiki-entry-body :deep(.wiki-iron) { color: #7a7e8b; }
+.wiki-entry-body :deep(.wiki-steel) { color: #a89b85; }
+.wiki-entry-body :deep(.wiki-cf) { color: #c9a84c; }
+.wiki-entry-body :deep(.wiki-vs) { color: #e0c878; text-shadow: 0 0 6px rgba(224, 200, 120, 0.3); }
+
+/* Welcome text */
+.wiki-text {
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  line-height: 1.6;
 }
 
 /* Resize handle */
