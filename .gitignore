@@ -52,3 +52,11 @@ Icon Sheet2.png
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Non-frontend folders (moved to private repo)
+backend/
+docs/
+plans/
+scripts/
+portal/
+README.md
