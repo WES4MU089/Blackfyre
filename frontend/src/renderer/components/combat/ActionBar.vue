@@ -126,15 +126,13 @@ const row2 = computed<ActionDef[]>(() => [
   },
 ])
 
-// Row 3: Situational — Disengage, Skip, Yield
+// Row 3: Situational — Retreat, Skip, Yield
 const row3Actions = computed<ActionDef[]>(() => [
   {
-    key: 'disengage',
+    key: 'retreat',
     label: 'Retreat',
-    tooltip: isEngaged.value
-      ? 'Attempt to break free (Cunning vs Prowess)'
-      : 'Not engaged in melee',
-    enabled: actionsEnabled.value && isEngaged.value,
+    tooltip: 'Attempt to flee combat (Prowess vs Prowess)',
+    enabled: actionsEnabled.value,
     requiresTarget: false,
   },
 ])
@@ -325,7 +323,7 @@ function onSkip(): void {
   background: rgba(155, 50, 212, 0.06);
 }
 
-.action-disengage:hover:not(:disabled) {
+.action-retreat:hover:not(:disabled) {
   border-color: rgba(212, 169, 50, 0.5);
   color: #d4a932;
   background: rgba(212, 169, 50, 0.06);

@@ -18,6 +18,11 @@ const router = createRouter({
       path: '/hud',
       name: 'hud',
       component: () => import('@/views/Hud.vue')
+    },
+    {
+      path: '/dice-test',
+      name: 'dice-test',
+      component: () => import('@/views/DiceTest.vue')
     }
   ]
 })
