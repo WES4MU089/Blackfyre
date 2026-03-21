@@ -94,7 +94,14 @@ export function useCombat() {
   // --- Execution actions ---
 
   function initiateExecution(targetCharacterId: number): void {
-    getSocket()?.emit('execute:initiate', { targetCharacterId })
+    const sock = getSocket()
+    console.log('[EXECUTE DEBUG] initiateExecution called', { targetCharacterId, socketExists: !!sock, connected: sock?.connected })
+    if (!sock) {
+      console.error('[EXECUTE DEBUG] Socket is null — cannot emit execute:initiate')
+      return
+    }
+    sock.emit('execute:initiate', { targetCharacterId })
+    console.log('[EXECUTE DEBUG] execute:initiate emitted')
   }
 
   function respondToExecution(targetCharacterId: number, response: 'intervene' | 'do-nothing'): void {

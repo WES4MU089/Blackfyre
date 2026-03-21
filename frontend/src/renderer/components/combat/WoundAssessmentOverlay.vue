@@ -47,6 +47,7 @@ function canInitiateExecution(r: WoundAssessmentView): boolean {
 }
 
 function onInitiateExecution(characterId: number): void {
+  console.log('[EXECUTE DEBUG] onInitiateExecution clicked', { characterId })
   initiateExecution(characterId)
 }
 
