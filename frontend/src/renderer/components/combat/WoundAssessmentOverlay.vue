@@ -41,8 +41,9 @@ function canInitiateExecution(r: WoundAssessmentView): boolean {
   // My character must be alive (survived combat)
   const me = combatStore.myCombatant
   if (!me || !me.isAlive) return false
-  // No pending execution for this target
+  // No pending execution for this target (either by me or someone else)
   if (combatStore.pendingExecuteAttacker?.targetCharacterId === r.characterId) return false
+  if (combatStore.pendingExecuteWitness?.targetCharacterId === r.characterId) return false
   return true
 }
 
