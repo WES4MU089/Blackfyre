@@ -100,13 +100,14 @@ function penaltyText(r: WoundAssessmentView): string {
           <div v-if="r.isKo" class="ko-warning">
             Survival check in 24 hours
           </div>
-          <button
+          <!-- Execution disabled — leaving open for RP instead of built-in system -->
+          <!-- <button
             v-if="canInitiateExecution(r)"
             class="btn-execute"
             @click="onInitiateExecution(r.characterId)"
           >
             Execute
-          </button>
+          </button> -->
           <p class="narrative">{{ r.narrative }}</p>
           <div v-if="r.infectionRisk && !r.isKo" class="infection-warning">
             Seek tending or infection will set in

@@ -109,10 +109,11 @@ onMounted(async () => {
   const savedPanelStates = await window.electronAPI.loadPanelStates()
   if (savedPanelStates) {
     hudStore.loadPanelStates(savedPanelStates)
-    if (savedPanelStates.chat?.open) {
-      chatStore.isOpen = true
-      chatStore.isMinimized = savedPanelStates.chat.minimized ?? false
-    }
+    // Chat sideboarded — don't restore chat state
+    // if (savedPanelStates.chat?.open) {
+    //   chatStore.isOpen = true
+    //   chatStore.isMinimized = savedPanelStates.chat.minimized ?? false
+    // }
   }
 
   ready.value = true
@@ -132,9 +133,10 @@ onMounted(async () => {
         <CharacterInfo />
       </DraggableArea>
 
-      <DraggableArea area-id="chat" label="Chat" class="hud-area-chat" always-draggable v-slot="{ dragStart }">
+      <!-- Chat panel — sideboarded, using SL chat for now -->
+      <!-- <DraggableArea area-id="chat" label="Chat" class="hud-area-chat" always-draggable v-slot="{ dragStart }">
         <ChatPanel :on-drag-start="dragStart" />
-      </DraggableArea>
+      </DraggableArea> -->
 
       <DraggableArea area-id="notifications" label="Notifications" class="hud-area-notifications">
         <Notifications />
@@ -157,8 +159,8 @@ onMounted(async () => {
     <!-- Player Application Review Modal -->
     <ApplicationReviewModal v-if="playerAppStore.isOpen" />
 
-    <!-- Execution overlay (witness/attacker prompt) -->
-    <CoupDeGraceOverlay />
+    <!-- Execution overlay (witness/attacker prompt) — disabled, leaving for RP -->
+    <!-- <CoupDeGraceOverlay /> -->
 
     <!-- Persistent notification panel (fixed position, outside system overlay) -->
     <NotificationPanel v-if="notificationStore.isOpen" />
