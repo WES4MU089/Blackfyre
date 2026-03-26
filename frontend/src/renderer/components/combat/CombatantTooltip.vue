@@ -17,7 +17,8 @@ const adjustedY = ref(props.y)
 
 const WEAPON_NAMES: Record<string, string> = {
   dagger: 'dagger',
-  bastardSword: 'bastard sword',
+  armingSword: 'arming sword',
+  longsword: 'longsword',
   greatsword: 'greatsword',
   battleAxe1H: 'battle axe',
   battleAxe2H: 'greataxe',

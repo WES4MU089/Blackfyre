@@ -234,6 +234,9 @@ async function onContextAction(action: string): Promise<void> {
     case 'unequip':
       await characterStore.unequipItem(item.slotId)
       break
+    case 'toggle_grip':
+      await characterStore.toggleGrip()
+      break
     case 'inspect':
       console.log('Inspect:', item)
       break
@@ -448,6 +451,7 @@ function close() {
               :slot-id="slot.id"
               :slot-label="slot.label"
               :item="characterStore.equipment[slot.id] ?? null"
+              :is-mirror="!!(characterStore.equipment[slot.id] as EquippedItem | null)?.isMirror"
               @hover-start="onEquipHoverStart"
               @hover-move="onEquipHoverMove"
               @hover-end="onEquipHoverEnd"
@@ -474,6 +478,7 @@ function close() {
               :slot-id="slot.id"
               :slot-label="slot.label"
               :item="characterStore.equipment[slot.id] ?? null"
+              :is-mirror="!!(characterStore.equipment[slot.id] as EquippedItem | null)?.isMirror"
               @hover-start="onEquipHoverStart"
               @hover-move="onEquipHoverMove"
               @hover-end="onEquipHoverEnd"

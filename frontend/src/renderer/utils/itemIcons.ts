@@ -70,7 +70,8 @@ const itemIconMap: Record<string, string> = {
 // weaponType (from model_data) → tier-indexed icon arrays [tier1, tier2, tier3, tier4]
 const weaponTypeIcons: Record<string, readonly string[]> = {
   dagger: [dagger1, dagger2, dagger3, dagger4],
-  bastardSword: [sword1, sword2, sword3, sword4],
+  armingSword: [sword1, sword2, sword3, sword4],
+  longsword: [sword1, sword2, sword3, sword4],
   greatsword: [twoHSword1, twoHSword2, twoHSword3, twoHSword4],
   mace1H: [mace1, mace2, mace3, mace4],
   warhammer1H: [hammer1, hammer2, hammer3, hammer4],

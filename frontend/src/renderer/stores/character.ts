@@ -60,7 +60,7 @@ export interface InventoryItem {
   is_usable: boolean
   is_tradeable: boolean
   base_price: number
-  model_data?: Record<string, number | boolean>
+  model_data?: Record<string, number | boolean | string>
   quantity: number
   slot_number: number
   durability: number
@@ -90,7 +90,9 @@ export interface EquippedItem {
   isTwoHanded: boolean
   weight: number
   basePrice: number
-  modelData?: Record<string, number | boolean>
+  modelData?: Record<string, number | boolean | string>
+  gripMode?: string | null   // '1h' | '2h' | null — only set for hybrid weapons
+  isMirror?: boolean         // true when offHand is a visual mirror of a 2H mainHand weapon
 }
 
 export interface RetainerInfo {
@@ -587,15 +589,34 @@ export const useCharacterStore = defineStore('character', () => {
       inventory.value = [...inventory.value, equippedToInventory(oldEquip, freedSlot)]
     }
 
-    // Two-handed: also clear offHand
-    if (invItem.is_two_handed && slotId === 'mainHand' && equipment.value.offHand) {
+    // Determine if this is a hybrid weapon
+    const itemModelData = invItem.model_data as Record<string, unknown> | undefined
+    const itemWeaponType = itemModelData?.weaponType as string | undefined
+    const itemIsHybrid = itemModelData?.hybrid === true
+
+    // Two-handed or hybrid-2H: clear offHand (skip if offHand is just a mirror)
+    if (invItem.is_two_handed && slotId === 'mainHand') {
       const offHand = equipment.value.offHand
-      inventory.value = [...inventory.value, equippedToInventory(offHand, findFirstEmptySlotLocal())]
+      if (offHand && !offHand.isMirror) {
+        inventory.value = [...inventory.value, equippedToInventory(offHand, findFirstEmptySlotLocal())]
+      }
       equipment.value = { ...equipment.value, offHand: null }
     }
 
-    // Place in equipment slot
-    equipment.value = { ...equipment.value, [slotId]: inventoryToEquipped(invItem, slotId) }
+    // Place in equipment slot with gripMode for hybrid weapons
+    const equipped = inventoryToEquipped(invItem, slotId)
+    if (itemIsHybrid && slotId === 'mainHand') {
+      equipped.gripMode = '1h'
+    }
+    equipment.value = { ...equipment.value, [slotId]: equipped }
+
+    // If equipping a shield to offHand and mainHand is hybrid in 2H, switch to 1H
+    if (slotId === 'offHand' && equipment.value.mainHand?.gripMode === '2h') {
+      equipment.value = {
+        ...equipment.value,
+        mainHand: { ...equipment.value.mainHand!, gripMode: '1h' },
+      }
+    }
 
     try {
       const res = await fetch(`${API_BASE}/api/equipment/character/${charId}/equip`, {
@@ -639,6 +660,55 @@ export const useCharacterStore = defineStore('character', () => {
       })
       const data = await res.json()
       // Server response is authoritative
+      if (data.inventory) inventory.value = data.inventory as InventoryItem[]
+      if (data.equipment) equipment.value = data.equipment as Record<string, EquippedItem | null>
+      return data.success === true
+    } catch {
+      inventory.value = invSnapshot
+      equipment.value = equipSnapshot
+      return false
+    }
+  }
+
+  async function toggleGrip(): Promise<boolean> {
+    const charId = character.value?.id
+    if (!charId) return false
+
+    const mainHand = equipment.value.mainHand
+    if (!mainHand || !mainHand.gripMode) return false
+
+    // Snapshot for rollback
+    const invSnapshot = inventory.value.map(i => ({ ...i }))
+    const equipSnapshot = { ...equipment.value }
+
+    // Optimistic: toggle grip
+    const newGrip = mainHand.gripMode === '1h' ? '2h' : '1h'
+    equipment.value = {
+      ...equipment.value,
+      mainHand: { ...mainHand, gripMode: newGrip },
+    }
+
+    // If switching to 2H, mirror into offHand and clear any real offHand item
+    if (newGrip === '2h') {
+      const offHand = equipment.value.offHand
+      if (offHand && !offHand.isMirror) {
+        inventory.value = [...inventory.value, equippedToInventory(offHand, findFirstEmptySlotLocal())]
+      }
+      equipment.value = {
+        ...equipment.value,
+        offHand: { ...equipment.value.mainHand!, slotId: 'offHand', isMirror: true, isTwoHanded: true },
+      }
+    } else {
+      // Switching to 1H: clear mirror from offHand
+      equipment.value = { ...equipment.value, offHand: null }
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/equipment/character/${charId}/toggle-grip`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      const data = await res.json()
       if (data.inventory) inventory.value = data.inventory as InventoryItem[]
       if (data.equipment) equipment.value = data.equipment as Record<string, EquippedItem | null>
       return data.success === true
@@ -815,6 +885,7 @@ export const useCharacterStore = defineStore('character', () => {
     stackItems,
     equipItem,
     unequipItem,
+    toggleGrip,
     useItem,
     dropItem,
     sortInventory,

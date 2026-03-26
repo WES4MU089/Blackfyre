@@ -41,6 +41,12 @@ const options = computed<MenuOption[]>(() => {
   }
 
   if (!isInventoryItem.value) {
+    const eqItem = props.item as EquippedItem
+    // Show grip toggle for hybrid weapons (those with gripMode set)
+    if (eqItem.gripMode) {
+      const newGripLabel = eqItem.gripMode === '1h' ? 'Switch to Two-Handed' : 'Switch to One-Handed'
+      list.push({ key: 'toggle_grip', label: newGripLabel })
+    }
     list.push({ key: 'unequip', label: 'Unequip' })
   }
 

@@ -8,6 +8,7 @@ const props = defineProps<{
   slotId: string
   slotLabel: string
   item: EquippedItem | null
+  isMirror?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -45,6 +46,8 @@ const isDragSource = computed(() => {
 // Can the dragged item be dropped here?
 const isValidDrop = computed(() => {
   if (!isDragging.value || !dragPayload.value || isDragSource.value) return false
+  // Mirror slots are visual-only — no drops allowed
+  if (props.isMirror) return false
   if (dragPayload.value.source === 'inventory' && dragPayload.value.inventoryItem) {
     return canEquipToSlot(dragPayload.value.inventoryItem.slot_type, props.slotId)
   }
@@ -62,7 +65,7 @@ const isInvalidDrop = computed(() => {
 })
 
 function onMouseDown(e: MouseEvent): void {
-  if (e.button !== 0 || !props.item) return
+  if (e.button !== 0 || !props.item || props.isMirror) return
   startDrag(e, {
     source: 'equipment',
     equippedItem: props.item,
@@ -96,7 +99,7 @@ function onMouseLeave(): void {
 
 function onContextMenu(e: MouseEvent): void {
   e.preventDefault()
-  if (props.item) {
+  if (props.item && !props.isMirror) {
     emit('hover-end')
     emit('context-menu', props.item, e)
   }
@@ -112,6 +115,7 @@ function onContextMenu(e: MouseEvent): void {
         'equip-slot--drag-source': isDragSource,
         'equip-slot--drop-valid': isValidDrop,
         'equip-slot--drop-invalid': isInvalidDrop,
+        'equip-slot--mirror': isMirror,
       },
     ]"
     @mousedown="onMouseDown"
@@ -174,6 +178,11 @@ function onContextMenu(e: MouseEvent): void {
 .equip-slot--drop-invalid {
   border-color: rgba(139, 26, 26, 0.5) !important;
   background: rgba(139, 26, 26, 0.08);
+}
+
+.equip-slot--mirror {
+  opacity: 0.55;
+  pointer-events: none;
 }
 
 /* Rarity border colors */
