@@ -1,14 +1,14 @@
 /**
  * 3D Dice Rolling Engine
  * Three.js + Cannon-es physics for pool-based d6 rolling
- * Dice are rigged to land on server-determined faces
+ * Pure physics — no rigging. Read the top face when dice settle.
  */
 
 import * as THREE from 'three'
 import * as CANNON from 'cannon-es'
 
 export interface DiceRollRequest {
-  results: number[]    // predetermined result for each die (1-6)
+  count: number        // number of dice to roll
   threshold: number    // success threshold (>= this value = success)
 }
 
@@ -81,29 +81,28 @@ function createDieMaterials(): THREE.MeshStandardMaterial[] {
   })
 }
 
-// Target quaternion: rotation to place face N on top (+Y)
-function targetQuatForFace(faceValue: number): THREE.Quaternion {
-  const euler: [number, number, number] = (() => {
-    switch (faceValue) {
-      case 1:  return [Math.PI, 0, 0] as const
-      case 2:  return [Math.PI / 2, 0, 0] as const
-      case 3:  return [0, 0, -Math.PI / 2] as const
-      case 4:  return [0, 0, Math.PI / 2] as const
-      case 5:  return [-Math.PI / 2, 0, 0] as const
-      case 6:  return [0, 0, 0] as const
-      default: return [0, 0, 0] as const
+// Read which face is currently pointing up based on body quaternion
+function getTopFace(q: CANNON.Quaternion): number {
+  const up = new CANNON.Vec3(0, 1, 0)
+  const normals: { face: number; local: CANNON.Vec3 }[] = [
+    { face: 3, local: new CANNON.Vec3(1, 0, 0) },
+    { face: 4, local: new CANNON.Vec3(-1, 0, 0) },
+    { face: 6, local: new CANNON.Vec3(0, 1, 0) },
+    { face: 1, local: new CANNON.Vec3(0, -1, 0) },
+    { face: 2, local: new CANNON.Vec3(0, 0, 1) },
+    { face: 5, local: new CANNON.Vec3(0, 0, -1) },
+  ]
+  let best = 6
+  let bestDot = -Infinity
+  for (const { face, local } of normals) {
+    const world = q.vmult(local)
+    const dot = world.dot(up)
+    if (dot > bestDot) {
+      bestDot = dot
+      best = face
     }
-  })()
-
-  const q = new THREE.Quaternion()
-  q.setFromEuler(new THREE.Euler(euler[0], euler[1], euler[2]))
-
-  // Random Y rotation so dice don't all align uniformly
-  const yRot = new THREE.Quaternion()
-  yRot.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.random() * Math.PI * 2)
-  q.premultiply(yRot)
-
-  return q
+  }
+  return best
 }
 
 // --- Internal die state ---
@@ -111,15 +110,13 @@ function targetQuatForFace(faceValue: number): THREE.Quaternion {
 interface DieState {
   mesh: THREE.Mesh
   body: CANNON.Body
-  targetValue: number
   settled: boolean
   settleFrames: number
-  correcting: boolean
-  correctionT: number
-  startQuat: THREE.Quaternion
-  targetQuat: THREE.Quaternion
   highlighted: boolean
 }
+
+// Settle threshold: 3 seconds at 60fps = 180 frames
+const SETTLE_FRAMES = 180
 
 // --- Main DiceScene class ---
 
@@ -164,10 +161,8 @@ export class DiceScene {
     this.camera.lookAt(0, 0, 0)
 
     // --- Lighting ---
-    // Warm ambient
     this.scene.add(new THREE.AmbientLight(0xfff0e0, 0.4))
 
-    // Main directional (casts shadows)
     const dirLight = new THREE.DirectionalLight(0xffe8c0, 1.2)
     dirLight.position.set(5, 12, 4)
     dirLight.castShadow = true
@@ -180,7 +175,6 @@ export class DiceScene {
     dirLight.shadow.camera.far = 30
     this.scene.add(dirLight)
 
-    // Cool fill from opposite side
     const fillLight = new THREE.DirectionalLight(0xc0d0ff, 0.3)
     fillLight.position.set(-4, 8, -3)
     this.scene.add(fillLight)
@@ -253,8 +247,7 @@ export class DiceScene {
       this.threshold = request.threshold
       this.resolveRoll = resolve
 
-      const { results } = request
-      const count = results.length
+      const { count } = request
       const cols = Math.ceil(Math.sqrt(count))
       const rows = Math.ceil(count / cols)
       const spacing = 1.8
@@ -269,7 +262,7 @@ export class DiceScene {
         const z = row * spacing - offsetZ + (Math.random() - 0.5) * 0.4
         const y = 5 + Math.random() * 3
 
-        this.spawnDie(x, y, z, results[i])
+        this.spawnDie(x, y, z)
       }
 
       // Adjust camera for dice count
@@ -293,7 +286,7 @@ export class DiceScene {
 
   // --- Private ---
 
-  private spawnDie(x: number, y: number, z: number, targetValue: number) {
+  private spawnDie(x: number, y: number, z: number) {
     const size = 0.8
 
     // Three.js mesh with per-face pip textures
@@ -304,14 +297,14 @@ export class DiceScene {
     mesh.receiveShadow = true
     this.scene.add(mesh)
 
-    // Cannon-es physics body
+    // Cannon-es physics body — pure physics, no rigging
     const half = size / 2
     const body = new CANNON.Body({
       mass: 1,
       shape: new CANNON.Box(new CANNON.Vec3(half, half, half)),
       material: this.diceMaterial,
-      linearDamping: 0.2,
-      angularDamping: 0.2,
+      linearDamping: 0.3,
+      angularDamping: 0.3,
     })
     body.position.set(x, y, z)
     body.velocity.set(
@@ -334,13 +327,8 @@ export class DiceScene {
     this.dice.push({
       mesh,
       body,
-      targetValue,
       settled: false,
       settleFrames: 0,
-      correcting: false,
-      correctionT: 0,
-      startQuat: new THREE.Quaternion(),
-      targetQuat: targetQuatForFace(targetValue),
       highlighted: false,
     })
   }
@@ -386,50 +374,39 @@ export class DiceScene {
             die.body.quaternion.w
           )
 
-          // Settle detection: low velocity for sustained frames
+          // Settle detection: static for 3 seconds (180 frames at 60fps)
           const v = die.body.velocity.length()
           const av = die.body.angularVelocity.length()
 
           if (v < 0.15 && av < 0.3) {
             die.settleFrames++
-            if (die.settleFrames > 20) {
+            if (die.settleFrames > SETTLE_FRAMES) {
               die.settled = true
-              die.correcting = true
-              die.correctionT = 0
-              die.startQuat.copy(die.mesh.quaternion)
+              die.highlighted = true
               this.world.removeBody(die.body)
+
+              // Read whichever face actually landed up
+              const landedFace = getTopFace(die.body.quaternion)
+              const isSuccess = landedFace >= this.threshold
+
+              // Apply highlight glow
+              const materials = die.mesh.material as THREE.MeshStandardMaterial[]
+              for (const mat of materials) {
+                if (isSuccess) {
+                  mat.emissive = new THREE.Color(0xc9a84c)
+                  mat.emissiveIntensity = 0.4
+                } else {
+                  mat.emissive = new THREE.Color(0x1a0505)
+                  mat.emissiveIntensity = 0.3
+                  mat.opacity = 0.6
+                  mat.transparent = true
+                }
+              }
+
+              this.onDieSettle?.(i, landedFace, isSuccess)
             }
           } else {
             die.settleFrames = 0
-          }
-        } else if (die.correcting) {
-          // Slerp to target face over 0.4s
-          die.correctionT += dt / 0.4
-          const t = Math.min(1, die.correctionT)
-          const eased = t * t * (3 - 2 * t) // smoothstep
-
-          die.mesh.quaternion.slerpQuaternions(die.startQuat, die.targetQuat, eased)
-
-          if (t >= 1) {
-            die.correcting = false
-            die.highlighted = true
-
-            // Apply highlight glow
-            const isSuccess = die.targetValue >= this.threshold
-            const materials = die.mesh.material as THREE.MeshStandardMaterial[]
-            for (const mat of materials) {
-              if (isSuccess) {
-                mat.emissive = new THREE.Color(0xc9a84c)
-                mat.emissiveIntensity = 0.4
-              } else {
-                mat.emissive = new THREE.Color(0x1a0505)
-                mat.emissiveIntensity = 0.3
-                mat.opacity = 0.6
-                mat.transparent = true
-              }
-            }
-
-            this.onDieSettle?.(i, die.targetValue, isSuccess)
           }
         }
       }

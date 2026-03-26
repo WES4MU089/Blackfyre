@@ -60,6 +60,12 @@ const rightSystems: SystemTab[] = [
 
 <template>
   <div class="topbar">
+    <!-- F3 hide hint -->
+    <div class="topbar-hide-hint">
+      <span class="hide-hint-key">F3</span>
+      <span class="hide-hint-text">to Hide</span>
+    </div>
+
     <!-- Left system icons -->
     <div class="topbar-systems left-systems">
       <button
@@ -410,5 +416,37 @@ const rightSystems: SystemTab[] = [
   color: var(--color-text);
   letter-spacing: 0.06em;
   opacity: 0.7;
+}
+
+/* F3 Hide Hint */
+.topbar-hide-hint {
+  position: absolute;
+  top: 50%;
+  left: 16px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.hide-hint-key {
+  font-family: var(--font-display);
+  font-size: 12px;
+  color: var(--color-gold);
+  letter-spacing: 0.08em;
+  padding: 2px 6px;
+  border: 1px solid var(--color-gold-dim);
+  border-radius: 3px;
+  background: rgba(201, 168, 76, 0.08);
+}
+
+.hide-hint-text {
+  font-family: var(--font-display);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 </style>
