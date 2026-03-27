@@ -28,6 +28,7 @@ import RetainerHire from '@/components/retainers/RetainerHire.vue'
 import AdminPanel from '@/components/admin/AdminPanel.vue'
 import SocialPanel from '@/components/social/SocialPanel.vue'
 import TargetWindowPanel from '@/components/hud/TargetWindowPanel.vue'
+import HoldingsPanel from '@/components/holdings/HoldingsPanel.vue'
 import NotificationPanel from '@/components/hud/NotificationPanel.vue'
 import ApplicationReviewModal from '@/components/hud/ApplicationReviewModal.vue'
 import CoupDeGraceOverlay from '@/components/combat/CoupDeGraceOverlay.vue'
@@ -176,6 +177,7 @@ onMounted(async () => {
       <WikiPanel v-if="hudStore.isPanelOpen('wiki')" />
       <TargetWindowPanel v-if="hudStore.isPanelOpen('target-window')" />
       <RetainerPanel v-if="hudStore.isPanelOpen('retainers')" />
+      <HoldingsPanel v-if="hudStore.isPanelOpen('holdings')" />
       <CombatLobby v-if="hudStore.isPanelOpen('combat') && combatStore.activeView !== 'combat'" />
       <CombatSession v-if="combatStore.activeView === 'combat'" />
       <AdminPanel v-if="adminStore.isOpen" />
