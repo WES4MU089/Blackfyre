@@ -28,6 +28,7 @@ export interface LobbyListEntry {
   region: string
   memberCount: number
   maxPlayers: number
+  isSpar: boolean
 }
 
 // --- Combat session types ---

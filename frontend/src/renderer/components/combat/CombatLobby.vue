@@ -149,7 +149,11 @@ function onToggleRetainer(retainerId: number): void {
           @click="onJoinLobby(entry)"
         >
           <span class="lobby-entry-host">{{ entry.hostName }}</span>
-          <span class="lobby-entry-count">{{ entry.memberCount }}/{{ entry.maxPlayers }}</span>
+          <span class="lobby-entry-meta">
+            <span v-if="entry.isSpar" class="lobby-entry-tag tag-spar">SPAR</span>
+            <span v-else class="lobby-entry-tag tag-combat">COMBAT</span>
+            <span class="lobby-entry-count">{{ entry.memberCount }}/{{ entry.maxPlayers }}</span>
+          </span>
         </div>
       </div>
 
@@ -388,6 +392,28 @@ function onToggleRetainer(retainerId: number): void {
 .lobby-entry-host {
   font-size: var(--font-size-sm);
   color: var(--color-text);
+}
+
+.lobby-entry-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.lobby-entry-tag {
+  padding: 1px var(--space-xs);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xxs, 0.6rem);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.tag-spar {
+  background: rgba(91, 155, 213, 0.2);
+  color: #5b9bd5;
+}
+.tag-combat {
+  background: rgba(139, 26, 26, 0.2);
+  color: var(--color-crimson, #8b1a1a);
 }
 
 .lobby-entry-count {
