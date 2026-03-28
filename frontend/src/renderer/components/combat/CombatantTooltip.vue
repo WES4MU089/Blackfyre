@@ -36,6 +36,8 @@ const MATERIAL_NAMES: Record<string, string> = {
   steel: 'steel',
   castle_forged: 'castle-forged',
   valyrian_steel: 'Valyrian steel',
+  cloth: 'padded',
+  wood: 'wooden',
 }
 
 const ARMOR_CLASS_NAMES: Record<string, string> = {
@@ -52,28 +54,40 @@ const SHIELD_CLASS_NAMES: Record<string, string> = {
 
 // --- Equipment description ---
 
+function isTourneyItem(name: string | null | undefined): boolean {
+  return !!name && name.toLowerCase().startsWith('tournament')
+}
+
 const weaponLine = computed(() => {
   const c = props.combatant
+  const grip = c.isTwoHanded ? ', gripped in both hands' : ''
+  if (isTourneyItem(c.weaponItemName)) {
+    const wep = WEAPON_NAMES[c.weaponType] ?? c.weaponType
+    return `Carries a blunted tournament ${wep}${grip}.`
+  }
   const mat = MATERIAL_NAMES[c.weaponMaterial] ?? c.weaponMaterial
   const name = WEAPON_NAMES[c.weaponType] ?? c.weaponType
-  const grip = c.isTwoHanded ? ' in both hands' : ''
   return `Wields a ${mat} ${name}${grip}.`
 })
 
 const armorLine = computed(() => {
   const c = props.combatant
   if (c.armorClass === 'none' || c.armorTier === 0) return 'Wears no armor.'
+  if (isTourneyItem(c.armorItemName)) {
+    return 'Wears padded tournament armor.'
+  }
   const mat = MATERIAL_NAMES[c.weaponMaterial] ?? c.weaponMaterial
   const armorName = ARMOR_CLASS_NAMES[c.armorClass] ?? c.armorClass
-  // Use armor material if available; weapon material as fallback for tier naming
-  const tierMat = MATERIAL_NAMES[c.weaponMaterial] ?? c.weaponMaterial
-  return `Clad in ${tierMat} ${armorName}.`
+  return `Clad in ${mat} ${armorName}.`
 })
 
 const shieldLine = computed(() => {
   const c = props.combatant
   if (!c.hasShield || c.shieldClass === 'none') return null
   const name = SHIELD_CLASS_NAMES[c.shieldClass] ?? c.shieldClass
+  if (isTourneyItem(c.shieldItemName)) {
+    return `Bears a plain tournament ${name}.`
+  }
   return `Carries a ${name}.`
 })
 

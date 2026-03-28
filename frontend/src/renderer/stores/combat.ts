@@ -61,11 +61,14 @@ export interface CombatantView {
   weaponType: string
   weaponTier: number
   weaponMaterial: string
+  weaponItemName: string | null
   isTwoHanded: boolean
   armorClass: string
   armorTier: number
+  armorItemName: string | null
   shieldClass: string
   shieldTier: number
+  shieldItemName: string | null
   hasShield: boolean
   combatRating: number
   thumbnailUrl: string | null

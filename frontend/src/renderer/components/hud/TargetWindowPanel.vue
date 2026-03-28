@@ -93,8 +93,80 @@ const ctxOptions = computed<CtxOption[]>(() => {
   return opts
 })
 
+// --- Equipment name maps for immersive descriptions ---
+const WEAPON_DISPLAY: Record<string, string> = {
+  dagger: 'dagger', armingSword: 'arming sword', longsword: 'longsword',
+  greatsword: 'greatsword', battleAxe1H: 'battle axe', battleAxe2H: 'greataxe',
+  warhammer1H: 'warhammer', warhammer2H: 'great warhammer', mace1H: 'mace',
+  spear: 'spear', polearm: 'polearm', bow: 'bow',
+}
+const MATERIAL_DISPLAY: Record<string, string> = {
+  rusty: 'rusted', iron: 'iron', steel: 'steel',
+  castle_forged: 'castle-forged', valyrian_steel: 'Valyrian steel',
+  cloth: 'padded', wood: 'wooden',
+}
+const ARMOR_DISPLAY: Record<string, string> = {
+  light: 'light leather armor', medium: 'mail', heavy: 'heavy plate',
+}
+const SHIELD_DISPLAY: Record<string, string> = {
+  light: 'buckler', medium: 'heater shield', heavy: 'tower shield',
+}
+
+function buildInspectDescription(player: NearbyPlayer): string {
+  const eq = player.equipment
+  if (!eq) return `You glance at ${player.characterName}, but cannot make out their equipment from here.`
+
+  const lines: string[] = []
+  lines.push(`You study ${player.characterName} carefully.`)
+  lines.push('')
+
+  if (eq.weaponName && eq.weaponType) {
+    const isTourney = eq.weaponName.toLowerCase().startsWith('tournament')
+    const mat = MATERIAL_DISPLAY[eq.weaponMaterial ?? ''] ?? eq.weaponMaterial ?? ''
+    const wep = WEAPON_DISPLAY[eq.weaponType] ?? eq.weaponType
+    const grip = eq.isTwoHanded ? ', gripped in both hands' : ''
+    if (isTourney) {
+      lines.push(`They carry a blunted tournament ${wep}${grip} \u2014 standard tourney issue.`)
+    } else {
+      lines.push(`They wield a ${mat} ${wep}${grip}.`)
+    }
+  } else {
+    lines.push('They appear unarmed.')
+  }
+
+  if (eq.armorName && eq.armorClass) {
+    const isTourney = eq.armorName.toLowerCase().startsWith('tournament')
+    const mat = MATERIAL_DISPLAY[eq.armorMaterial ?? ''] ?? eq.armorMaterial ?? ''
+    const armor = ARMOR_DISPLAY[eq.armorClass] ?? eq.armorClass
+    if (isTourney) {
+      lines.push(`They wear padded tournament armor \u2014 enough to keep the fight fair, no more.`)
+    } else {
+      lines.push(`They are clad in ${mat} ${armor}.`)
+    }
+  } else {
+    lines.push('They wear no armor.')
+  }
+
+  if (eq.shieldName && eq.shieldClass) {
+    const isTourney = eq.shieldName.toLowerCase().startsWith('tournament')
+    const shield = SHIELD_DISPLAY[eq.shieldClass] ?? eq.shieldClass
+    if (isTourney) {
+      lines.push(`A plain tournament ${shield} hangs at their arm.`)
+    } else {
+      lines.push(`They carry a ${shield}.`)
+    }
+  }
+
+  return lines.join('\n')
+}
+
 function handleCtxAction(key: string): void {
   closeCtxMenu()
+  if (key === 'inspect' && ctxPlayer.value) {
+    const desc = buildInspectDescription(ctxPlayer.value)
+    hudStore.addNotification('info', `Inspecting ${ctxPlayer.value.characterName}`, desc)
+    return
+  }
   hudStore.addNotification('info', 'Coming Soon', `${key.charAt(0).toUpperCase() + key.slice(1)} is not yet available.`)
 }
 

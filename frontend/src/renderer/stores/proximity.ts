@@ -7,6 +7,18 @@ export interface NearbyStatusEffect {
   iconUrl: string | null
 }
 
+export interface NearbyEquipment {
+  weaponName: string | null
+  weaponType: string | null
+  weaponMaterial: string | null
+  isTwoHanded: boolean
+  armorName: string | null
+  armorClass: string | null
+  armorMaterial: string | null
+  shieldName: string | null
+  shieldClass: string | null
+}
+
 export interface NearbyPlayer {
   characterId: number
   characterName: string
@@ -18,6 +30,7 @@ export interface NearbyPlayer {
   isAlive: boolean
   woundSeverity: string
   statusEffects: NearbyStatusEffect[]
+  equipment: NearbyEquipment | null
 }
 
 export const useProximityStore = defineStore('proximity', () => {
