@@ -4,8 +4,8 @@ import { useCombatStore } from '@/stores/combat'
 export function useCombat() {
   const combatStore = useCombatStore()
 
-  function createLobby(isSpar: boolean = false): void {
-    getSocket()?.emit('lobby:create', { isSpar })
+  function createLobby(isSpar: boolean = false, isFfa: boolean = false): void {
+    getSocket()?.emit('lobby:create', { isSpar, isFfa })
   }
 
   function joinLobby(lobbyId: number): void {

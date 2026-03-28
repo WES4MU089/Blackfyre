@@ -62,8 +62,8 @@ function onCancelLobby(): void {
   cancelLobby()
 }
 
-function onCreateLobby(spar: boolean = false): void {
-  createLobby(spar)
+function onCreateLobby(spar: boolean = false, ffa: boolean = false): void {
+  createLobby(spar, ffa)
 }
 
 function onRefreshLobbies(): void {
@@ -129,6 +129,9 @@ function onToggleRetainer(retainerId: number): void {
           <button class="btn-ornate btn-spar" @click="onCreateLobby(true)">
             Create Spar
           </button>
+          <button class="btn-ornate btn-ffa" @click="onCreateLobby(false, true)">
+            Create FFA
+          </button>
         </div>
 
         <div class="lobby-divider" />
@@ -150,8 +153,9 @@ function onToggleRetainer(retainerId: number): void {
         >
           <span class="lobby-entry-host">{{ entry.hostName }}</span>
           <span class="lobby-entry-meta">
+            <span v-if="entry.isFfa" class="lobby-entry-tag tag-ffa">FFA</span>
             <span v-if="entry.isSpar" class="lobby-entry-tag tag-spar">SPAR</span>
-            <span v-else class="lobby-entry-tag tag-combat">COMBAT</span>
+            <span v-if="!entry.isSpar && !entry.isFfa" class="lobby-entry-tag tag-combat">COMBAT</span>
             <span class="lobby-entry-count">{{ entry.memberCount }}/{{ entry.maxPlayers }}</span>
           </span>
         </div>
@@ -162,6 +166,7 @@ function onToggleRetainer(retainerId: number): void {
         <div class="lobby-status-bar">
           <span class="lobby-id">Lobby #{{ combatStore.lobbyState.lobbyId }}</span>
           <div class="lobby-status-badges">
+            <span v-if="combatStore.lobbyState.isFfa" class="ffa-badge">FFA</span>
             <span v-if="combatStore.lobbyState.isSpar" class="spar-badge">SPAR</span>
             <span class="lobby-status-badge" :class="`status-${combatStore.lobbyState.status}`">
               {{ combatStore.lobbyState.status }}
@@ -169,8 +174,27 @@ function onToggleRetainer(retainerId: number): void {
           </div>
         </div>
 
-        <!-- Teams -->
-        <div class="teams-container">
+        <!-- FFA Combatants (flat list) -->
+        <div v-if="combatStore.lobbyState.isFfa" class="ffa-container">
+          <div class="team-header ffa-header">Free-For-All</div>
+          <div
+            v-for="member in combatStore.lobbyState.members"
+            :key="member.characterId"
+            class="team-member"
+            :class="{
+              'is-me': member.characterId === myCharId,
+              'is-ready': member.isReady,
+            }"
+          >
+            <span class="member-ready-dot" :class="{ ready: member.isReady }" />
+            <span class="member-name">{{ member.characterName }}</span>
+            <span v-if="member.characterId === combatStore.lobbyState.hostCharacterId" class="host-badge">HOST</span>
+            <span v-if="member.isRetainer" class="retainer-badge">RET</span>
+          </div>
+        </div>
+
+        <!-- Teams (standard mode) -->
+        <div v-else class="teams-container">
           <!-- Team 1 -->
           <div class="team-column">
             <div class="team-header team-1-header">Team 1</div>
@@ -229,7 +253,7 @@ function onToggleRetainer(retainerId: number): void {
 
         <!-- Actions -->
         <div class="lobby-actions">
-          <button class="btn-ornate btn-switch" @click="onSwitchTeam">
+          <button v-if="!combatStore.lobbyState?.isFfa" class="btn-ornate btn-switch" @click="onSwitchTeam">
             Switch Team
           </button>
           <button
@@ -415,6 +439,10 @@ function onToggleRetainer(retainerId: number): void {
   background: rgba(139, 26, 26, 0.2);
   color: var(--color-crimson, #8b1a1a);
 }
+.tag-ffa {
+  background: rgba(201, 168, 76, 0.2);
+  color: var(--color-gold, #c9a84c);
+}
 
 .lobby-entry-count {
   font-size: var(--font-size-xs);
@@ -458,14 +486,20 @@ function onToggleRetainer(retainerId: number): void {
   align-items: center;
 }
 
-.spar-badge {
+.spar-badge, .ffa-badge {
   padding: 1px var(--space-xs);
   border-radius: var(--radius-sm);
   font-size: var(--font-size-xxs, 0.6rem);
   text-transform: uppercase;
   letter-spacing: 0.1em;
+}
+.spar-badge {
   background: rgba(91, 155, 213, 0.2);
   color: #5b9bd5;
+}
+.ffa-badge {
+  background: rgba(201, 168, 76, 0.2);
+  color: var(--color-gold, #c9a84c);
 }
 
 .lobby-create-row {
@@ -483,6 +517,27 @@ function onToggleRetainer(retainerId: number): void {
 }
 .btn-spar:hover {
   background: rgba(91, 155, 213, 0.1);
+}
+.btn-ffa {
+  border-color: rgba(201, 168, 76, 0.4);
+  color: var(--color-gold, #c9a84c);
+}
+.btn-ffa:hover {
+  background: rgba(201, 168, 76, 0.1);
+}
+
+.ffa-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: var(--space-sm);
+}
+.ffa-header {
+  text-align: center;
+  color: var(--color-gold, #c9a84c);
+  border-bottom: 1px solid rgba(201, 168, 76, 0.3);
+  padding-bottom: var(--space-xs);
+  margin-bottom: var(--space-xs);
 }
 
 /* Teams */

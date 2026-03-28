@@ -17,6 +17,7 @@ export interface LobbyStateView {
   hostName: string
   region: string
   isSpar: boolean
+  isFfa: boolean
   status: 'open' | 'starting' | 'started' | 'cancelled'
   maxPlayers: number
   members: LobbyMemberView[]
@@ -29,6 +30,7 @@ export interface LobbyListEntry {
   memberCount: number
   maxPlayers: number
   isSpar: boolean
+  isFfa: boolean
 }
 
 // --- Combat session types ---
@@ -238,6 +240,11 @@ export const useCombatStore = defineStore('combat', () => {
 
   const allReady = computed(() => {
     if (!lobbyState.value || lobbyState.value.members.length < 2) return false
+    if (lobbyState.value.isFfa) {
+      const players = lobbyState.value.members.filter(m => !m.isRetainer)
+      if (players.length < 3) return false
+      return lobbyState.value.members.every(m => m.isReady)
+    }
     const team1 = lobbyState.value.members.filter(m => m.team === 1)
     const team2 = lobbyState.value.members.filter(m => m.team === 2)
     if (team1.length === 0 || team2.length === 0) return false
