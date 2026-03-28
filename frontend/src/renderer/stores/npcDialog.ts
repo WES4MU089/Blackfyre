@@ -1,6 +1,15 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 
+export interface DialogTextInput {
+  placeholder: string
+  maxLength: number
+  submitId: string
+  submitText: string
+  cancelId?: string
+  cancelText?: string
+}
+
 export interface DialogPayload {
   npcType: string
   npcName: string
@@ -9,6 +18,7 @@ export interface DialogPayload {
   npcText: string
   options: { id: string; text: string }[]
   closeAfter: boolean
+  textInput?: DialogTextInput
 }
 
 export interface DialogHistoryEntry {
@@ -24,6 +34,7 @@ export const useNpcDialogStore = defineStore('npcDialog', () => {
   const currentNodeId = ref('')
   const currentNpcText = ref('')
   const options = ref<{ id: string; text: string }[]>([])
+  const textInput = ref<DialogTextInput | null>(null)
   const dialogHistory = ref<DialogHistoryEntry[]>([])
   const isClosing = ref(false)
 
@@ -44,6 +55,7 @@ export const useNpcDialogStore = defineStore('npcDialog', () => {
     currentNodeId.value = payload.nodeId
     currentNpcText.value = payload.npcText
     options.value = payload.options
+    textInput.value = payload.textInput ?? null
     dialogHistory.value = [{ speaker: 'npc', text: payload.npcText }]
 
     if (payload.closeAfter) {
@@ -55,6 +67,7 @@ export const useNpcDialogStore = defineStore('npcDialog', () => {
     currentNodeId.value = payload.nodeId
     currentNpcText.value = payload.npcText
     options.value = payload.options
+    textInput.value = payload.textInput ?? null
     dialogHistory.value.push({ speaker: 'npc', text: payload.npcText })
 
     if (payload.closeAfter) {
@@ -81,6 +94,7 @@ export const useNpcDialogStore = defineStore('npcDialog', () => {
     currentNodeId.value = ''
     currentNpcText.value = ''
     options.value = []
+    textInput.value = null
     dialogHistory.value = []
   }
 
@@ -92,7 +106,8 @@ export const useNpcDialogStore = defineStore('npcDialog', () => {
     }, 2500)
   }
 
-  const hasOptions = computed(() => options.value.length > 0 && !isClosing.value)
+  const hasOptions = computed(() => options.value.length > 0 && !isClosing.value && !textInput.value)
+  const hasTextInput = computed(() => textInput.value !== null && !isClosing.value)
 
   return {
     isOpen,
@@ -102,9 +117,11 @@ export const useNpcDialogStore = defineStore('npcDialog', () => {
     currentNodeId,
     currentNpcText,
     options,
+    textInput,
     dialogHistory,
     isClosing,
     hasOptions,
+    hasTextInput,
     openDialog,
     updateNode,
     addPlayerChoice,

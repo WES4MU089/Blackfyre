@@ -9,6 +9,7 @@ const store = useNpcDialogStore()
 const panelRef = ref<HTMLElement | null>(null)
 const historyRef = ref<HTMLElement | null>(null)
 const typewriter = useTypewriter({ intervalMs: 30 })
+const textInputValue = ref('')
 
 const { onDragStart } = useDraggable('npc-dialog', panelRef, { alwaysDraggable: true })
 
@@ -30,11 +31,29 @@ watch(
   },
 )
 
-function selectOption(optionId: string, text: string): void {
+function selectOption(optionId: string, text: string, textInput?: string): void {
   if (store.isClosing) return
   typewriter.skip()
   store.addPlayerChoice(text)
-  getSocket()?.emit('npc:select-option', { optionId })
+  const payload: { optionId: string; textInput?: string } = { optionId }
+  if (textInput !== undefined) payload.textInput = textInput
+  getSocket()?.emit('npc:select-option', payload)
+}
+
+function submitTextInput(): void {
+  if (!store.textInput || !textInputValue.value.trim()) return
+  const ti = store.textInput
+  selectOption(ti.submitId, textInputValue.value.trim(), textInputValue.value.trim())
+  textInputValue.value = ''
+}
+
+function cancelTextInput(): void {
+  if (!store.textInput) return
+  const ti = store.textInput
+  const cancelId = ti.cancelId || 'cancel'
+  const cancelText = ti.cancelText || 'Nevermind.'
+  selectOption(cancelId, cancelText)
+  textInputValue.value = ''
 }
 
 function close(): void {
@@ -106,6 +125,26 @@ function close(): void {
           <span class="npc-option-num">{{ i + 1 }}.</span>
           <span class="npc-option-text">{{ opt.text }}</span>
         </button>
+      </div>
+
+      <!-- Text input -->
+      <div v-else-if="store.hasTextInput" class="npc-text-input">
+        <input
+          v-model="textInputValue"
+          type="text"
+          class="npc-text-field"
+          :placeholder="store.textInput!.placeholder"
+          :maxlength="store.textInput!.maxLength"
+          @keydown.enter="submitTextInput"
+        />
+        <div class="npc-text-actions">
+          <button class="npc-option npc-text-submit" :disabled="!textInputValue.trim()" @click="submitTextInput">
+            <span class="npc-option-text">{{ store.textInput!.submitText }}</span>
+          </button>
+          <button class="npc-option npc-text-cancel" @click="cancelTextInput">
+            <span class="npc-option-text">{{ store.textInput!.cancelText || 'Nevermind.' }}</span>
+          </button>
+        </div>
       </div>
 
       <!-- Closing indicator -->
@@ -330,6 +369,47 @@ function close(): void {
 
 .npc-option:hover .npc-option-text {
   color: var(--color-gold-light);
+}
+
+/* ── Text input ── */
+
+.npc-text-input {
+  border-top: 1px solid var(--color-border);
+  padding: var(--space-sm) var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.npc-text-field {
+  width: 100%;
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--color-surface-dark);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: var(--font-size-md);
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.npc-text-field:focus {
+  border-color: var(--color-gold-dim);
+}
+
+.npc-text-field::placeholder {
+  color: var(--color-text-muted);
+}
+
+.npc-text-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.npc-text-submit:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 /* ── Closing indicator ── */
