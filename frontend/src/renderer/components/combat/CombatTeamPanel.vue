@@ -13,7 +13,7 @@ interface CombatantGroup {
 const props = defineProps<{
   areaId: string
   teamLabel: string
-  teamColor: 'blue' | 'red'
+  teamColor: 'blue' | 'red' | 'gold'
   combatants: CombatantView[]
   myCharId: number | null
   myRetainerIds: number[]
@@ -170,6 +170,7 @@ const groupedCombatants = computed<CombatantGroup[]>(() => {
 
 .combat-team-panel.team-blue .team-panel-title { color: #5b9bd5; }
 .combat-team-panel.team-red .team-panel-title { color: #e06c75; }
+.combat-team-panel.team-gold .team-panel-title { color: var(--color-gold, #c9a84c); }
 
 /* Cards */
 .team-panel-cards {

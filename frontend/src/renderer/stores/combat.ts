@@ -173,6 +173,7 @@ export const useCombatStore = defineStore('combat', () => {
 
   // Combat session state
   const sessionId = ref<number | null>(null)
+  const sessionIsFfa = ref(false)
   const combatants = ref<CombatantView[]>([])
   const turnOrder = ref<{ characterId: number; initiative: number; team: number }[]>([])
   const currentTurnCharacterId = ref<number | null>(null)
@@ -348,12 +349,14 @@ export const useCombatStore = defineStore('combat', () => {
 
   function initCombatSession(data: {
     sessionId: number
+    isFfa?: boolean
     combatants: CombatantView[]
     turnOrder: { characterId: number; initiative: number; team: number }[]
     currentTurnCharacterId: number
     currentRound: number
   }): void {
     sessionId.value = data.sessionId
+    sessionIsFfa.value = data.isFfa ?? false
     combatants.value = data.combatants
     turnOrder.value = data.turnOrder
     currentTurnCharacterId.value = data.currentTurnCharacterId
@@ -571,6 +574,7 @@ export const useCombatStore = defineStore('combat', () => {
 
   function clearCombatSession(): void {
     sessionId.value = null
+    sessionIsFfa.value = false
     combatants.value = []
     turnOrder.value = []
     currentTurnCharacterId.value = null
@@ -609,6 +613,7 @@ export const useCombatStore = defineStore('combat', () => {
     closePanel,
     // Combat session state
     sessionId,
+    sessionIsFfa,
     combatants,
     turnOrder,
     currentTurnCharacterId,

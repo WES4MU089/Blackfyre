@@ -18,6 +18,8 @@ const targetStore = useTargetStore()
 const myCharId = computed(() => characterStore.character?.id ?? null)
 const myRetainerIds = computed(() => combatStore.myRetainerIds)
 
+const isFfa = computed(() => combatStore.sessionIsFfa)
+
 const team1Combatants = computed(() =>
   combatStore.combatants.filter(c => c.team === 1)
 )
@@ -95,22 +97,43 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="combat-session-orchestrator">
-    <!-- Team Blue (left) -->
-    <CombatTeamPanel
-      area-id="combat-team-blue"
-      team-label="Team Blue"
-      team-color="blue"
-      :combatants="team1Combatants"
-      :my-char-id="myCharId"
-      :my-retainer-ids="myRetainerIds"
-      :selected-target-id="combatStore.selectedTargetId"
-      :current-turn-character-id="combatStore.currentTurnCharacterId"
-      @select="onSelectCombatant"
-      @hover-start="onHoverStart"
-      @hover-move="onHoverMove"
-      @hover-end="onHoverEnd"
-    />
+  <div class="combat-session-orchestrator" :class="{ 'ffa-layout': isFfa }">
+    <!-- FFA: single combatant panel (left) -->
+    <template v-if="isFfa">
+      <CombatTeamPanel
+        area-id="combat-team-ffa"
+        team-label="Combatants"
+        team-color="gold"
+        :combatants="combatStore.combatants"
+        :my-char-id="myCharId"
+        :my-retainer-ids="myRetainerIds"
+        :selected-target-id="combatStore.selectedTargetId"
+        :current-turn-character-id="combatStore.currentTurnCharacterId"
+        @select="onSelectCombatant"
+        @hover-start="onHoverStart"
+        @hover-move="onHoverMove"
+        @hover-end="onHoverEnd"
+      />
+    </template>
+
+    <!-- Standard: two team panels -->
+    <template v-else>
+      <!-- Team Blue (left) -->
+      <CombatTeamPanel
+        area-id="combat-team-blue"
+        team-label="Team Blue"
+        team-color="blue"
+        :combatants="team1Combatants"
+        :my-char-id="myCharId"
+        :my-retainer-ids="myRetainerIds"
+        :selected-target-id="combatStore.selectedTargetId"
+        :current-turn-character-id="combatStore.currentTurnCharacterId"
+        @select="onSelectCombatant"
+        @hover-start="onHoverStart"
+        @hover-move="onHoverMove"
+        @hover-end="onHoverEnd"
+      />
+    </template>
 
     <!-- Controls (center) -->
     <CombatControlPanel
@@ -118,8 +141,9 @@ onMounted(() => {
       @close="onClose"
     />
 
-    <!-- Team Red (right) -->
+    <!-- Team Red (right, standard only) -->
     <CombatTeamPanel
+      v-if="!isFfa"
       area-id="combat-team-red"
       team-label="Team Red"
       team-color="red"
