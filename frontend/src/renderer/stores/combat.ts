@@ -245,8 +245,6 @@ export const useCombatStore = defineStore('combat', () => {
   const allReady = computed(() => {
     if (!lobbyState.value || lobbyState.value.members.length < 2) return false
     if (lobbyState.value.isFfa) {
-      const players = lobbyState.value.members.filter(m => !m.isRetainer)
-      if (players.length < 3) return false
       return lobbyState.value.members.every(m => m.isReady)
     }
     const team1 = lobbyState.value.members.filter(m => m.team === 1)
