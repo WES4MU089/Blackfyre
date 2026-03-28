@@ -138,6 +138,19 @@ const row3Actions = computed<ActionDef[]>(() => [
 ])
 
 const showMendConfirm = ref(false)
+const showFriendlyFireConfirm = ref(false)
+const pendingFriendlyAction = ref<string | null>(null)
+
+function isTargetingAlly(actionKey: string): boolean {
+  if (actionKey !== 'attack' && actionKey !== 'grapple') return false
+  const targetId = combatStore.selectedTargetId
+  if (!targetId) return false
+  const actor = activeCombatant.value
+  if (!actor) return false
+  const target = combatStore.combatants.find(c => c.characterId === targetId)
+  if (!target) return false
+  return target.team === actor.team
+}
 
 function onAction(action: ActionDef): void {
   if (!action.enabled) return
@@ -145,7 +158,24 @@ function onAction(action: ActionDef): void {
     showMendConfirm.value = true
     return
   }
+  if (isTargetingAlly(action.key)) {
+    pendingFriendlyAction.value = action.key
+    showFriendlyFireConfirm.value = true
+    return
+  }
   submitAction(action.key, combatStore.selectedTargetId ?? undefined)
+}
+
+function confirmFriendlyFire(): void {
+  showFriendlyFireConfirm.value = false
+  const action = pendingFriendlyAction.value
+  pendingFriendlyAction.value = null
+  if (action) submitAction(action, combatStore.selectedTargetId ?? undefined)
+}
+
+function cancelFriendlyFire(): void {
+  showFriendlyFireConfirm.value = false
+  pendingFriendlyAction.value = null
 }
 
 function confirmMend(): void {
@@ -241,6 +271,22 @@ function onSkip(): void {
     </div>
 
     <!-- Mend confirmation overlay (not teleported — must stay inside pointer-events:auto ancestor) -->
+    <!-- Friendly fire confirmation -->
+    <div v-if="showFriendlyFireConfirm" class="mend-confirm-overlay">
+      <div class="mend-confirm-panel">
+        <p class="mend-confirm-text" style="color: var(--color-crimson-light)">
+          You are about to <strong>{{ pendingFriendlyAction }}</strong> an <strong>ally</strong>.
+          This will be treated as a hostile action.
+        </p>
+        <p class="mend-confirm-prompt">Are you certain?</p>
+        <div class="mend-confirm-actions">
+          <button class="mend-btn mend-btn-cancel" @click="cancelFriendlyFire">Stand Down</button>
+          <button class="mend-btn mend-btn-confirm" style="background: var(--color-crimson); border-color: var(--color-crimson)" @click="confirmFriendlyFire">Strike</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mend confirmation -->
     <div v-if="showMendConfirm" class="mend-confirm-overlay">
       <div class="mend-confirm-panel">
         <p class="mend-confirm-text">
