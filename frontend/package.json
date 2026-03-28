@@ -1,6 +1,6 @@
 {
   "name": "blackfyre-hud",
-  "version": "0.0.49",
+  "version": "0.0.50",
   "description": "Blackfyre RPG HUD Overlay for Second Life",
   "main": "./out/main/index.js",
   "scripts": {
