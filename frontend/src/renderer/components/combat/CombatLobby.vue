@@ -62,8 +62,32 @@ function onCancelLobby(): void {
   cancelLobby()
 }
 
-function onCreateLobby(spar: boolean = false, ffa: boolean = false): void {
-  createLobby(spar, ffa)
+// --- Lobby creation flow ---
+const createStep = ref<'none' | 'mode' | 'type' | 'team'>('none')
+const createMode = ref<'combat' | 'spar'>('combat')
+const createType = ref<'melee' | 'mounted' | 'dragon'>('melee')
+
+function startCreate(): void {
+  createStep.value = 'mode'
+}
+
+function selectMode(mode: 'combat' | 'spar'): void {
+  createMode.value = mode
+  createStep.value = 'type'
+}
+
+function selectType(type: 'melee' | 'mounted' | 'dragon'): void {
+  createType.value = type
+  createStep.value = 'team'
+}
+
+function selectTeamMode(ffa: boolean): void {
+  createStep.value = 'none'
+  createLobby(createMode.value === 'spar', ffa)
+}
+
+function cancelCreate(): void {
+  createStep.value = 'none'
 }
 
 function onRefreshLobbies(): void {
@@ -122,16 +146,42 @@ function onToggleRetainer(retainerId: number): void {
           <span class="lobby-region-name">{{ hudStore.simName || 'Unknown' }}</span>
         </div>
 
-        <div class="lobby-create-row">
-          <button class="btn-ornate btn-create" @click="onCreateLobby(false)">
+        <!-- Step 0: Start -->
+        <div v-if="createStep === 'none'" class="lobby-create-row">
+          <button class="btn-ornate btn-create" @click="startCreate">
             Create Lobby
           </button>
-          <button class="btn-ornate btn-spar" @click="onCreateLobby(true)">
-            Create Spar
-          </button>
-          <button class="btn-ornate btn-ffa" @click="onCreateLobby(false, true)">
-            Create FFA
-          </button>
+        </div>
+
+        <!-- Step 1: Combat or Spar -->
+        <div v-else-if="createStep === 'mode'" class="create-step">
+          <div class="create-step-label">Choose Mode</div>
+          <div class="lobby-create-row">
+            <button class="btn-ornate btn-create" @click="selectMode('combat')">Combat</button>
+            <button class="btn-ornate btn-spar" @click="selectMode('spar')">Spar</button>
+          </div>
+          <button class="create-back" @click="cancelCreate">&larr; Cancel</button>
+        </div>
+
+        <!-- Step 2: Combat Type -->
+        <div v-else-if="createStep === 'type'" class="create-step">
+          <div class="create-step-label">Choose Type</div>
+          <div class="lobby-create-row">
+            <button class="btn-ornate btn-create" @click="selectType('melee')">Melee</button>
+            <button class="btn-ornate btn-disabled" disabled title="Coming soon">Mounted</button>
+            <button class="btn-ornate btn-disabled" disabled title="Coming soon">Dragon</button>
+          </div>
+          <button class="create-back" @click="createStep = 'mode'">&larr; Back</button>
+        </div>
+
+        <!-- Step 3: Team or FFA -->
+        <div v-else-if="createStep === 'team'" class="create-step">
+          <div class="create-step-label">Choose Format</div>
+          <div class="lobby-create-row">
+            <button class="btn-ornate btn-create" @click="selectTeamMode(false)">Team</button>
+            <button class="btn-ornate btn-ffa" @click="selectTeamMode(true)">Free-For-All</button>
+          </div>
+          <button class="create-back" @click="createStep = 'type'">&larr; Back</button>
         </div>
 
         <div class="lobby-divider" />
@@ -524,6 +574,41 @@ function onToggleRetainer(retainerId: number): void {
 }
 .btn-ffa:hover {
   background: rgba(201, 168, 76, 0.1);
+}
+
+.btn-disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  border-color: var(--color-border-dim);
+  color: var(--color-text-muted);
+}
+
+.create-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.create-step-label {
+  font-family: var(--font-display);
+  font-size: var(--font-size-xs);
+  color: var(--color-gold-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  text-align: center;
+}
+
+.create-back {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  padding: 2px 0;
+  text-align: center;
+}
+.create-back:hover {
+  color: var(--color-text);
 }
 
 .ffa-container {
