@@ -10,7 +10,7 @@ const props = defineProps<{
   isMyRetainer: boolean
   isSelected: boolean
   isCurrentTurn: boolean
-  teamColor: 'blue' | 'red'
+  teamColor: 'blue' | 'red' | 'gold'
 }>()
 
 const emit = defineEmits<{
