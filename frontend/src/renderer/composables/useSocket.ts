@@ -11,6 +11,7 @@ import { useNpcDialogStore, type DialogPayload } from '@/stores/npcDialog'
 import { useAilmentsStore } from '@/stores/ailments'
 import { useShopStore, type ShopOpenPayload } from '@/stores/shop'
 import { useContainerStore, type ContainerOpenPayload } from '@/stores/container'
+import { useVaultStore, type VaultOpenPayload } from '@/stores/vault'
 import { useAuthStore } from '@/stores/auth'
 import { useAdminStore } from '@/stores/admin'
 import { useNotificationStore } from '@/stores/notifications'
@@ -466,6 +467,33 @@ export function useSocket() {
     socket.on('container:renamed', (data: { containerId: number; name: string }) => {
       if (containerStore.containerId === data.containerId) {
         containerStore.setName(data.name)
+      }
+    })
+
+    // --- Vault events ---
+    const vaultStore = useVaultStore()
+
+    socket.on('vault:open', (data: VaultOpenPayload) => {
+      vaultStore.openVault(data)
+      if (!hudStore.isPanelOpen('inventory')) {
+        hudStore.toggleSystemPanel('inventory')
+      }
+    })
+
+    socket.on('vault:updated', (data: { items: VaultOpenPayload['items'] }) => {
+      vaultStore.updateItems(data.items)
+    })
+
+    socket.on('vault:upgraded', (data: { tier: number; slots: number; message: string }) => {
+      vaultStore.setTier(data.tier, data.slots)
+      vaultStore.setMessage(true, data.message)
+    })
+
+    socket.on('vault:error', (data: { message: string }) => {
+      if (vaultStore.isOpen) {
+        vaultStore.setMessage(false, data.message)
+      } else {
+        hudStore.addNotification('danger', 'Vault', data.message)
       }
     })
 

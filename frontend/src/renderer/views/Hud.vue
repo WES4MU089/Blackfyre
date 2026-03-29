@@ -23,6 +23,7 @@ import CombatSession from '@/components/combat/CombatSession.vue'
 import NPCDialog from '@/components/npc/NPCDialog.vue'
 import ShopPanel from '@/components/shop/ShopPanel.vue'
 import ContainerPanel from '@/components/hud/ContainerPanel.vue'
+import VaultPanel from '@/components/hud/VaultPanel.vue'
 import RetainerPanel from '@/components/retainers/RetainerPanel.vue'
 import RetainerHire from '@/components/retainers/RetainerHire.vue'
 import AdminPanel from '@/components/admin/AdminPanel.vue'
@@ -40,6 +41,7 @@ import { useCombatStore } from '@/stores/combat'
 import { useNpcDialogStore } from '@/stores/npcDialog'
 import { useShopStore } from '@/stores/shop'
 import { useContainerStore } from '@/stores/container'
+import { useVaultStore } from '@/stores/vault'
 import { useChatStore } from '@/stores/chat'
 import { useTargetStore } from '@/stores/target'
 import '@/styles/hud.css'
@@ -51,6 +53,7 @@ const combatStore = useCombatStore()
 const npcDialogStore = useNpcDialogStore()
 const shopStore = useShopStore()
 const containerStore = useContainerStore()
+const vaultStore = useVaultStore()
 const chatStore = useChatStore()
 const adminStore = useAdminStore()
 const socialStore = useSocialStore()
@@ -170,8 +173,9 @@ onMounted(async () => {
     <TargetPanel v-if="targetStore.target" />
 
     <!-- System panel overlay -->
-    <div v-if="hudStore.openSystemPanels.size > 0 || combatStore.activeView !== 'none' || adminStore.isOpen || socialStore.isOpen || containerStore.isOpen" class="hud-system-overlay">
+    <div v-if="hudStore.openSystemPanels.size > 0 || combatStore.activeView !== 'none' || adminStore.isOpen || socialStore.isOpen || containerStore.isOpen || vaultStore.isOpen" class="hud-system-overlay">
       <ContainerPanel v-if="containerStore.isOpen" />
+      <VaultPanel v-if="vaultStore.isOpen" />
       <InventoryPanel v-if="hudStore.isPanelOpen('inventory')" />
       <CharacterPanel v-if="hudStore.isPanelOpen('character')" />
       <WikiPanel v-if="hudStore.isPanelOpen('wiki')" />
