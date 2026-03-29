@@ -12,6 +12,7 @@ import { useAilmentsStore } from '@/stores/ailments'
 import { useShopStore, type ShopOpenPayload } from '@/stores/shop'
 import { useContainerStore, type ContainerOpenPayload } from '@/stores/container'
 import { useVaultStore, type VaultOpenPayload } from '@/stores/vault'
+import { useLootStore, type LootPoolData } from '@/stores/loot'
 import { useAuthStore } from '@/stores/auth'
 import { useAdminStore } from '@/stores/admin'
 import { useNotificationStore } from '@/stores/notifications'
@@ -496,6 +497,36 @@ export function useSocket() {
         hudStore.addNotification('danger', 'Vault', data.message)
       }
     })
+
+    // --- Loot events ---
+    const lootStore = useLootStore()
+
+    socket.on('loot:available', (data: LootPoolData) => {
+      lootStore.openLoot(data)
+      hudStore.addNotification('info', 'Loot', 'Spoils of war available for claiming!')
+    })
+
+    socket.on('loot:resolved', (data: LootPoolData) => {
+      lootStore.setResolved(data)
+    })
+
+    // Listen for ready button clicks from the loot panel
+    window.addEventListener('loot:ready', ((e: CustomEvent) => {
+      if (e.detail?.poolId && socket) {
+        socket.emit('loot:ready', { poolId: e.detail.poolId })
+      }
+    }) as EventListener)
+
+    // Listen for claim toggles
+    window.addEventListener('loot:toggle-claim', ((e: CustomEvent) => {
+      if (e.detail?.poolId && e.detail?.itemId && socket) {
+        if (e.detail.claimed) {
+          socket.emit('loot:claim', { poolId: e.detail.poolId, itemId: e.detail.itemId })
+        } else {
+          socket.emit('loot:unclaim', { poolId: e.detail.poolId, itemId: e.detail.itemId })
+        }
+      }
+    }) as EventListener)
 
     // --- Finances updates ---
     socket.on('finances:changed', (data: Record<string, number>) => {
