@@ -23,9 +23,9 @@ const { isDragging: isItemDragging, dragPayload } = useItemDrag()
 const TOTAL_SLOTS = 25
 
 // Currency denominations: 1 Dragon = 100 Stags, 1 Stag = 100 Stars
-const dragons = computed(() => Math.floor(characterStore.finances.cash / 10000))
-const stags = computed(() => Math.floor((characterStore.finances.cash % 10000) / 100))
-const stars = computed(() => characterStore.finances.cash % 100)
+const dragons = computed(() => Math.floor(characterStore.finances.purse / 10000))
+const stags = computed(() => Math.floor((characterStore.finances.purse % 10000) / 100))
+const stars = computed(() => characterStore.finances.purse % 100)
 
 // Map inventory items by slot number (1-25)
 const slotMap = computed(() => {

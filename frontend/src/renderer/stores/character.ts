@@ -11,10 +11,8 @@ export interface Vitals {
 }
 
 export interface Finances {
-  cash: number
-  bank: number
-  crypto: number
-  dirty_money: number
+  purse: number
+  vault: number
 }
 
 export interface CharacterInfo {
@@ -24,6 +22,7 @@ export interface CharacterInfo {
   backstory?: string
   portrait_url?: string
   created_at: string
+  free_retainer_token?: number | null
 }
 
 export interface Job {
@@ -116,6 +115,7 @@ export interface RetainerTierInfo {
   armorKey: string | null
   shieldKey: string | null
   description: string | null
+  isFree?: boolean
 }
 
 export interface PerkSlot {
@@ -167,10 +167,8 @@ export const useCharacterStore = defineStore('character', () => {
     armor: 0,
   })
   const finances = ref<Finances>({
-    cash: 0,
-    bank: 0,
-    crypto: 0,
-    dirty_money: 0
+    purse: 0,
+    vault: 0
   })
   const jobs = ref<Job[]>([])
   const activeEffects = ref<StatusEffect[]>([])
@@ -243,10 +241,8 @@ export const useCharacterStore = defineStore('character', () => {
     if (data.finances) {
       const f = data.finances as Record<string, number>
       finances.value = {
-        cash: f.cash ?? 0,
-        bank: f.bank ?? 0,
-        crypto: f.crypto ?? 0,
-        dirty_money: f.dirty_money ?? 0
+        purse: f.purse ?? 0,
+        vault: f.vault ?? 0
       }
     }
     if (data.jobs) jobs.value = data.jobs as Job[]
@@ -269,10 +265,8 @@ export const useCharacterStore = defineStore('character', () => {
   }
 
   function updateFinances(data: Record<string, number>): void {
-    if (data.cash !== undefined) finances.value.cash = data.cash
-    if (data.bank !== undefined) finances.value.bank = data.bank
-    if (data.crypto !== undefined) finances.value.crypto = data.crypto
-    if (data.dirty_money !== undefined) finances.value.dirty_money = data.dirty_money
+    if (data.purse !== undefined) finances.value.purse = data.purse
+    if (data.vault !== undefined) finances.value.vault = data.vault
   }
 
   function setInventory(items: unknown[]): void {
@@ -822,7 +816,7 @@ export const useCharacterStore = defineStore('character', () => {
     segmentsPerLevel.value = 10
     unspentAptitudePoints.value = 0
     vitals.value = { health: 100, maxHealth: 100, armor: 0 }
-    finances.value = { cash: 0, bank: 0, crypto: 0, dirty_money: 0 }
+    finances.value = { purse: 0, vault: 0 }
     jobs.value = []
     activeEffects.value = []
     deathState.value = 'alive'

@@ -24,7 +24,7 @@ export interface ShopOpenPayload {
   npcName: string
   npcType: string
   items: ShopItem[]
-  cash: number
+  purse: number
 }
 
 export const useShopStore = defineStore('shop', () => {
@@ -66,7 +66,7 @@ export const useShopStore = defineStore('shop', () => {
     npcName.value = data.npcName
     npcType.value = data.npcType
     items.value = data.items
-    playerCash.value = data.cash
+    playerCash.value = data.purse
     buyingItemKey.value = null
     lastMessage.value = null
 

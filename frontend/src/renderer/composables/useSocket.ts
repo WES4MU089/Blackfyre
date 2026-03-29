@@ -310,10 +310,13 @@ export function useSocket() {
     })
 
     socket.on('combat:session-end', (data: { sessionId: number; winningTeam: number | null }) => {
-      // Sync combat health back to character store before processing end
-      const myCombatant = combatStore.myCombatant
-      if (myCombatant) {
-        characterStore.updateVitals({ health: myCombatant.currentHealth })
+      // Sync combat health back to character store — skip for spars (backend restores pre-spar HP)
+      const isSpar = combatStore.lobbyState?.isSpar ?? false
+      if (!isSpar) {
+        const myCombatant = combatStore.myCombatant
+        if (myCombatant) {
+          characterStore.updateVitals({ health: myCombatant.currentHealth })
+        }
       }
       combatStore.processSessionEnd(data)
       // Persistent notification + toast handled by notification:new from server
@@ -424,10 +427,10 @@ export function useSocket() {
       shopStore.openShop(data)
     })
 
-    socket.on('shop:buy-result', (data: { success: boolean; message: string; itemName?: string; cash?: number }) => {
+    socket.on('shop:buy-result', (data: { success: boolean; message: string; itemName?: string; purse?: number }) => {
       shopStore.setMessage(data.success, data.message)
-      if (data.success && data.cash != null) {
-        shopStore.updateCash(data.cash)
+      if (data.success && data.purse != null) {
+        shopStore.updateCash(data.purse)
       }
     })
 
@@ -469,9 +472,9 @@ export function useSocket() {
     // --- Finances updates ---
     socket.on('finances:changed', (data: Record<string, number>) => {
       characterStore.updateFinances(data)
-      // Also update shop cash if shop is open
-      if (shopStore.isOpen && data.cash != null) {
-        shopStore.updateCash(data.cash)
+      // Also update shop purse if shop is open
+      if (shopStore.isOpen && data.purse != null) {
+        shopStore.updateCash(data.purse)
       }
     })
 
