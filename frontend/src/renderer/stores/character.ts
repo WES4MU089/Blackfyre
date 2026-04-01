@@ -203,7 +203,7 @@ export const useCharacterStore = defineStore('character', () => {
   // Respec state
   const showRespecModal = ref(false)
   const respecEnabled = ref(false)
-  const respecInfo = ref<{ lockedAptitudes: Record<string, number>; freePoints: number; levelUpPoints: number } | null>(null)
+  const respecInfo = ref<{ lockedAptitudes: Record<string, number>; freePoints: number; levelUpPoints: number; aptitudeCaps: Record<string, number>; age: number } | null>(null)
 
   // Retainer management state
   const retainerDetail = ref<RetainerDetailInfo | null>(null)

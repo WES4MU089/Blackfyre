@@ -7,8 +7,6 @@ import { acquireInteractionLock, releaseInteractionLock } from '@/composables/us
 const characterStore = useCharacterStore()
 const hudStore = useHudStore()
 
-const MAX_PER_APT = 7
-
 const APTITUDE_NAMES: Record<string, string> = {
   prowess: 'Prowess',
   fortitude: 'Fortitude',
@@ -30,6 +28,7 @@ const info = computed(() => characterStore.respecInfo)
 const locked = computed(() => info.value?.lockedAptitudes ?? {})
 const freePoints = computed(() => info.value?.freePoints ?? 0)
 const levelUpPoints = computed(() => info.value?.levelUpPoints ?? 0)
+const aptCaps = computed(() => info.value?.aptitudeCaps ?? {})
 
 // Working copy of aptitudes for editing
 const draft = ref<Record<string, number>>({})
@@ -69,7 +68,8 @@ const hasChanged = computed(() => {
 })
 
 function increment(key: string) {
-  if (draft.value[key] < MAX_PER_APT && pointsRemaining.value > 0) {
+  const cap = aptCaps.value[key] ?? 7
+  if (draft.value[key] < cap && pointsRemaining.value > 0) {
     draft.value[key]++
   }
 }
@@ -163,7 +163,7 @@ onBeforeUnmount(() => {
                 <span class="respec-apt-value">{{ draft[key] }}</span>
                 <button
                   class="respec-apt-btn"
-                  :disabled="draft[key] >= MAX_PER_APT || pointsRemaining <= 0"
+                  :disabled="draft[key] >= (aptCaps[key] ?? 7) || pointsRemaining <= 0"
                   @click="increment(key)"
                 >
                   +
@@ -171,7 +171,7 @@ onBeforeUnmount(() => {
               </div>
               <div class="respec-apt-pips">
                 <span
-                  v-for="i in MAX_PER_APT"
+                  v-for="i in (aptCaps[key] ?? 7)"
                   :key="i"
                   class="respec-pip"
                   :class="{ 'respec-pip--filled': i <= draft[key] }"
