@@ -824,7 +824,8 @@ export const useCharacterStore = defineStore('character', () => {
       const res = await fetch(`${API_BASE}/api/game-settings`)
       if (res.ok) {
         const data = await res.json()
-        respecEnabled.value = data.free_respec_enabled === true
+        const val = data.settings?.free_respec_enabled ?? data.free_respec_enabled
+        respecEnabled.value = val === '1' || val === 'true' || val === true
       }
     } catch { /* swallow */ }
   }
