@@ -200,6 +200,10 @@ export const useCharacterStore = defineStore('character', () => {
   const availablePerkSlot = ref<number | null>(null)
   const showPerkSelection = ref(false)
 
+  // Respec state
+  const showRespecModal = ref(false)
+  const respecEnabled = ref(false)
+
   // Retainer management state
   const retainerDetail = ref<RetainerDetailInfo | null>(null)
   const retainerHireTier = ref<RetainerTierInfo | null>(null)
@@ -254,6 +258,9 @@ export const useCharacterStore = defineStore('character', () => {
     if (data.equipment) equipment.value = data.equipment as Record<string, EquippedItem | null>
     if (data.retainers) retainers.value = data.retainers as RetainerInfo[]
     if (data.perks) perks.value = data.perks as PerkSlot[]
+
+    // Check respec availability in background
+    checkRespecEnabled()
   }
 
   function setCharacterList(list: CharacterListEntry[]): void {
@@ -802,6 +809,57 @@ export const useCharacterStore = defineStore('character', () => {
     showPerkSelection.value = false
   }
 
+  // --- Respec ---
+
+  function openRespecModal(): void {
+    showRespecModal.value = true
+  }
+
+  function closeRespecModal(): void {
+    showRespecModal.value = false
+  }
+
+  async function checkRespecEnabled(): Promise<void> {
+    try {
+      const res = await fetch(`${API_BASE}/api/game-settings`)
+      if (res.ok) {
+        const data = await res.json()
+        respecEnabled.value = data.free_respec_enabled === true
+      }
+    } catch { /* swallow */ }
+  }
+
+  async function submitRespec(
+    newAptitudes: Record<string, number>,
+  ): Promise<{ success: boolean; error?: string }> {
+    const charId = character.value?.id
+    if (!charId) return { success: false, error: 'No character loaded' }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/aptitudes/character/${charId}/respec`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ aptitudes: newAptitudes }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        return { success: false, error: data.error ?? 'Respec failed' }
+      }
+
+      // Update aptitudes from the submitted values
+      for (const apt of aptitudes.value) {
+        if (newAptitudes[apt.id] != null) {
+          apt.baseValue = newAptitudes[apt.id]
+          apt.currentValue = newAptitudes[apt.id]
+        }
+      }
+      closeRespecModal()
+      return { success: true }
+    } catch {
+      return { success: false, error: 'Network error' }
+    }
+  }
+
   function clearPerks(): void {
     perks.value = []
     availablePerkSlot.value = null
@@ -831,6 +889,8 @@ export const useCharacterStore = defineStore('character', () => {
     perks.value = []
     availablePerkSlot.value = null
     showPerkSelection.value = false
+    showRespecModal.value = false
+    respecEnabled.value = false
   }
 
   return {
@@ -893,6 +953,12 @@ export const useCharacterStore = defineStore('character', () => {
     openPerkSelection,
     closePerkSelection,
     clearPerks,
+    showRespecModal,
+    respecEnabled,
+    openRespecModal,
+    closeRespecModal,
+    checkRespecEnabled,
+    submitRespec,
     clear
   }
 })

@@ -15,6 +15,7 @@ import ItemContextMenu from './ItemContextMenu.vue'
 import StatsPanel from './StatsPanel.vue'
 import HealthPanel from './HealthPanel.vue'
 import PerkSelectionModal from './PerkSelectionModal.vue'
+import RespecModal from './RespecModal.vue'
 import paperdollImg from '@res/images/art/paperdoll.png'
 import { getPerkIcon, PERK_SLOT_LEVELS } from '@/utils/perkIcons'
 import type { PerkSlot } from '@/stores/character'
@@ -491,7 +492,16 @@ function close() {
 
       <!-- Aptitudes section -->
       <div class="char-aptitudes">
-        <div class="aptitudes-label">Aptitudes</div>
+        <div class="aptitudes-label-row">
+          <div class="aptitudes-label">Aptitudes</div>
+          <button
+            v-if="characterStore.respecEnabled"
+            class="respec-trigger-btn"
+            @click="characterStore.openRespecModal()"
+          >
+            Respec
+          </button>
+        </div>
 
         <!-- Unspent points banner -->
         <div v-if="characterStore.unspentAptitudePoints > 0" class="unspent-banner">
@@ -688,6 +698,9 @@ function close() {
 
   <!-- Perk selection modal -->
   <PerkSelectionModal v-if="characterStore.showPerkSelection" />
+
+  <!-- Respec modal -->
+  <RespecModal v-if="characterStore.showRespecModal" />
 </template>
 
 <style scoped>
@@ -1372,13 +1385,39 @@ function close() {
   border-radius: 2px;
 }
 
+.aptitudes-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-xs);
+}
+
 .aptitudes-label {
   font-family: var(--font-display);
   font-size: 9px;
   color: var(--color-gold-dim);
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  margin-bottom: var(--space-xs);
+}
+
+.respec-trigger-btn {
+  font-family: var(--font-display);
+  font-size: 8px;
+  color: var(--color-gold-dim);
+  background: rgba(201, 168, 76, 0.08);
+  border: 1px solid var(--color-border-dim);
+  border-radius: 3px;
+  padding: 1px 6px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  transition: all 0.15s ease;
+}
+
+.respec-trigger-btn:hover {
+  color: var(--color-gold);
+  border-color: var(--color-gold-dim);
+  background: rgba(201, 168, 76, 0.15);
 }
 
 /* Unspent points banner */
