@@ -203,6 +203,7 @@ export const useCharacterStore = defineStore('character', () => {
   // Respec state
   const showRespecModal = ref(false)
   const respecEnabled = ref(false)
+  const respecInfo = ref<{ lockedAptitudes: Record<string, number>; freePoints: number; levelUpPoints: number } | null>(null)
 
   // Retainer management state
   const retainerDetail = ref<RetainerDetailInfo | null>(null)
@@ -811,12 +812,23 @@ export const useCharacterStore = defineStore('character', () => {
 
   // --- Respec ---
 
-  function openRespecModal(): void {
+  async function openRespecModal(): Promise<void> {
+    const charId = character.value?.id
+    if (!charId) return
+    try {
+      const res = await fetch(`${API_BASE}/api/aptitudes/character/${charId}/respec-info`, {
+        headers: { 'Content-Type': 'application/json' },
+      })
+      if (res.ok) {
+        respecInfo.value = await res.json()
+      }
+    } catch { /* swallow */ }
     showRespecModal.value = true
   }
 
   function closeRespecModal(): void {
     showRespecModal.value = false
+    respecInfo.value = null
   }
 
   async function checkRespecEnabled(): Promise<void> {
@@ -858,7 +870,7 @@ export const useCharacterStore = defineStore('character', () => {
       if (data.perksCleared) {
         perks.value = []
       }
-      unspentAptitudePoints.value = 0
+      unspentAptitudePoints.value = data.unspentAptitudePoints ?? 0
       closeRespecModal()
       return { success: true }
     } catch {
@@ -897,6 +909,7 @@ export const useCharacterStore = defineStore('character', () => {
     showPerkSelection.value = false
     showRespecModal.value = false
     respecEnabled.value = false
+    respecInfo.value = null
   }
 
   return {
@@ -961,6 +974,7 @@ export const useCharacterStore = defineStore('character', () => {
     clearPerks,
     showRespecModal,
     respecEnabled,
+    respecInfo,
     openRespecModal,
     closeRespecModal,
     checkRespecEnabled,

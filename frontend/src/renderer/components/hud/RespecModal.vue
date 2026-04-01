@@ -7,16 +7,7 @@ import { acquireInteractionLock, releaseInteractionLock } from '@/composables/us
 const characterStore = useCharacterStore()
 const hudStore = useHudStore()
 
-const BASE_POINTS = 28
-const MIN_PER_APT = 1
-const MAX_PER_APT = 10
-const MAX_AT_10 = 1
-const MAX_AT_9_PLUS = 2
-
-// Total budget = 28 base + (level - 1) level-up points + any unspent points
-const totalPoints = computed(() =>
-  BASE_POINTS + (characterStore.level - 1) + characterStore.unspentAptitudePoints
-)
+const MAX_PER_APT = 7
 
 const APTITUDE_NAMES: Record<string, string> = {
   prowess: 'Prowess',
@@ -35,27 +26,37 @@ const APTITUDE_ORDER = [
   'presence', 'lore', 'faith', 'craftsmanship',
 ]
 
+const info = computed(() => characterStore.respecInfo)
+const locked = computed(() => info.value?.lockedAptitudes ?? {})
+const freePoints = computed(() => info.value?.freePoints ?? 0)
+const levelUpPoints = computed(() => info.value?.levelUpPoints ?? 0)
+
 // Working copy of aptitudes for editing
 const draft = ref<Record<string, number>>({})
 const isSubmitting = ref(false)
 const errorMsg = ref('')
 
-// Initialize draft to minimum (1 each) so player redistributes all points
+// Initialize draft to template locked minimums
 function initDraft() {
   const d: Record<string, number> = {}
   for (const key of APTITUDE_ORDER) {
-    d[key] = MIN_PER_APT
+    d[key] = locked.value[key] ?? 1
   }
   draft.value = d
 }
 
 initDraft()
 
-const pointsUsed = computed(() =>
-  Object.values(draft.value).reduce((sum, v) => sum + v, 0)
-)
+// Only count points ABOVE the locked minimums as "used free points"
+const usedFreePoints = computed(() => {
+  let used = 0
+  for (const key of APTITUDE_ORDER) {
+    used += (draft.value[key] ?? 0) - (locked.value[key] ?? 1)
+  }
+  return used
+})
 
-const pointsRemaining = computed(() => totalPoints.value - pointsUsed.value)
+const pointsRemaining = computed(() => freePoints.value - usedFreePoints.value)
 
 const isValid = computed(() => pointsRemaining.value === 0)
 
@@ -67,20 +68,15 @@ const hasChanged = computed(() => {
   return false
 })
 
-// Hard-cap tier check
-const at10Count = computed(() => Object.values(draft.value).filter(v => v >= 10).length)
-const at9PlusCount = computed(() => Object.values(draft.value).filter(v => v >= 9).length)
-
 function increment(key: string) {
-  const val = draft.value[key]
-  if (val >= MAX_PER_APT || pointsRemaining.value <= 0) return
-  if (val + 1 >= 10 && at10Count.value >= MAX_AT_10 && val < 10) return
-  if (val + 1 >= 9 && at9PlusCount.value >= MAX_AT_9_PLUS && val < 9) return
-  draft.value[key]++
+  if (draft.value[key] < MAX_PER_APT && pointsRemaining.value > 0) {
+    draft.value[key]++
+  }
 }
 
 function decrement(key: string) {
-  if (draft.value[key] > MIN_PER_APT) {
+  const min = locked.value[key] ?? 1
+  if (draft.value[key] > min) {
     draft.value[key]--
   }
 }
@@ -131,7 +127,7 @@ onBeforeUnmount(() => {
       <div class="respec-modal">
         <div class="respec-header">
           <h2 class="respec-title">Respec Aptitudes</h2>
-          <span class="respec-subtitle">Redistribute your {{ totalPoints }} aptitude points. Perks will be cleared.</span>
+          <span class="respec-subtitle">Redistribute your {{ freePoints }} free points. Perks will be cleared.{{ levelUpPoints > 0 ? ` ${levelUpPoints} level-up point${levelUpPoints === 1 ? '' : 's'} will be returned to allocate.` : '' }}</span>
           <button class="respec-close" @click="close">&times;</button>
         </div>
 
@@ -159,7 +155,7 @@ onBeforeUnmount(() => {
               <div class="respec-apt-controls">
                 <button
                   class="respec-apt-btn"
-                  :disabled="draft[key] <= MIN_PER_APT"
+                  :disabled="draft[key] <= (locked[key] ?? 1)"
                   @click="decrement(key)"
                 >
                   &minus;
