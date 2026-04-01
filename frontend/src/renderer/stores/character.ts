@@ -854,6 +854,11 @@ export const useCharacterStore = defineStore('character', () => {
           apt.currentValue = newAptitudes[apt.id]
         }
       }
+      // Perks are cleared on respec
+      if (data.perksCleared) {
+        perks.value = []
+      }
+      unspentAptitudePoints.value = 0
       closeRespecModal()
       return { success: true }
     } catch {

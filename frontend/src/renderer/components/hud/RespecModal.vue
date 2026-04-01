@@ -7,9 +7,16 @@ import { acquireInteractionLock, releaseInteractionLock } from '@/composables/us
 const characterStore = useCharacterStore()
 const hudStore = useHudStore()
 
-const TOTAL_POINTS = 28
+const BASE_POINTS = 28
 const MIN_PER_APT = 1
-const MAX_PER_APT = 7
+const MAX_PER_APT = 10
+const MAX_AT_10 = 1
+const MAX_AT_9_PLUS = 2
+
+// Total budget = 28 base + (level - 1) level-up points + any unspent points
+const totalPoints = computed(() =>
+  BASE_POINTS + (characterStore.level - 1) + characterStore.unspentAptitudePoints
+)
 
 const APTITUDE_NAMES: Record<string, string> = {
   prowess: 'Prowess',
@@ -33,12 +40,11 @@ const draft = ref<Record<string, number>>({})
 const isSubmitting = ref(false)
 const errorMsg = ref('')
 
-// Initialize draft from current character aptitudes
+// Initialize draft to minimum (1 each) so player redistributes all points
 function initDraft() {
   const d: Record<string, number> = {}
   for (const key of APTITUDE_ORDER) {
-    const apt = characterStore.aptitudes.find(a => a.id === key)
-    d[key] = apt ? apt.baseValue : 1
+    d[key] = MIN_PER_APT
   }
   draft.value = d
 }
@@ -49,22 +55,28 @@ const pointsUsed = computed(() =>
   Object.values(draft.value).reduce((sum, v) => sum + v, 0)
 )
 
-const pointsRemaining = computed(() => TOTAL_POINTS - pointsUsed.value)
+const pointsRemaining = computed(() => totalPoints.value - pointsUsed.value)
 
 const isValid = computed(() => pointsRemaining.value === 0)
 
 const hasChanged = computed(() => {
   for (const key of APTITUDE_ORDER) {
     const apt = characterStore.aptitudes.find(a => a.id === key)
-    if (apt && draft.value[key] !== apt.baseValue) return true
+    if (apt && draft.value[key] !== apt.currentValue) return true
   }
   return false
 })
 
+// Hard-cap tier check
+const at10Count = computed(() => Object.values(draft.value).filter(v => v >= 10).length)
+const at9PlusCount = computed(() => Object.values(draft.value).filter(v => v >= 9).length)
+
 function increment(key: string) {
-  if (draft.value[key] < MAX_PER_APT && pointsRemaining.value > 0) {
-    draft.value[key]++
-  }
+  const val = draft.value[key]
+  if (val >= MAX_PER_APT || pointsRemaining.value <= 0) return
+  if (val + 1 >= 10 && at10Count.value >= MAX_AT_10 && val < 10) return
+  if (val + 1 >= 9 && at9PlusCount.value >= MAX_AT_9_PLUS && val < 9) return
+  draft.value[key]++
 }
 
 function decrement(key: string) {
@@ -119,7 +131,7 @@ onBeforeUnmount(() => {
       <div class="respec-modal">
         <div class="respec-header">
           <h2 class="respec-title">Respec Aptitudes</h2>
-          <span class="respec-subtitle">Redistribute your {{ TOTAL_POINTS }} aptitude points</span>
+          <span class="respec-subtitle">Redistribute your {{ totalPoints }} aptitude points. Perks will be cleared.</span>
           <button class="respec-close" @click="close">&times;</button>
         </div>
 
