@@ -111,7 +111,7 @@ function cancel(): void {
       <!-- Step 1: Name -->
       <div v-if="step === 'name'" class="hire-body">
         <p class="hire-desc">{{ tier.description }}</p>
-        <div class="hire-cost">Cost: <span class="gold-text">{{ tier.hireCost.toLocaleString() }} stars</span></div>
+        <div class="hire-cost">Cost: <span class="gold-text">{{ tier.isFree ? 'FREE (retainer token)' : `${tier.hireCost.toLocaleString()} stars` }}</span></div>
         <div class="hire-field">
           <label class="hire-label">Retainer Name</label>
           <input
@@ -170,7 +170,7 @@ function cancel(): void {
           </div>
           <div class="confirm-row">
             <span class="confirm-label">Cost</span>
-            <span class="confirm-value gold-text">{{ tier.hireCost.toLocaleString() }} stars</span>
+            <span class="confirm-value gold-text">{{ tier.isFree ? 'FREE (retainer token)' : `${tier.hireCost.toLocaleString()} stars` }}</span>
           </div>
           <div class="confirm-divider" />
           <div v-for="key in APTITUDE_KEYS" :key="key" class="confirm-row">
