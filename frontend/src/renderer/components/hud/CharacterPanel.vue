@@ -16,6 +16,7 @@ import StatsPanel from './StatsPanel.vue'
 import HealthPanel from './HealthPanel.vue'
 import PerkSelectionModal from './PerkSelectionModal.vue'
 import RespecModal from './RespecModal.vue'
+import RetainerDetail from '@/components/retainers/RetainerDetail.vue'
 import paperdollImg from '@res/images/art/paperdoll.png'
 import { getPerkIcon, PERK_SLOT_LEVELS } from '@/utils/perkIcons'
 import type { PerkSlot } from '@/stores/character'
@@ -191,6 +192,12 @@ function onDismissClick(retainerId: number): void {
 
 function cancelDismiss(): void {
   confirmDismissId.value = null
+}
+
+const showRetainerDetail = computed(() => characterStore.retainerDetail !== null)
+
+function viewRetainer(retainerId: number): void {
+  characterStore.fetchRetainerDetail(retainerId)
 }
 
 const { isDragging: isItemDragging, dragPayload } = useItemDrag()
@@ -566,7 +573,11 @@ function close() {
 
     <!-- Retainer tab -->
     <template v-if="activeTab === 'retainer'">
-      <div class="retainer-area">
+      <!-- Detail view -->
+      <RetainerDetail v-if="showRetainerDetail" />
+
+      <!-- List view -->
+      <div v-else class="retainer-area">
         <div class="retainer-header-row">
           <span class="retainer-label">Retainers</span>
           <span class="retainer-cap">{{ retainerCount }} / 4</span>
@@ -597,14 +608,20 @@ function close() {
             <div class="retainer-card-footer">
               <span v-if="!ret.isAvailable" class="retainer-status retainer-status--wounded">Wounded</span>
               <span v-else class="retainer-status retainer-status--ready">Ready</span>
-              <button
-                class="retainer-dismiss-btn"
-                :class="{ 'retainer-dismiss-btn--confirm': confirmDismissId === ret.id }"
-                @click.stop="onDismissClick(ret.id)"
-                @mouseleave="cancelDismiss"
-              >
-                {{ confirmDismissId === ret.id ? 'Confirm?' : 'Dismiss' }}
-              </button>
+              <div class="retainer-card-actions">
+                <button
+                  class="retainer-view-btn"
+                  @click.stop="viewRetainer(ret.id)"
+                >View</button>
+                <button
+                  class="retainer-dismiss-btn"
+                  :class="{ 'retainer-dismiss-btn--confirm': confirmDismissId === ret.id }"
+                  @click.stop="onDismissClick(ret.id)"
+                  @mouseleave="cancelDismiss"
+                >
+                  {{ confirmDismissId === ret.id ? 'Confirm?' : 'Dismiss' }}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1620,6 +1637,32 @@ function close() {
   border-color: rgba(139, 26, 26, 0.6);
   color: var(--color-crimson-light);
   background: rgba(139, 26, 26, 0.1);
+}
+
+.retainer-card-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.retainer-view-btn {
+  padding: 1px 8px;
+  background: none;
+  border: 1px solid var(--color-border-dim);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-display);
+  font-size: 8px;
+  color: var(--color-text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.retainer-view-btn:hover {
+  border-color: var(--color-gold);
+  color: var(--color-gold);
+  background: rgba(201, 168, 76, 0.06);
 }
 
 /* Empty state */
