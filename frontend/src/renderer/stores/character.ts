@@ -143,7 +143,7 @@ export interface RetainerDetailInfo {
   trainingCost: number | null
   aptitudes: { key: string; baseValue: number; currentValue: number }[]
   equipment: { slotId: string; itemId: number; itemKey: string; itemName: string; iconUrl: string | null }[]
-  inventory: { id: number; itemId: number; itemKey: string; itemName: string; iconUrl: string | null; quantity: number; slotNumber: number }[]
+  inventory: { id: number; itemId: number; itemKey: string; itemName: string; iconUrl: string | null; quantity: number; slotNumber: number; slotType: string | null; category: string | null; isTwoHanded: boolean }[]
 }
 
 export interface CharacterListEntry {

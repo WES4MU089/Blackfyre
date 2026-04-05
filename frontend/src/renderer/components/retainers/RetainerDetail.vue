@@ -31,9 +31,6 @@ const tierLabels = ['', 'I', 'II', 'III', 'IV', 'V']
 
 const activeSection = ref<'equipment' | 'inventory' | 'transfer'>('equipment')
 
-/** Track which inventory item is showing an equip slot picker */
-const equipPickerItemId = ref<number | null>(null)
-
 function healthPercent(): number {
   if (!detail.value) return 0
   return detail.value.maxHealth > 0
@@ -45,12 +42,6 @@ function xpPercent(): number {
   if (!detail.value) return 0
   return (detail.value.xpSegments / 10) * 100
 }
-
-/** Slots currently equipped — for showing which are available */
-const occupiedSlots = computed(() => {
-  if (!detail.value) return new Set<string>()
-  return new Set(detail.value.equipment.map(e => e.slotId))
-})
 
 async function allocatePoint(key: string): Promise<void> {
   if (!detail.value) return
@@ -68,14 +59,31 @@ async function handleUnequip(slotId: string): Promise<void> {
   }
 }
 
-function toggleEquipPicker(inventoryId: number): void {
-  equipPickerItemId.value = equipPickerItemId.value === inventoryId ? null : inventoryId
+/** Determine the correct equipment slot for an item based on its slotType */
+function resolveSlot(slotType: string | null): string | null {
+  if (!slotType || !detail.value) return null
+  const equipped = new Set(detail.value.equipment.map(e => e.slotId))
+  // Direct slots
+  if (['mainHand', 'offHand', 'armor'].includes(slotType)) return slotType
+  // Group slots: try slot1 first, then slot2
+  if (slotType === 'accessory') return !equipped.has('accessory1') ? 'accessory1' : 'accessory2'
+  if (slotType === 'ancillary') return !equipped.has('ancillary1') ? 'ancillary1' : 'ancillary2'
+  return null
 }
 
-async function handleEquip(inventoryId: number, slotId: string): Promise<void> {
+/** Whether an inventory item can be equipped (has a valid slot_type) */
+function canEquip(slotType: string | null): boolean {
+  return !!slotType && !!resolveSlot(slotType)
+}
+
+async function handleEquip(inventoryId: number, slotType: string | null): Promise<void> {
   if (!detail.value) return
-  equipPickerItemId.value = null
-  const success = await characterStore.equipRetainerItem(detail.value.characterId, inventoryId, slotId)
+  const targetSlot = resolveSlot(slotType)
+  if (!targetSlot) {
+    hudStore.addNotification('danger', 'Error', 'This item cannot be equipped')
+    return
+  }
+  const success = await characterStore.equipRetainerItem(detail.value.characterId, inventoryId, targetSlot)
   if (!success) {
     hudStore.addNotification('danger', 'Error', 'Failed to equip item')
   }
@@ -312,20 +320,15 @@ function close(): void {
             <div class="inv-item-info">
               <span class="inv-name">{{ item.itemName }}</span>
               <span v-if="item.quantity > 1" class="inv-qty">x{{ item.quantity }}</span>
+              <span v-if="item.slotType" class="inv-slot-type">{{ SLOT_LABELS[item.slotType] ?? item.slotType }}</span>
             </div>
             <div class="inv-actions">
-              <button class="btn-action" @click="toggleEquipPicker(item.id)">Equip</button>
-              <button class="btn-action btn-action--transfer" @click="handleTransferToPlayer(item.id)">To Player</button>
-            </div>
-            <!-- Slot picker -->
-            <div v-if="equipPickerItemId === item.id" class="slot-picker">
               <button
-                v-for="slot in ALL_SLOTS"
-                :key="slot"
-                class="slot-pick-btn"
-                :class="{ 'slot-pick-btn--occupied': occupiedSlots.has(slot) }"
-                @click="handleEquip(item.id, slot)"
-              >{{ SLOT_LABELS[slot] }}</button>
+                v-if="canEquip(item.slotType)"
+                class="btn-action"
+                @click="handleEquip(item.id, item.slotType)"
+              >Equip</button>
+              <button class="btn-action btn-action--transfer" @click="handleTransferToPlayer(item.id)">To Player</button>
             </div>
           </div>
           <div v-if="detail.inventory.length === 0" class="empty-text">Empty</div>
@@ -632,6 +635,13 @@ function close(): void {
 
 .inv-qty { color: var(--color-text-dim); font-size: 10px; }
 
+.inv-slot-type {
+  font-size: 9px;
+  color: var(--color-text-muted);
+  font-style: italic;
+  margin-left: 2px;
+}
+
 .inv-actions {
   display: flex;
   gap: 3px;
@@ -691,40 +701,6 @@ function close(): void {
 .btn-action--give:hover {
   background: rgba(201, 168, 76, 0.2);
   border-color: var(--color-gold);
-}
-
-/* Slot picker */
-.slot-picker {
-  width: 100%;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px;
-  padding: 4px 0;
-}
-
-.slot-pick-btn {
-  padding: 2px 6px;
-  background: rgba(201, 168, 76, 0.06);
-  border: 1px solid var(--color-border-dim);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-display);
-  font-size: 8px;
-  color: var(--color-text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.slot-pick-btn:hover {
-  border-color: var(--color-gold);
-  color: var(--color-gold);
-  background: rgba(201, 168, 76, 0.15);
-}
-
-.slot-pick-btn--occupied {
-  border-color: rgba(201, 168, 76, 0.15);
-  color: var(--color-text-muted);
 }
 
 .empty-text {
