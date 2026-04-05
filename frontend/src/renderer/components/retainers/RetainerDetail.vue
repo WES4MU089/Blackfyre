@@ -118,9 +118,14 @@ async function handleDismiss(): Promise<void> {
 
 /** Training: format copper cost as readable currency */
 function formatCost(copper: number): string {
-  if (copper >= 100_000) return `${(copper / 100_000).toFixed(0)} Dragon${copper >= 200_000 ? 's' : ''}`
-  if (copper >= 1_000) return `${(copper / 1_000).toFixed(0)} Stag${copper >= 2_000 ? 's' : ''}`
-  return `${copper} Copper`
+  const dragons = Math.floor(copper / 10_000)
+  const stags = Math.floor((copper % 10_000) / 100)
+  const stars = copper % 100
+  const parts: string[] = []
+  if (dragons > 0) parts.push(`${dragons} Dragon${dragons > 1 ? 's' : ''}`)
+  if (stags > 0) parts.push(`${stags} Stag${stags > 1 ? 's' : ''}`)
+  if (stars > 0 || parts.length === 0) parts.push(`${stars} Copper`)
+  return parts.join(', ')
 }
 
 /** Training: time remaining as human-readable string */
