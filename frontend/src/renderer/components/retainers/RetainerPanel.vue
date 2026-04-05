@@ -9,7 +9,11 @@ import RetainerDetail from './RetainerDetail.vue'
 
 const characterStore = useCharacterStore()
 const hudStore = useHudStore()
-const { dismissRetainer, viewRetainer } = useSocket()
+const { dismissRetainer } = useSocket()
+
+async function openDetail(retainerId: number): Promise<void> {
+  await characterStore.fetchRetainerDetail(retainerId)
+}
 
 const panelRef = ref<HTMLElement | null>(null)
 const { isDragging, onDragStart } = useDraggable('retainers', panelRef, { alwaysDraggable: true })
@@ -103,8 +107,8 @@ function close(): void {
                 <div class="retainer-card-actions">
                   <button
                     class="retainer-view-btn"
-                    @click.stop="viewRetainer(ret.id)"
-                  >View</button>
+                    @click.stop="openDetail(ret.id)"
+                  >Manage</button>
                   <button
                     class="retainer-dismiss-btn"
                     :class="{ 'retainer-dismiss-btn--confirm': confirmDismissId === ret.id }"

@@ -24,7 +24,7 @@ const characterStore = useCharacterStore()
 const hudStore = useHudStore()
 const ailmentsStore = useAilmentsStore()
 const playerAppStore = usePlayerApplicationStore()
-const { selectCharacter, requestCharacterList, dismissRetainer, deleteCharacter, allocateAptitude, viewRetainer, backToPlayer } = useSocket()
+const { selectCharacter, requestCharacterList, dismissRetainer, deleteCharacter, allocateAptitude, backToPlayer } = useSocket()
 const panelRef = ref<HTMLElement | null>(null)
 const { isDragging, onDragStart } = useDraggable('character', panelRef, { alwaysDraggable: true })
 
@@ -187,6 +187,11 @@ function onDismissClick(retainerId: number): void {
     // First click = show confirm state
     confirmDismissId.value = retainerId
   }
+}
+
+async function openRetainerDetail(retainerId: number): Promise<void> {
+  await characterStore.fetchRetainerDetail(retainerId)
+  hudStore.openSystemPanel('retainers')
 }
 
 function cancelDismiss(): void {
@@ -609,8 +614,8 @@ function close() {
               <div class="retainer-card-actions">
                 <button
                   class="retainer-view-btn"
-                  @click.stop="viewRetainer(ret.id)"
-                >View</button>
+                  @click.stop="openRetainerDetail(ret.id)"
+                >Manage</button>
                 <button
                   class="retainer-dismiss-btn"
                   :class="{ 'retainer-dismiss-btn--confirm': confirmDismissId === ret.id }"

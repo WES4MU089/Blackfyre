@@ -93,6 +93,15 @@ export const useHudStore = defineStore('hud', () => {
     return openSystemPanels.value.has(id)
   }
 
+  function openSystemPanel(id: string): void {
+    if (!openSystemPanels.value.has(id)) {
+      const next = new Set(openSystemPanels.value)
+      next.add(id)
+      openSystemPanels.value = next
+      savePanelStates()
+    }
+  }
+
   function setLayoutEditMode(enabled: boolean): void {
     layoutEditMode.value = enabled
     if (!enabled) {
@@ -181,6 +190,7 @@ export const useHudStore = defineStore('hud', () => {
     setConnected,
     setLatency,
     toggleSystemPanel,
+    openSystemPanel,
     isPanelOpen,
     layoutEditMode,
     hudPositions,
