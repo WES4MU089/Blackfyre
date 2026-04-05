@@ -16,7 +16,6 @@ import StatsPanel from './StatsPanel.vue'
 import HealthPanel from './HealthPanel.vue'
 import PerkSelectionModal from './PerkSelectionModal.vue'
 import RespecModal from './RespecModal.vue'
-import RetainerDetail from '@/components/retainers/RetainerDetail.vue'
 import paperdollImg from '@res/images/art/paperdoll.png'
 import { getPerkIcon, PERK_SLOT_LEVELS } from '@/utils/perkIcons'
 import type { PerkSlot } from '@/stores/character'
@@ -25,7 +24,7 @@ const characterStore = useCharacterStore()
 const hudStore = useHudStore()
 const ailmentsStore = useAilmentsStore()
 const playerAppStore = usePlayerApplicationStore()
-const { selectCharacter, requestCharacterList, dismissRetainer, deleteCharacter, allocateAptitude } = useSocket()
+const { selectCharacter, requestCharacterList, dismissRetainer, deleteCharacter, allocateAptitude, viewRetainer, backToPlayer } = useSocket()
 const panelRef = ref<HTMLElement | null>(null)
 const { isDragging, onDragStart } = useDraggable('character', panelRef, { alwaysDraggable: true })
 
@@ -194,12 +193,6 @@ function cancelDismiss(): void {
   confirmDismissId.value = null
 }
 
-const showRetainerDetail = computed(() => characterStore.retainerDetail !== null)
-
-function viewRetainer(retainerId: number): void {
-  characterStore.fetchRetainerDetail(retainerId)
-}
-
 const { isDragging: isItemDragging, dragPayload } = useItemDrag()
 
 // --- Equipment tooltip state ---
@@ -290,9 +283,16 @@ function close() {
     <div class="char-identity">
       <!-- Character name with dropdown toggle -->
       <div class="char-name-row">
+        <button
+          v-if="characterStore.isViewingRetainer"
+          class="char-back-btn"
+          title="Back to player"
+          @click="backToPlayer"
+        >&larr;</button>
         <button class="char-name-btn" @click="toggleCharacterDropdown" title="Switch character">
           <span class="char-name">{{ characterName }}</span>
-          <span class="char-name-arrow" :class="{ 'char-name-arrow--open': showCharacterDropdown }">&#9662;</span>
+          <span v-if="characterStore.isViewingRetainer" class="char-retainer-badge">RETAINER</span>
+          <span v-else class="char-name-arrow" :class="{ 'char-name-arrow--open': showCharacterDropdown }">&#9662;</span>
         </button>
       </div>
 
@@ -418,6 +418,7 @@ function close() {
         Equipment
       </button>
       <button
+        v-if="!characterStore.isViewingRetainer"
         class="char-tab"
         :class="{ 'char-tab--active': activeTab === 'retainer' }"
         @click="activeTab = 'retainer'"
@@ -434,6 +435,7 @@ function close() {
         <span v-if="woundBadgeClass" class="health-badge" :class="woundBadgeClass">&bull;</span>
       </button>
       <button
+        v-if="!characterStore.isViewingRetainer"
         class="char-tab"
         :class="{ 'char-tab--active': activeTab === 'perks' }"
         @click="activeTab = 'perks'"
@@ -573,11 +575,7 @@ function close() {
 
     <!-- Retainer tab -->
     <template v-if="activeTab === 'retainer'">
-      <!-- Detail view -->
-      <RetainerDetail v-if="showRetainerDetail" />
-
-      <!-- List view -->
-      <div v-else class="retainer-area">
+      <div class="retainer-area">
         <div class="retainer-header-row">
           <span class="retainer-label">Retainers</span>
           <span class="retainer-cap">{{ retainerCount }} / 4</span>
@@ -1987,5 +1985,40 @@ function close() {
 .perk-choose-btn:hover {
   background: rgba(201, 168, 76, 0.15);
   border-color: var(--color-gold);
+}
+
+/* Back button (retainer view) */
+.char-back-btn {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(201, 168, 76, 0.08);
+  border: 1px solid var(--color-gold-dim);
+  border-radius: var(--radius-sm);
+  color: var(--color-gold);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.char-back-btn:hover {
+  background: rgba(201, 168, 76, 0.18);
+  border-color: var(--color-gold);
+}
+
+/* Retainer badge next to name */
+.char-retainer-badge {
+  font-family: var(--font-display);
+  font-size: 8px;
+  color: var(--color-gold);
+  background: rgba(201, 168, 76, 0.15);
+  border: 1px solid rgba(201, 168, 76, 0.3);
+  border-radius: 2px;
+  padding: 1px 5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 </style>

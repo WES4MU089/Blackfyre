@@ -205,6 +205,10 @@ export const useCharacterStore = defineStore('character', () => {
   const respecEnabled = ref(false)
   const respecInfo = ref<{ lockedAptitudes: Record<string, number>; freePoints: number; levelUpPoints: number; aptitudeCaps: Record<string, number>; age: number } | null>(null)
 
+  // Retainer viewing state (socket-based full character view)
+  const isViewingRetainer = ref(false)
+  const ownerCharacterId = ref<number | null>(null)
+
   // Retainer management state
   const retainerDetail = ref<RetainerDetailInfo | null>(null)
   const retainerHireTier = ref<RetainerTierInfo | null>(null)
@@ -283,6 +287,11 @@ export const useCharacterStore = defineStore('character', () => {
 
   function setRetainers(data: unknown[]): void {
     retainers.value = data as RetainerInfo[]
+  }
+
+  function setViewingRetainer(viewing: boolean, ownerId: number | null): void {
+    isViewingRetainer.value = viewing
+    ownerCharacterId.value = ownerId
   }
 
   // --- Retainer management ---
@@ -907,6 +916,8 @@ export const useCharacterStore = defineStore('character', () => {
     aptitudes.value = []
     equipment.value = { mainHand: null, offHand: null, armor: null, accessory1: null, accessory2: null, ancillary1: null, ancillary2: null }
     retainers.value = []
+    isViewingRetainer.value = false
+    ownerCharacterId.value = null
     retainerDetail.value = null
     retainerHireTier.value = null
     isHiringRetainer.value = false
@@ -935,6 +946,9 @@ export const useCharacterStore = defineStore('character', () => {
     aptitudes,
     equipment,
     retainers,
+    isViewingRetainer,
+    ownerCharacterId,
+    setViewingRetainer,
     retainerDetail,
     retainerHireTier,
     isHiringRetainer,

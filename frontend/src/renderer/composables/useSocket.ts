@@ -128,12 +128,19 @@ export function useSocket() {
     // Character data loaded
     socket.on('character:loaded', (data: Record<string, unknown>) => {
       characterStore.loadCharacterData(data)
+      characterStore.setViewingRetainer(false, null)
       hudStore.addNotification('info', 'Character Loaded', `Playing as ${characterStore.character?.name ?? 'Unknown'}`)
       // Prefetch wound/ailment data so Health tab is ready
       const ailmentsStore = useAilmentsStore()
       if (characterStore.character?.id) {
         ailmentsStore.fetchAilments(characterStore.character.id)
       }
+    })
+
+    // Retainer data loaded (full character view of a retainer)
+    socket.on('retainer:loaded', (data: Record<string, unknown> & { ownerCharacterId?: number }) => {
+      characterStore.loadCharacterData(data)
+      characterStore.setViewingRetainer(true, (data.ownerCharacterId as number) ?? null)
     })
 
     // Characters list (for character switcher + auto-trigger creation)
@@ -659,6 +666,14 @@ export function useSocket() {
     socket?.emit('aptitude:allocate', { aptitudeKey })
   }
 
+  function viewRetainer(retainerId: number): void {
+    socket?.emit('retainer:view', { retainerId })
+  }
+
+  function backToPlayer(): void {
+    socket?.emit('retainer:back')
+  }
+
   function disconnect(): void {
     if (pingInterval) {
       clearInterval(pingInterval)
@@ -686,6 +701,8 @@ export function useSocket() {
     dismissRetainer,
     deleteCharacter,
     allocateAptitude,
+    viewRetainer,
+    backToPlayer,
     disconnect
   }
 }
