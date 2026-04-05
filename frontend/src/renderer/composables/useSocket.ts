@@ -17,6 +17,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useAdminStore } from '@/stores/admin'
 import { useNotificationStore } from '@/stores/notifications'
 import { useProximityStore, type NearbyPlayer } from '@/stores/proximity'
+import { useTradeStore, type TradeRequestPayload, type TradeStartedPayload, type TradeUpdatedPayload } from '@/stores/trade'
 import { BACKEND_URL } from '@/config'
 
 const SOCKET_URL = BACKEND_URL
@@ -549,6 +550,55 @@ export function useSocket() {
       characterStore.setInventory(data)
     })
 
+    // --- Trade events ---
+    const tradeStore = useTradeStore()
+
+    socket.on('trade:request-received', (data: TradeRequestPayload) => {
+      tradeStore.setPendingRequest(data)
+      hudStore.addNotification('info', 'Trade Request', `${data.fromCharacterName} wants to trade with you.`, 10000)
+    })
+
+    socket.on('trade:request-sent', (data: { tradeId: string; targetCharacterName: string }) => {
+      hudStore.addNotification('info', 'Trade', `Trade request sent to ${data.targetCharacterName}`)
+    })
+
+    socket.on('trade:request-expired', (data: { tradeId: string }) => {
+      if (tradeStore.pendingRequest?.tradeId === data.tradeId) {
+        tradeStore.clearPendingRequest()
+      }
+      hudStore.addNotification('warning', 'Trade', 'Trade request expired')
+    })
+
+    socket.on('trade:declined', (data: { tradeId: string; declinedBy: string }) => {
+      hudStore.addNotification('info', 'Trade', `${data.declinedBy} declined the trade request`)
+    })
+
+    socket.on('trade:started', (data: TradeStartedPayload) => {
+      tradeStore.openTrade(data)
+    })
+
+    socket.on('trade:updated', (data: TradeUpdatedPayload) => {
+      tradeStore.updateOffers(data)
+    })
+
+    socket.on('trade:completed', () => {
+      tradeStore.closeTrade()
+      hudStore.addNotification('success', 'Trade Complete', 'The trade was completed successfully!')
+    })
+
+    socket.on('trade:cancelled', (data: { tradeId: string; reason: string }) => {
+      tradeStore.closeTrade()
+      hudStore.addNotification('warning', 'Trade Cancelled', data.reason)
+    })
+
+    socket.on('trade:error', (data: { message: string }) => {
+      if (tradeStore.isOpen) {
+        tradeStore.setMessage(false, data.message)
+      } else {
+        hudStore.addNotification('danger', 'Trade', data.message)
+      }
+    })
+
     // --- Retainer updates (from hire/dismiss via NPC or character panel) ---
     socket.on('retainers:changed', (data: unknown[]) => {
       characterStore.setRetainers(data)
@@ -674,6 +724,18 @@ export function useSocket() {
     socket?.emit('retainer:back')
   }
 
+  function acceptTrade(tradeId: string): void {
+    socket?.emit('trade:accept', { tradeId })
+  }
+
+  function declineTrade(tradeId: string): void {
+    socket?.emit('trade:decline', { tradeId })
+  }
+
+  function requestTrade(targetCharacterId: number): void {
+    socket?.emit('trade:request', { targetCharacterId })
+  }
+
   function disconnect(): void {
     if (pingInterval) {
       clearInterval(pingInterval)
@@ -703,6 +765,9 @@ export function useSocket() {
     allocateAptitude,
     viewRetainer,
     backToPlayer,
+    acceptTrade,
+    declineTrade,
+    requestTrade,
     disconnect
   }
 }

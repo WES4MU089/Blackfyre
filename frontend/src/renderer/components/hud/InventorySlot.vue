@@ -8,7 +8,7 @@ import { computed } from 'vue'
 const props = withDefaults(defineProps<{
   item: InventoryItem | null
   slotIndex: number
-  dragSource?: 'inventory' | 'container'
+  dragSource?: string
   containerId?: number
 }>(), {
   dragSource: 'inventory',

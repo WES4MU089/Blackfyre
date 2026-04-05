@@ -5,6 +5,7 @@ import { useProximityStore, type NearbyPlayer } from '@/stores/proximity'
 import { useTargetStore } from '@/stores/target'
 import { useDraggable } from '@/composables/useDraggable'
 import { hpBarColor } from '@/utils/healthColor'
+import { getSocket } from '@/composables/useSocket'
 
 const hudStore = useHudStore()
 const proximityStore = useProximityStore()
@@ -161,12 +162,21 @@ function buildInspectDescription(player: NearbyPlayer): string {
 }
 
 function handleCtxAction(key: string): void {
+  const player = ctxPlayer.value
   closeCtxMenu()
-  if (key === 'inspect' && ctxPlayer.value) {
-    const desc = buildInspectDescription(ctxPlayer.value)
-    hudStore.addNotification('info', `Inspecting ${ctxPlayer.value.characterName}`, desc)
+  if (!player) return
+
+  if (key === 'inspect') {
+    const desc = buildInspectDescription(player)
+    hudStore.addNotification('info', `Inspecting ${player.characterName}`, desc)
     return
   }
+
+  if (key === 'trade') {
+    getSocket()?.emit('trade:request', { targetCharacterId: player.characterId })
+    return
+  }
+
   hudStore.addNotification('info', 'Coming Soon', `${key.charAt(0).toUpperCase() + key.slice(1)} is not yet available.`)
 }
 

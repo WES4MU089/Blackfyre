@@ -30,6 +30,8 @@ import RetainerHire from '@/components/retainers/RetainerHire.vue'
 import AdminPanel from '@/components/admin/AdminPanel.vue'
 import SocialPanel from '@/components/social/SocialPanel.vue'
 import TargetWindowPanel from '@/components/hud/TargetWindowPanel.vue'
+import TradePanel from '@/components/hud/TradePanel.vue'
+import TradeRequestPrompt from '@/components/hud/TradeRequestPrompt.vue'
 import HoldingsPanel from '@/components/holdings/HoldingsPanel.vue'
 import NotificationPanel from '@/components/hud/NotificationPanel.vue'
 import ApplicationReviewModal from '@/components/hud/ApplicationReviewModal.vue'
@@ -44,6 +46,7 @@ import { useShopStore } from '@/stores/shop'
 import { useContainerStore } from '@/stores/container'
 import { useVaultStore } from '@/stores/vault'
 import { useLootStore } from '@/stores/loot'
+import { useTradeStore } from '@/stores/trade'
 import { useChatStore } from '@/stores/chat'
 import { useTargetStore } from '@/stores/target'
 import '@/styles/hud.css'
@@ -62,6 +65,7 @@ const adminStore = useAdminStore()
 const socialStore = useSocialStore()
 const notificationStore = useNotificationStore()
 const playerAppStore = usePlayerApplicationStore()
+const tradeStore = useTradeStore()
 const targetStore = useTargetStore()
 const { connect } = useSocket()
 const { isDragging: isItemDragging, cancelDrag } = useItemDrag()
@@ -169,6 +173,9 @@ onMounted(async () => {
     <!-- Execution overlay (witness/attacker prompt) — disabled, leaving for RP -->
     <!-- <CoupDeGraceOverlay /> -->
 
+    <!-- Trade request prompt (incoming request) -->
+    <TradeRequestPrompt v-if="tradeStore.pendingRequest" />
+
     <!-- Persistent notification panel (fixed position, outside system overlay) -->
     <NotificationPanel v-if="notificationStore.isOpen" />
 
@@ -176,10 +183,11 @@ onMounted(async () => {
     <TargetPanel v-if="targetStore.target" />
 
     <!-- System panel overlay -->
-    <div v-if="hudStore.openSystemPanels.size > 0 || combatStore.activeView !== 'none' || adminStore.isOpen || socialStore.isOpen || containerStore.isOpen || vaultStore.isOpen || lootStore.isOpen" class="hud-system-overlay">
+    <div v-if="hudStore.openSystemPanels.size > 0 || combatStore.activeView !== 'none' || adminStore.isOpen || socialStore.isOpen || containerStore.isOpen || vaultStore.isOpen || lootStore.isOpen || tradeStore.isOpen" class="hud-system-overlay">
       <ContainerPanel v-if="containerStore.isOpen" />
       <VaultPanel v-if="vaultStore.isOpen" />
       <LootPanel v-if="lootStore.isOpen" />
+      <TradePanel v-if="tradeStore.isOpen" />
       <InventoryPanel v-if="hudStore.isPanelOpen('inventory')" />
       <CharacterPanel v-if="hudStore.isPanelOpen('character')" />
       <WikiPanel v-if="hudStore.isPanelOpen('wiki')" />

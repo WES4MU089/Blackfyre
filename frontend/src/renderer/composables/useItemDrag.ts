@@ -3,7 +3,7 @@ import type { InventoryItem, EquippedItem } from '@/stores/character'
 import { acquireInteractionLock, releaseInteractionLock } from './useInteractionLock'
 
 export interface DragPayload {
-  source: 'inventory' | 'equipment' | 'container'
+  source: string
   inventoryItem?: InventoryItem
   sourceSlot?: number
   equippedItem?: EquippedItem

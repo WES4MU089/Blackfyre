@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useCharacterStore, type InventoryItem, type EquippedItem } from '@/stores/character'
 import { useContainerStore } from '@/stores/container'
+import { useTradeStore } from '@/stores/trade'
 import { useHudStore } from '@/stores/hud'
 import { useDraggable } from '@/composables/useDraggable'
 import { useItemDrag, type DragPayload } from '@/composables/useItemDrag'
@@ -15,6 +16,7 @@ import starIcon from '@res/images/art/Currency/star.png'
 
 const characterStore = useCharacterStore()
 const containerStore = useContainerStore()
+const tradeStore = useTradeStore()
 const hudStore = useHudStore()
 const panelRef = ref<HTMLElement | null>(null)
 const { isDragging: isPanelDragging, onDragStart } = useDraggable('inventory', panelRef, { alwaysDraggable: true })
@@ -117,8 +119,14 @@ async function onContextAction(action: string): Promise<void> {
       console.log('Inspect:', item)
       break
     case 'give':
-      // TODO: open give dialog
-      hudStore.addNotification('info', 'Give', 'Trade system coming soon')
+      if (tradeStore.isOpen && item.is_tradeable) {
+        getSocket()?.emit('trade:offer-item', {
+          inventoryId: item.inventory_id,
+          quantity: item.quantity,
+        })
+      } else {
+        hudStore.addNotification('info', 'Give', 'Open a trade first by right-clicking a nearby player.')
+      }
       break
   }
 }
