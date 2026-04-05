@@ -329,9 +329,15 @@ export const useCharacterStore = defineStore('character', () => {
     try {
       const res = await fetch(`${API_BASE}/api/retainers/${charId}`)
       const data = await res.json()
-      retainers.value = (data as RetainerInfo[]).map(r => ({
-        ...r,
-        isAvailable: r.health > 0,
+      retainers.value = (data as any[]).map(r => ({
+        id: r.id ?? r.characterId,
+        name: r.name,
+        tier: r.tier,
+        tierName: r.tierName,
+        level: r.level,
+        health: Number(r.health),
+        maxHealth: Number(r.maxHealth),
+        isAvailable: Number(r.health) > 0,
       }))
     } catch { /* swallow */ }
   }
