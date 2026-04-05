@@ -137,6 +137,10 @@ export interface RetainerDetailInfo {
   health: number
   maxHealth: number
   unspentAptitudePoints: number
+  trainingStatus: 'idle' | 'training'
+  trainingTargetLevel: number | null
+  trainingCompletesAt: string | null
+  trainingCost: number | null
   aptitudes: { key: string; baseValue: number; currentValue: number }[]
   equipment: { slotId: string; itemId: number; itemKey: string; itemName: string; iconUrl: string | null }[]
   inventory: { id: number; itemId: number; itemKey: string; itemName: string; iconUrl: string | null; quantity: number; slotNumber: number }[]
@@ -469,6 +473,44 @@ export const useCharacterStore = defineStore('character', () => {
         return true
       }
       return false
+    } catch {
+      return false
+    }
+  }
+
+  async function startRetainerTraining(retainerId: number): Promise<boolean> {
+    const charId = character.value?.id
+    if (!charId) return false
+    try {
+      const res = await fetch(`${API_BASE}/api/retainers/${charId}/${retainerId}/train`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      if (res.ok) {
+        await fetchRetainerDetail(retainerId)
+        return true
+      }
+      const data = await res.json().catch(() => ({}))
+      return data.error ?? false
+    } catch {
+      return false
+    }
+  }
+
+  async function completeRetainerTraining(retainerId: number): Promise<boolean> {
+    const charId = character.value?.id
+    if (!charId) return false
+    try {
+      const res = await fetch(`${API_BASE}/api/retainers/${charId}/${retainerId}/complete-training`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      if (res.ok) {
+        await fetchRetainerDetail(retainerId)
+        return true
+      }
+      const data = await res.json().catch(() => ({}))
+      return data.error ?? false
     } catch {
       return false
     }
@@ -974,6 +1016,8 @@ export const useCharacterStore = defineStore('character', () => {
     equipRetainerItem,
     unequipRetainerItem,
     allocateRetainerAptitude,
+    startRetainerTraining,
+    completeRetainerTraining,
     moveItem,
     stackItems,
     equipItem,

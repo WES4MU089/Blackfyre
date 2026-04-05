@@ -8,6 +8,7 @@ const characterStore = useCharacterStore()
 const hudStore = useHudStore()
 
 const detail = computed(() => characterStore.retainerDetail)
+const trainingBusy = ref(false)
 
 const APTITUDE_LABELS: Record<string, string> = {
   prowess: 'Prowess', fortitude: 'Fortitude', command: 'Command', cunning: 'Cunning',
@@ -107,6 +108,59 @@ async function handleDismiss(): Promise<void> {
   }
 }
 
+/** Training: format copper cost as readable currency */
+function formatCost(copper: number): string {
+  if (copper >= 100_000) return `${(copper / 100_000).toFixed(0)} Dragon${copper >= 200_000 ? 's' : ''}`
+  if (copper >= 1_000) return `${(copper / 1_000).toFixed(0)} Stag${copper >= 2_000 ? 's' : ''}`
+  return `${copper} Copper`
+}
+
+/** Training: time remaining as human-readable string */
+const trainingTimeRemaining = computed(() => {
+  if (!detail.value?.trainingCompletesAt) return ''
+  const now = Date.now()
+  const end = new Date(detail.value.trainingCompletesAt).getTime()
+  const remaining = end - now
+  if (remaining <= 0) return 'Ready!'
+  const days = Math.floor(remaining / (24 * 60 * 60 * 1000))
+  const hours = Math.floor((remaining % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000))
+  if (days > 0) return `${days}d ${hours}h remaining`
+  return `${hours}h remaining`
+})
+
+const trainingComplete = computed(() => {
+  if (!detail.value?.trainingCompletesAt) return false
+  return Date.now() >= new Date(detail.value.trainingCompletesAt).getTime()
+})
+
+async function startTraining(): Promise<void> {
+  if (!detail.value || trainingBusy.value) return
+  trainingBusy.value = true
+  const result = await characterStore.startRetainerTraining(detail.value.characterId)
+  trainingBusy.value = false
+  if (result === true) {
+    hudStore.addNotification('info', 'Training', `${detail.value.name} has begun training.`)
+  } else if (typeof result === 'string') {
+    hudStore.addNotification('danger', 'Training', result)
+  } else {
+    hudStore.addNotification('danger', 'Error', 'Failed to start training')
+  }
+}
+
+async function completeTraining(): Promise<void> {
+  if (!detail.value || trainingBusy.value) return
+  trainingBusy.value = true
+  const result = await characterStore.completeRetainerTraining(detail.value.characterId)
+  trainingBusy.value = false
+  if (result === true) {
+    hudStore.addNotification('info', 'Training Complete', `${detail.value.name} has leveled up!`)
+  } else if (typeof result === 'string') {
+    hudStore.addNotification('danger', 'Training', result)
+  } else {
+    hudStore.addNotification('danger', 'Error', 'Failed to complete training')
+  }
+}
+
 function close(): void {
   characterStore.clearRetainerDetail()
 }
@@ -127,12 +181,58 @@ function close(): void {
       <div class="detail-section">
         <div class="detail-row">
           <span class="detail-label">Level</span>
-          <span class="detail-value">{{ detail.level }} / 10</span>
+          <span class="detail-value">{{ detail.level }} / 5</span>
         </div>
         <div class="xp-bar">
           <div class="xp-fill" :style="{ width: xpPercent() + '%' }" />
         </div>
         <div class="xp-text">{{ detail.xpSegments }} / 10 segments</div>
+      </div>
+
+      <!-- Training -->
+      <div class="detail-section training-section">
+        <div class="section-title">Training</div>
+
+        <!-- Currently training -->
+        <template v-if="detail.trainingStatus === 'training'">
+          <div class="training-status">
+            <span class="training-status-label">Training to Level {{ detail.trainingTargetLevel }}</span>
+            <span class="training-time" :class="{ 'training-time--ready': trainingComplete }">
+              {{ trainingTimeRemaining }}
+            </span>
+          </div>
+          <button
+            v-if="trainingComplete"
+            class="btn-training btn-training--complete"
+            :disabled="trainingBusy"
+            @click="completeTraining"
+          >Complete Training</button>
+          <div v-else class="training-progress">
+            <div class="training-bar">
+              <div class="training-bar-fill" :style="{ width: '50%' }" />
+            </div>
+          </div>
+        </template>
+
+        <!-- Idle, can train -->
+        <template v-else-if="detail.level < 5 && detail.trainingCost != null">
+          <div class="training-info">
+            <span class="training-info-text">
+              Level {{ detail.level }} &rarr; {{ detail.level + 1 }}
+            </span>
+            <span class="training-info-cost">{{ formatCost(detail.trainingCost) }}</span>
+          </div>
+          <button
+            class="btn-training"
+            :disabled="trainingBusy"
+            @click="startTraining"
+          >Begin Training</button>
+        </template>
+
+        <!-- Max level -->
+        <template v-else>
+          <div class="training-maxed">Maximum level reached</div>
+        </template>
       </div>
 
       <!-- Health -->
@@ -631,6 +731,113 @@ function close(): void {
   font-size: 11px;
   color: var(--color-text-muted);
   font-style: italic;
+}
+
+/* Training section */
+.training-section {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm);
+  background: rgba(201, 168, 76, 0.03);
+}
+
+.training-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--font-size-xs);
+}
+
+.training-status-label {
+  color: var(--color-text);
+}
+
+.training-time {
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.training-time--ready {
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+.training-progress {
+  margin-top: 4px;
+}
+
+.training-bar {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.training-bar-fill {
+  height: 100%;
+  background: var(--color-gold);
+  border-radius: 2px;
+  transition: width 0.3s;
+}
+
+.training-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--font-size-xs);
+}
+
+.training-info-text {
+  color: var(--color-text);
+}
+
+.training-info-cost {
+  color: var(--color-gold);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.btn-training {
+  margin-top: 6px;
+  width: 100%;
+  padding: var(--space-xs) var(--space-md);
+  background: rgba(201, 168, 76, 0.1);
+  border: 1px solid rgba(201, 168, 76, 0.3);
+  border-radius: var(--radius-sm);
+  color: var(--color-gold);
+  font-family: var(--font-display);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-training:hover:not(:disabled) {
+  background: rgba(201, 168, 76, 0.2);
+  border-color: var(--color-gold);
+}
+.btn-training:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-training--complete {
+  background: rgba(46, 204, 113, 0.12);
+  border-color: rgba(46, 204, 113, 0.4);
+  color: var(--color-success);
+}
+.btn-training--complete:hover:not(:disabled) {
+  background: rgba(46, 204, 113, 0.25);
+  border-color: var(--color-success);
+}
+
+.training-maxed {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  font-style: italic;
+  text-align: center;
 }
 
 .btn-dismiss {
