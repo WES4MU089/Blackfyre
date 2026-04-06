@@ -19,12 +19,11 @@ const APTITUDE_LABELS: Record<string, string> = {
 }
 
 const tier = computed(() => characterStore.retainerHireTier)
-const isT5 = computed(() => tier.value?.tier === 5)
 const aptCap = computed(() => tier.value?.aptitudeCap ?? 7)
 
-// Aptitude allocation
+// Aptitude allocation — all tiers start at 1 per aptitude
 const aptitudes = ref<Record<string, number>>(
-  Object.fromEntries(APTITUDE_KEYS.map(k => [k, isT5.value ? (tier.value?.aptitudeCap ?? 8) : 1]))
+  Object.fromEntries(APTITUDE_KEYS.map(k => [k, 1]))
 )
 
 const pointsSpent = computed(() =>
@@ -52,12 +51,7 @@ function goToAptitudes(): void {
     return
   }
   nameError.value = ''
-  if (isT5.value) {
-    // T5 has fixed aptitudes — skip to confirm
-    step.value = 'confirm'
-  } else {
-    step.value = 'aptitudes'
-  }
+  step.value = 'aptitudes'
 }
 
 function goToConfirm(): void {
@@ -67,10 +61,8 @@ function goToConfirm(): void {
 
 function goBack(): void {
   submitError.value = ''
-  if (step.value === 'confirm' && !isT5.value) {
+  if (step.value === 'confirm') {
     step.value = 'aptitudes'
-  } else if (step.value === 'confirm' && isT5.value) {
-    step.value = 'name'
   } else {
     step.value = 'name'
   }
@@ -126,7 +118,7 @@ function cancel(): void {
         <div class="hire-actions">
           <button class="btn btn-secondary" @click="cancel">Cancel</button>
           <button class="btn btn-primary" :disabled="!retainerName.trim()" @click="goToAptitudes">
-            {{ isT5 ? 'Review' : 'Allocate Points' }}
+Allocate Points
           </button>
         </div>
       </div>
