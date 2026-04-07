@@ -11,8 +11,9 @@ import FamilyTreeAdmin from './FamilyTreeAdmin.vue'
 import OrganizationAdmin from './OrganizationAdmin.vue'
 import FactionAdmin from './FactionAdmin.vue'
 import AuditLogViewer from './AuditLogViewer.vue'
+import CharacterAuditViewer from './CharacterAuditViewer.vue'
 
-type AdminTab = 'applications' | 'family-trees' | 'organizations' | 'factions' | 'audit-log'
+type AdminTab = 'applications' | 'family-trees' | 'organizations' | 'factions' | 'audit-log' | 'snapshots'
 
 interface TabDef {
   id: AdminTab
@@ -26,6 +27,7 @@ const ALL_TABS: TabDef[] = [
   { id: 'organizations', label: 'Orgs', perm: 'content.manage_organizations' },
   { id: 'factions', label: 'Factions', perm: 'content.manage_factions' },
   { id: 'audit-log', label: 'Audit', perm: 'system.view_audit_log' },
+  { id: 'snapshots', label: 'Snapshots', perm: 'system.view_audit_log' },
 ]
 
 const adminStore = useAdminStore()
@@ -98,6 +100,7 @@ function close() {
         <OrganizationAdmin v-if="activeTab === 'organizations'" />
         <FactionAdmin v-if="activeTab === 'factions'" />
         <AuditLogViewer v-if="activeTab === 'audit-log'" />
+        <CharacterAuditViewer v-if="activeTab === 'snapshots'" />
       </div>
 
       <!-- Resize handle -->

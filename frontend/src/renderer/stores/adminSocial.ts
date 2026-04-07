@@ -72,6 +72,28 @@ export interface StaffFactionMember {
   house_name: string | null
 }
 
+export interface CharacterAuditEntry {
+  id: number
+  character_id: number
+  character_name: string
+  event_type: string
+  event_source: string | null
+  snapshot: {
+    characterId: number
+    name: string
+    level: number
+    xpSegments: number
+    deathState: string
+    woundSeverity: string | null
+    finances: { purse: number; vault: number; vaultTier: number }
+    inventory: Array<{ inventoryId: number; itemId: number; itemKey: string; itemName: string; quantity: number; slotNumber: number | null; durability: number }>
+    equipment: Array<{ slotId: string; itemId: number; itemKey: string; itemName: string; durability: number; gripMode: string | null }>
+    retainers: Array<{ characterId: number; name: string; tier: number; level: number; isActive: boolean; deathState: string; health: number }>
+  }
+  metadata: Record<string, unknown> | null
+  created_at: string
+}
+
 export interface AuditLogEntry {
   id: number
   actor_id: number
@@ -114,6 +136,17 @@ export const useAdminSocialStore = defineStore('adminSocial', () => {
     limit: 50,
     offset: 0,
   })
+
+  // Character audit log (snapshots)
+  const charAuditEntries = ref<CharacterAuditEntry[]>([])
+  const charAuditTotal = ref(0)
+  const charAuditFilters = ref({
+    characterName: '',
+    eventType: '',
+    limit: 25,
+    offset: 0,
+  })
+  const charAuditExpanded = ref<number | null>(null)
 
   const isLoading = ref(false)
 
@@ -517,6 +550,58 @@ export const useAdminSocialStore = defineStore('adminSocial', () => {
     }
   }
 
+  // ===== Character Audit Log =====
+  async function fetchCharacterAudit(): Promise<void> {
+    isLoading.value = true
+    try {
+      const params = new URLSearchParams()
+      const f = charAuditFilters.value
+      if (f.characterName) params.set('characterName', f.characterName)
+      if (f.eventType) params.set('eventType', f.eventType)
+      params.set('limit', String(f.limit))
+      params.set('offset', String(f.offset))
+
+      const res = await fetch(`${BACKEND_URL}/api/staff/character-audit?${params}`, {
+        headers: authHeaders(),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        charAuditEntries.value = data.entries
+        charAuditTotal.value = data.total
+      }
+    } catch (err) {
+      console.error('Failed to fetch character audit log:', err)
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  function setCharAuditFilter(key: string, value: string): void {
+    ;(charAuditFilters.value as Record<string, unknown>)[key] = value
+    charAuditFilters.value.offset = 0
+    fetchCharacterAudit()
+  }
+
+  function nextCharAuditPage(): void {
+    const f = charAuditFilters.value
+    if (f.offset + f.limit < charAuditTotal.value) {
+      f.offset += f.limit
+      fetchCharacterAudit()
+    }
+  }
+
+  function prevCharAuditPage(): void {
+    const f = charAuditFilters.value
+    if (f.offset > 0) {
+      f.offset = Math.max(0, f.offset - f.limit)
+      fetchCharacterAudit()
+    }
+  }
+
+  function toggleCharAuditExpand(id: number): void {
+    charAuditExpanded.value = charAuditExpanded.value === id ? null : id
+  }
+
   // ===== Reset helpers =====
   function resetOrgView(): void {
     orgActiveView.value = 'list'
@@ -573,5 +658,15 @@ export const useAdminSocialStore = defineStore('adminSocial', () => {
     setAuditFilter,
     nextAuditPage,
     prevAuditPage,
+    // Character audit
+    charAuditEntries,
+    charAuditTotal,
+    charAuditFilters,
+    charAuditExpanded,
+    fetchCharacterAudit,
+    setCharAuditFilter,
+    nextCharAuditPage,
+    prevCharAuditPage,
+    toggleCharAuditExpand,
   }
 })
