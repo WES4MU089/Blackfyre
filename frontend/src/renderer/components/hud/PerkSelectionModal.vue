@@ -26,9 +26,13 @@ interface PerkDef {
   description: string
   lore: string
   alreadyTaken: boolean
+  categoryFull: boolean
 }
 
+type Cat = 'offensive' | 'defensive' | 'utility'
 const allPerks = ref<PerkDef[]>([])
+const categoryCounts = ref<Record<Cat, number>>({ offensive: 0, defensive: 0, utility: 0 })
+const maxPerksPerCategory = ref(3)
 const isLoading = ref(true)
 
 // Fetch all perks from backend
@@ -41,11 +45,17 @@ async function fetchPerks() {
     })
     const data = await res.json()
     allPerks.value = data.allPerks ?? []
+    if (data.categoryCounts) categoryCounts.value = data.categoryCounts
+    if (data.maxPerksPerCategory) maxPerksPerCategory.value = data.maxPerksPerCategory
   } catch {
     hudStore.addNotification('error', 'Error', 'Failed to load perks')
   } finally {
     isLoading.value = false
   }
+}
+
+function isPerkDisabled(perk: PerkDef): boolean {
+  return perk.alreadyTaken || perk.categoryFull
 }
 
 fetchPerks()
@@ -128,7 +138,7 @@ function close() {
         <div v-else class="perk-columns">
           <!-- Offensive -->
           <div class="perk-column">
-            <div class="perk-column-header perk-cat--offensive">Offensive</div>
+            <div class="perk-column-header perk-cat--offensive">Offensive ({{ categoryCounts.offensive }}/{{ maxPerksPerCategory }})</div>
             <div
               v-for="perk in offensivePerks"
               :key="perk.key"
@@ -136,14 +146,16 @@ function close() {
               :class="{
                 'perk-card--selected': selectedPerk === perk.key,
                 'perk-card--taken': perk.alreadyTaken,
+                'perk-card--disabled': perk.categoryFull && !perk.alreadyTaken,
               }"
-              @click="!perk.alreadyTaken && (selectedPerk = perk.key)"
+              @click="!isPerkDisabled(perk) && (selectedPerk = perk.key)"
             >
               <div class="perk-card-top">
                 <img v-if="getPerkIcon(perk.key)" :src="getPerkIcon(perk.key)!" class="perk-card-icon" :alt="perk.name" />
                 <div class="perk-card-info">
                   <span class="perk-card-name">{{ perk.name }}</span>
                   <span v-if="perk.alreadyTaken" class="perk-card-taken-badge">Taken</span>
+                  <span v-else-if="perk.categoryFull" class="perk-card-taken-badge">Category Full</span>
                 </div>
               </div>
               <p class="perk-card-desc">{{ perk.description }}</p>
@@ -156,7 +168,7 @@ function close() {
 
           <!-- Defensive -->
           <div class="perk-column">
-            <div class="perk-column-header perk-cat--defensive">Defensive</div>
+            <div class="perk-column-header perk-cat--defensive">Defensive ({{ categoryCounts.defensive }}/{{ maxPerksPerCategory }})</div>
             <div
               v-for="perk in defensivePerks"
               :key="perk.key"
@@ -164,14 +176,16 @@ function close() {
               :class="{
                 'perk-card--selected': selectedPerk === perk.key,
                 'perk-card--taken': perk.alreadyTaken,
+                'perk-card--disabled': perk.categoryFull && !perk.alreadyTaken,
               }"
-              @click="!perk.alreadyTaken && (selectedPerk = perk.key)"
+              @click="!isPerkDisabled(perk) && (selectedPerk = perk.key)"
             >
               <div class="perk-card-top">
                 <img v-if="getPerkIcon(perk.key)" :src="getPerkIcon(perk.key)!" class="perk-card-icon" :alt="perk.name" />
                 <div class="perk-card-info">
                   <span class="perk-card-name">{{ perk.name }}</span>
                   <span v-if="perk.alreadyTaken" class="perk-card-taken-badge">Taken</span>
+                  <span v-else-if="perk.categoryFull" class="perk-card-taken-badge">Category Full</span>
                 </div>
               </div>
               <p class="perk-card-desc">{{ perk.description }}</p>
@@ -184,7 +198,7 @@ function close() {
 
           <!-- Utility -->
           <div class="perk-column">
-            <div class="perk-column-header perk-cat--utility">Utility</div>
+            <div class="perk-column-header perk-cat--utility">Utility ({{ categoryCounts.utility }}/{{ maxPerksPerCategory }})</div>
             <div
               v-for="perk in utilityPerks"
               :key="perk.key"
@@ -192,14 +206,16 @@ function close() {
               :class="{
                 'perk-card--selected': selectedPerk === perk.key,
                 'perk-card--taken': perk.alreadyTaken,
+                'perk-card--disabled': perk.categoryFull && !perk.alreadyTaken,
               }"
-              @click="!perk.alreadyTaken && (selectedPerk = perk.key)"
+              @click="!isPerkDisabled(perk) && (selectedPerk = perk.key)"
             >
               <div class="perk-card-top">
                 <img v-if="getPerkIcon(perk.key)" :src="getPerkIcon(perk.key)!" class="perk-card-icon" :alt="perk.name" />
                 <div class="perk-card-info">
                   <span class="perk-card-name">{{ perk.name }}</span>
                   <span v-if="perk.alreadyTaken" class="perk-card-taken-badge">Taken</span>
+                  <span v-else-if="perk.categoryFull" class="perk-card-taken-badge">Category Full</span>
                 </div>
               </div>
               <p class="perk-card-desc">{{ perk.description }}</p>
@@ -341,9 +357,14 @@ function close() {
   transition: all 0.15s ease;
 }
 
-.perk-card:hover:not(.perk-card--taken) {
+.perk-card:hover:not(.perk-card--taken):not(.perk-card--disabled) {
   border-color: var(--color-gold-dim);
   background: rgba(201, 168, 76, 0.04);
+}
+
+.perk-card--disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .perk-card--selected {

@@ -641,7 +641,7 @@ function close() {
     <template v-if="activeTab === 'perks'">
       <div class="perks-tab">
         <div
-          v-for="slotNum in 4"
+          v-for="slotNum in 5"
           :key="slotNum"
           class="perk-slot"
           :class="{
