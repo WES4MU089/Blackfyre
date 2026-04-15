@@ -36,4 +36,4 @@ export function getPerkIcon(key: string): string | null {
   return PERK_ICONS[key] ?? null
 }
 
-export const PERK_SLOT_LEVELS: Record<number, number> = { 1: 1, 2: 5, 3: 10 }
+export const PERK_SLOT_LEVELS: Record<number, number> = { 1: 1, 2: 5, 3: 10, 4: 20 }
