@@ -53,6 +53,7 @@ const leftSystems: SystemTab[] = [
 const rightSystems: SystemTab[] = [
   { id: 'holdings', label: 'Holdings', icon: holdingsIcon, tooltip: 'Holdings & Land' },
   { id: 'world', label: 'World', icon: worldIcon, tooltip: 'World Map' },
+  { id: 'dice-roller', label: 'Dice', icon: '', tooltip: 'Roll Aptitude Check' },
   { id: 'wiki', label: 'Codex', icon: wikiIcon, tooltip: 'Codex' },
   { id: 'settings', label: 'Settings', icon: settingsIcon, tooltip: 'Settings' },
 ]
@@ -126,7 +127,15 @@ const rightSystems: SystemTab[] = [
         @click="hudStore.toggleSystemPanel(sys.id)"
       >
         <div class="system-icon">
-          <img :src="sys.icon" :alt="sys.label" class="system-icon-img" />
+          <svg v-if="sys.id === 'dice-roller'" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2.5" />
+            <circle cx="8" cy="8" r="1.3" fill="currentColor" />
+            <circle cx="16" cy="8" r="1.3" fill="currentColor" />
+            <circle cx="12" cy="12" r="1.3" fill="currentColor" />
+            <circle cx="8" cy="16" r="1.3" fill="currentColor" />
+            <circle cx="16" cy="16" r="1.3" fill="currentColor" />
+          </svg>
+          <img v-else :src="sys.icon" :alt="sys.label" class="system-icon-img" />
         </div>
         <span class="system-label">{{ sys.label }}</span>
       </button>

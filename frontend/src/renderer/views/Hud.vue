@@ -13,6 +13,7 @@ import Notifications from '@/components/hud/Notifications.vue'
 import ChatPanel from '@/components/chat/ChatPanel.vue'
 import InventoryPanel from '@/components/hud/InventoryPanel.vue'
 import CharacterPanel from '@/components/hud/CharacterPanel.vue'
+import DiceRollerPanel from '@/components/hud/DiceRollerPanel.vue'
 import WikiPanel from '@/components/hud/WikiPanel.vue'
 import DragGhost from '@/components/hud/DragGhost.vue'
 import DraggableArea from '@/components/hud/DraggableArea.vue'
@@ -190,6 +191,7 @@ onMounted(async () => {
       <TradePanel v-if="tradeStore.isOpen" />
       <InventoryPanel v-if="hudStore.isPanelOpen('inventory')" />
       <CharacterPanel v-if="hudStore.isPanelOpen('character')" />
+      <DiceRollerPanel v-if="hudStore.isPanelOpen('dice-roller')" />
       <WikiPanel v-if="hudStore.isPanelOpen('wiki')" />
       <TargetWindowPanel v-if="hudStore.isPanelOpen('target-window')" />
       <RetainerPanel v-if="hudStore.isPanelOpen('retainers')" />
