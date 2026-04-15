@@ -80,7 +80,6 @@ const stats = computed(() => {
   if (m.penetration != null) entries.push({ label: 'Penetration', value: String(m.penetration) })
   if (m.penMod != null) entries.push({ label: 'Pen Modifier', value: (m.penMod as number) >= 0 ? `+${m.penMod}` : String(m.penMod) })
   if (m.mitigation != null) entries.push({ label: 'Mitigation', value: String(m.mitigation) })
-  if (m.blockBonus != null) entries.push({ label: 'Block Bonus', value: `+${m.blockBonus}` })
   if (m.encumbrance != null) entries.push({ label: 'Encumbrance', value: String(m.encumbrance) })
   if (m.speed != null) entries.push({ label: 'Speed', value: String(m.speed) })
   if (m.stamina != null) entries.push({ label: 'Stamina', value: String(m.stamina) })

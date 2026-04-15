@@ -82,16 +82,10 @@ const mitigation = computed(() => {
 
 const isShield = computed(() => {
   if (!offHand.value) return false
-  return offHand.value.category === 'shield' || offHand.value.modelData?.blockBonus != null
+  return offHand.value.category === 'shield'
 })
 
 const shieldName = computed(() => isShield.value ? offHand.value?.itemName ?? null : null)
-
-const blockBonus = computed(() => {
-  if (!isShield.value) return null
-  const md = offHand.value?.modelData
-  return md?.blockBonus != null ? Number(md.blockBonus) : null
-})
 
 const totalEncumbrance = computed(() => {
   let total = 0
@@ -138,7 +132,6 @@ function getKeyStat(item: typeof store.equipment.mainHand): string | null {
   const md = item.modelData
   if (md.baseDamage != null) return `${md.baseDamage} dmg`
   if (md.mitigation != null) return `${md.mitigation} mit`
-  if (md.blockBonus != null) return `+${md.blockBonus} block`
   return null
 }
 
@@ -259,10 +252,6 @@ function formatWeight(w: number): string {
 
         <template v-if="shieldName">
           <div class="stats-equip-name stats-equip-name--secondary">{{ shieldName }}</div>
-          <div class="stats-row">
-            <span class="stats-row__label">Block Bonus</span>
-            <span class="stats-row__value stats-row__value--positive">+{{ blockBonus }}</span>
-          </div>
         </template>
 
         <div class="stats-row">

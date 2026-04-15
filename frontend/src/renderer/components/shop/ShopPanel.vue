@@ -75,7 +75,6 @@ function getStatSummary(item: ShopItem): string {
   if (m.baseDamage != null) parts.push(`${m.baseDamage} dmg`)
   if (m.penetration != null) parts.push(`${m.penetration} pen`)
   if (m.mitigation != null) parts.push(`${m.mitigation} mit`)
-  if (m.blockBonus != null) parts.push(`+${m.blockBonus} block`)
   if (m.encumbrance != null && Number(m.encumbrance) !== 0) parts.push(`${m.encumbrance} enc`)
   return parts.join('  /  ')
 }
