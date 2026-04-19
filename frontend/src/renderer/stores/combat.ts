@@ -301,12 +301,31 @@ export const useCombatStore = defineStore('combat', () => {
     return c?.team ?? null
   })
 
+  // The combatant whose turn we are currently driving — the player themselves,
+  // or one of their retainers during a retainer turn. allies/enemies resolve
+  // relative to this actor so retainer mends/protects can target the owner.
+  const activeActorId = computed<number | null>(() =>
+    isRetainerTurn.value
+      ? currentTurnCharacterId.value
+      : characterStore.character?.id ?? null
+  )
+
+  const activeActorTeam = computed(() => {
+    if (activeActorId.value === null) return null
+    return combatants.value.find(c => c.characterId === activeActorId.value)?.team ?? null
+  })
+
   const enemies = computed(() =>
-    combatants.value.filter(c => c.team !== myCombatTeam.value && c.isAlive && !c.isYielded)
+    combatants.value.filter(c => c.team !== activeActorTeam.value && c.isAlive && !c.isYielded)
   )
 
   const allies = computed(() =>
-    combatants.value.filter(c => c.team === myCombatTeam.value && c.characterId !== characterStore.character?.id && c.isAlive && !c.isYielded)
+    combatants.value.filter(c =>
+      c.team === activeActorTeam.value
+      && c.characterId !== activeActorId.value
+      && c.isAlive
+      && !c.isYielded
+    )
   )
 
   const myCombatant = computed(() =>
