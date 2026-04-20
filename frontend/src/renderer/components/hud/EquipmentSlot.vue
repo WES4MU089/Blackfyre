@@ -3,6 +3,7 @@ import type { EquippedItem } from '@/stores/character'
 import { useItemDrag, canEquipToSlot, type DragPayload } from '@/composables/useItemDrag'
 import { getItemIcon } from '@/utils/itemIcons'
 import { computed } from 'vue'
+import DurabilityBar from './DurabilityBar.vue'
 
 const props = defineProps<{
   slotId: string
@@ -130,6 +131,12 @@ function onContextMenu(e: MouseEvent): void {
         :src="itemIcon!"
         :alt="item.itemName"
         class="equip-slot__icon"
+      />
+      <DurabilityBar
+        v-if="item.durability != null"
+        :durability="item.durability"
+        :soft-damage="item.softDamage ?? 0"
+        :hard-damage="item.hardDamage ?? 0"
       />
     </template>
     <template v-else>

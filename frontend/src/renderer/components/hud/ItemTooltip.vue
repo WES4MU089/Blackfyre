@@ -44,6 +44,10 @@ const isTwoHanded = computed(() => (i.value.is_two_handed ?? i.value.isTwoHanded
 
 // Inventory-only fields
 const durability = computed(() => (i.value.durability ?? null) as number | null)
+const softDamage = computed(() => Number(i.value.soft_damage ?? i.value.softDamage ?? 0))
+const hardDamage = computed(() => Number(i.value.hard_damage ?? i.value.hardDamage ?? 0))
+const hasDurability = computed(() => durability.value != null)
+const effectiveMax = computed(() => Math.max(0, 100 - hardDamage.value))
 const isUsable = computed(() => (i.value.is_usable ?? false) as boolean)
 const isTradeable = computed(() => (i.value.is_tradeable ?? true) as boolean)
 
@@ -172,8 +176,10 @@ onMounted(() => {
       <div class="tooltip-footer">
         <span v-if="weight" class="tooltip-weight">{{ weight.toFixed(1) }} kg</span>
         <span v-if="priceLabel" class="tooltip-price">{{ priceLabel }}</span>
-        <span v-if="durability != null && durability < 100" class="tooltip-durability">
-          {{ Math.round(durability) }}% dur
+        <span v-if="hasDurability && (durability! < 100 || softDamage > 0 || hardDamage > 0)" class="tooltip-durability">
+          {{ Math.round(durability!) }} / {{ Math.round(effectiveMax) }} dur
+          <span v-if="softDamage > 0" class="tooltip-dur-soft">(-{{ Math.round(softDamage) }} worn)</span>
+          <span v-if="hardDamage > 0" class="tooltip-dur-hard">(-{{ Math.round(hardDamage) }} broken)</span>
         </span>
       </div>
 
@@ -277,6 +283,16 @@ onMounted(() => {
 
 .tooltip-durability {
   color: #c47a32;
+}
+
+.tooltip-dur-soft {
+  color: #d94848;
+  margin-left: 4px;
+}
+
+.tooltip-dur-hard {
+  color: #888;
+  margin-left: 4px;
 }
 
 .tooltip-flags {

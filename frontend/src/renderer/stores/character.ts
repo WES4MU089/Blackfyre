@@ -63,6 +63,8 @@ export interface InventoryItem {
   quantity: number
   slot_number: number
   durability: number
+  soft_damage?: number
+  hard_damage?: number
   metadata?: Record<string, unknown>
 }
 
@@ -92,6 +94,9 @@ export interface EquippedItem {
   modelData?: Record<string, number | boolean | string>
   gripMode?: string | null   // '1h' | '2h' | null — only set for hybrid weapons
   isMirror?: boolean         // true when offHand is a visual mirror of a 2H mainHand weapon
+  durability?: number
+  softDamage?: number
+  hardDamage?: number
 }
 
 export interface RetainerInfo {
