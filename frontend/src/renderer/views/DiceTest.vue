@@ -68,8 +68,8 @@ const expectedSuccesses = computed(() => {
         <div class="control-group">
           <label>Threshold</label>
           <select v-model.number="threshold" class="input">
-            <option :value="4">4+ (Attack / Tactical)</option>
-            <option :value="5">5+ (Defense)</option>
+            <option :value="4">4+ (Attack / Defense / Tactical)</option>
+            <option :value="5">5+ (Legacy)</option>
             <option :value="3">3+ (Easy)</option>
           </select>
         </div>

@@ -106,10 +106,10 @@ function formatVerbose(entry: ActionResultView): string | null {
   const atkDice = atk.attackDice?.length ? formatDice(atk.attackDice, 4) : '—'
   lines.push(`<span class="verbose-label">ATK</span> ${atkDice} <span class="verbose-dim">→ ${atk.attackSuccesses} hit${atk.attackSuccesses !== 1 ? 's' : ''} (${atk.attackPoolSize}d6, 4+)</span>`)
 
-  // Defense pool (success on 5+)
+  // Defense pool (success on 4+)
   if (atk.defenseDice?.length) {
-    const defDice = formatDice(atk.defenseDice, 5)
-    lines.push(`<span class="verbose-label">DEF</span> ${defDice} <span class="verbose-dim">→ ${atk.defenseSuccesses} hit${atk.defenseSuccesses !== 1 ? 's' : ''} (${atk.defensePoolSize}d6, 5+)</span>`)
+    const defDice = formatDice(atk.defenseDice, 4)
+    lines.push(`<span class="verbose-label">DEF</span> ${defDice} <span class="verbose-dim">→ ${atk.defenseSuccesses} hit${atk.defenseSuccesses !== 1 ? 's' : ''} (${atk.defensePoolSize}d6, 4+)</span>`)
   }
 
   // Net successes + outcome
