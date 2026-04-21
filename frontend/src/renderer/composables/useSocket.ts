@@ -11,6 +11,7 @@ import { useNpcDialogStore, type DialogPayload } from '@/stores/npcDialog'
 import { useAilmentsStore } from '@/stores/ailments'
 import { useShopStore, type ShopOpenPayload } from '@/stores/shop'
 import { useContainerStore, type ContainerOpenPayload } from '@/stores/container'
+import { useWorkbenchStore, type WorkbenchOpenPayload, type CraftResult } from '@/stores/workbench'
 import { useVaultStore, type VaultOpenPayload } from '@/stores/vault'
 import { useLootStore, type LootPoolData } from '@/stores/loot'
 import { useAuthStore } from '@/stores/auth'
@@ -442,6 +443,17 @@ export function useSocket() {
       if (data.success && data.purse != null) {
         shopStore.updateCash(data.purse)
       }
+    })
+
+    // --- Workbench (crafting) events ---
+    const workbenchStore = useWorkbenchStore()
+
+    socket.on('workbench:open', (data: WorkbenchOpenPayload) => {
+      workbenchStore.open(data)
+    })
+
+    socket.on('workbench:craft-result', (data: CraftResult) => {
+      workbenchStore.applyCraftResult(data)
     })
 
     // --- Container events ---

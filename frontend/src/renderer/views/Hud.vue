@@ -23,6 +23,7 @@ import CombatLobby from '@/components/combat/CombatLobby.vue'
 import CombatSession from '@/components/combat/CombatSession.vue'
 import NPCDialog from '@/components/npc/NPCDialog.vue'
 import ShopPanel from '@/components/shop/ShopPanel.vue'
+import WorkbenchPanel from '@/components/workbench/WorkbenchPanel.vue'
 import ContainerPanel from '@/components/hud/ContainerPanel.vue'
 import VaultPanel from '@/components/hud/VaultPanel.vue'
 import LootPanel from '@/components/hud/LootPanel.vue'
@@ -44,6 +45,7 @@ import { usePlayerApplicationStore } from '@/stores/playerApplication'
 import { useCombatStore } from '@/stores/combat'
 import { useNpcDialogStore } from '@/stores/npcDialog'
 import { useShopStore } from '@/stores/shop'
+import { useWorkbenchStore } from '@/stores/workbench'
 import { useContainerStore } from '@/stores/container'
 import { useVaultStore } from '@/stores/vault'
 import { useLootStore } from '@/stores/loot'
@@ -58,6 +60,7 @@ const hudStore = useHudStore()
 const combatStore = useCombatStore()
 const npcDialogStore = useNpcDialogStore()
 const shopStore = useShopStore()
+const workbenchStore = useWorkbenchStore()
 const containerStore = useContainerStore()
 const vaultStore = useVaultStore()
 const lootStore = useLootStore()
@@ -164,6 +167,9 @@ onMounted(async () => {
 
     <!-- Shop / Trade Panel -->
     <ShopPanel v-if="shopStore.isOpen" />
+
+    <!-- Crafting Workbench Panel -->
+    <WorkbenchPanel v-if="workbenchStore.isOpen" />
 
     <!-- Retainer Hire Wizard (opens from NPC dialog or panel) -->
     <RetainerHire v-if="characterStore.isHiringRetainer" />
