@@ -100,6 +100,21 @@ function qualityLabel(quality: string | null | undefined): string {
 function ingredientIcon(ing: WorkbenchIngredient): string {
   return iconFor(ing.itemKey, ing.iconUrl, { category: 'material' })
 }
+
+// Map backend blocker codes to human-readable labels.
+function blockerLabel(code: string): string {
+  if (code.startsWith('missing_ingredient:')) {
+    const key = code.slice('missing_ingredient:'.length)
+    const ing = workbenchStore.selectedRecipe?.ingredients.find(i => i.itemKey === key)
+    return ing?.itemName ?? key
+  }
+  if (code.startsWith('low_aptitude:')) {
+    const [, apt, min] = code.split(':')
+    const name = apt ? apt.charAt(0).toUpperCase() + apt.slice(1) : apt
+    return `${name} ${min}+`
+  }
+  return code
+}
 </script>
 
 <template>
@@ -257,7 +272,7 @@ function ingredientIcon(ing: WorkbenchIngredient): string {
             </div>
 
             <div v-if="!workbenchStore.selectedRecipe.canCraft" class="wb-blockers">
-              <span class="crimson mono">Missing: {{ workbenchStore.selectedRecipe.blockers.join(', ') }}</span>
+              <span class="crimson">Missing: {{ workbenchStore.selectedRecipe.blockers.map(blockerLabel).join(', ') }}</span>
             </div>
 
             <button
