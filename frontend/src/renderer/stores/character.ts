@@ -63,6 +63,8 @@ export interface InventoryItem {
   quantity: number
   slot_number: number
   durability: number
+  soft_damage?: number
+  hard_damage?: number
   metadata?: Record<string, unknown>
 }
 
@@ -92,6 +94,9 @@ export interface EquippedItem {
   modelData?: Record<string, number | boolean | string>
   gripMode?: string | null   // '1h' | '2h' | null — only set for hybrid weapons
   isMirror?: boolean         // true when offHand is a visual mirror of a 2H mainHand weapon
+  durability?: number
+  softDamage?: number
+  hardDamage?: number
 }
 
 export interface RetainerInfo {
@@ -804,6 +809,29 @@ export const useCharacterStore = defineStore('character', () => {
     }
   }
 
+  async function repairItem(inventoryId: number): Promise<boolean> {
+    const charId = character.value?.id
+    if (!charId) return false
+    try {
+      const res = await fetch(`${API_BASE}/api/inventory/${charId}/items/${inventoryId}/repair`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      const data = await res.json()
+      if (data.success) {
+        const item = inventory.value.find(i => i.inventory_id === inventoryId)
+        if (item) {
+          item.durability = data.durability
+          item.soft_damage = data.softDamage
+          item.hard_damage = data.hardDamage
+        }
+      }
+      return data.success === true
+    } catch {
+      return false
+    }
+  }
+
   async function dropItem(inventoryId: number): Promise<boolean> {
     const charId = character.value?.id
     if (!charId) return false
@@ -1024,6 +1052,7 @@ export const useCharacterStore = defineStore('character', () => {
     unequipItem,
     toggleGrip,
     useItem,
+    repairItem,
     dropItem,
     sortInventory,
     updateCharacterXp,

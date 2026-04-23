@@ -27,10 +27,8 @@ export interface WorkbenchRecipe {
   recipeKey: string
   name: string
   description: string | null
-  stationMinTier: number
   aptitudeKey: string | null
   aptitudeMin: number
-  goldCost: number
   timeSeconds: number
   output: WorkbenchRecipeOutput
   ingredients: WorkbenchIngredient[]
@@ -41,10 +39,7 @@ export interface WorkbenchRecipe {
 export interface WorkbenchOpenPayload {
   stationType: string
   stationLabel: string
-  stationTier: number
-  holdingId: number
-  holdingName: string
-  holdingGold: number
+  workbenchName: string
   character: {
     id: number
     name: string
@@ -67,17 +62,13 @@ export interface CraftResult {
     roll: { successes: number; target: number; poolSize: number } | null
   }
   refreshedRecipes?: WorkbenchRecipe[]
-  refreshedHoldingGold?: number
 }
 
 export const useWorkbenchStore = defineStore('workbench', () => {
   const isOpen = ref(false)
   const stationType = ref('')
   const stationLabel = ref('')
-  const stationTier = ref(0)
-  const holdingId = ref<number | null>(null)
-  const holdingName = ref('')
-  const holdingGold = ref(0)
+  const workbenchName = ref('')
   const characterName = ref('')
   const aptitudes = ref<Record<string, number>>({})
   const recipes = ref<WorkbenchRecipe[]>([])
@@ -109,14 +100,10 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     isOpen.value = true
     stationType.value = payload.stationType
     stationLabel.value = payload.stationLabel
-    stationTier.value = payload.stationTier
-    holdingId.value = payload.holdingId
-    holdingName.value = payload.holdingName
-    holdingGold.value = payload.holdingGold
+    workbenchName.value = payload.workbenchName
     characterName.value = payload.character.name
     aptitudes.value = payload.character.aptitudes
     recipes.value = payload.recipes
-    // Preserve selection if the recipe still exists; otherwise auto-select the first craftable
     if (!selectedRecipeKey.value || !payload.recipes.find(r => r.recipeKey === selectedRecipeKey.value)) {
       const firstCraftable = payload.recipes.find(r => r.canCraft)
       selectedRecipeKey.value = (firstCraftable ?? payload.recipes[0])?.recipeKey ?? null
@@ -150,19 +137,13 @@ export const useWorkbenchStore = defineStore('workbench', () => {
     if (result.refreshedRecipes) {
       recipes.value = result.refreshedRecipes
     }
-    if (result.refreshedHoldingGold != null) {
-      holdingGold.value = result.refreshedHoldingGold
-    }
   }
 
   return {
     isOpen,
     stationType,
     stationLabel,
-    stationTier,
-    holdingId,
-    holdingName,
-    holdingGold,
+    workbenchName,
     characterName,
     aptitudes,
     recipes,

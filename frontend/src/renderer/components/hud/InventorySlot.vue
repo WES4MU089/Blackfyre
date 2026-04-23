@@ -4,6 +4,7 @@ import { useItemDrag, type DragPayload } from '@/composables/useItemDrag'
 import { getItemIcon } from '@/utils/itemIcons'
 import { getTierClass } from '@/utils/tierColors'
 import { computed } from 'vue'
+import DurabilityBar from './DurabilityBar.vue'
 
 const props = withDefaults(defineProps<{
   item: InventoryItem | null
@@ -109,6 +110,14 @@ function onContextMenu(e: MouseEvent): void {
         :src="itemIcon!"
         :alt="item.name"
         class="inv-slot__icon"
+      />
+
+      <!-- Durability bar overlay (three-segment: green/red/black) -->
+      <DurabilityBar
+        v-if="item.durability != null"
+        :durability="item.durability"
+        :soft-damage="item.soft_damage ?? 0"
+        :hard-damage="item.hard_damage ?? 0"
       />
 
       <!-- Quantity badge -->

@@ -108,6 +108,9 @@ async function onContextAction(action: string): Promise<void> {
     case 'use':
       await characterStore.useItem(item.inventory_id)
       break
+    case 'repair':
+      await characterStore.repairItem(item.inventory_id)
+      break
     case 'drop':
       await characterStore.dropItem(item.inventory_id)
       break

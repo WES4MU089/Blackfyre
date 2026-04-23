@@ -38,6 +38,9 @@ const options = computed<MenuOption[]>(() => {
     if (invItem.value.is_usable) {
       list.push({ key: 'use', label: 'Use' })
     }
+    if ((invItem.value.soft_damage ?? 0) > 0) {
+      list.push({ key: 'repair', label: 'Repair' })
+    }
   }
 
   if (!isInventoryItem.value) {
