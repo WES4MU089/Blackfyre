@@ -15,12 +15,14 @@ const label = computed(() => {
     piercing: 'Piercing',
     engaged: 'Engaged',
     protecting: 'Protecting',
+    protected: 'Protected',
     pressured: 'Pressured',
     grappled: 'Grappled',
     grappling: 'Grappling',
     bracing: 'Bracing',
     rallied: 'Rallied',
     rally_cooldown: 'Rally Cooldown',
+    aggressor: 'Aggressor',
     wounded: 'Wounded',
   }
   return labels[props.type] ?? props.type
@@ -34,12 +36,14 @@ const symbol = computed(() => {
     piercing: '\u27B3',   // arrow
     engaged: '\u2694',    // crossed swords
     protecting: '\u26E8', // shield
+    protected: '\u26CA',  // tent (under cover)
     pressured: '\u26A0',  // warning
     grappled: '\u2696',   // chains/scales
     grappling: '\u270B',  // hand
     bracing: '\u26E8',    // shield
     rallied: '\u2691',    // flag
     rally_cooldown: '\u23F3', // hourglass
+    aggressor: '\u2620',  // skull-and-crossbones for the initiator
     wounded: '\u2764',    // heart
   }
   return symbols[props.type] ?? '\u2022'
@@ -53,12 +57,14 @@ const tooltip = computed(() => {
     piercing: '+10 penetration',
     engaged: 'In melee combat',
     protecting: 'Guarding an ally',
+    protected: 'Being guarded by an ally',
     pressured: `-${props.stacks} dice to all pools (${props.stacks + 1} attackers)`,
     grappled: '-3 defense dice (1 round)',
     grappling: 'Holding an enemy',
     bracing: '+1 defense die per attacker this round',
     rallied: `+${props.stacks} attack dice from rally`,
     rally_cooldown: 'Cannot rally yet',
+    aggressor: 'Initiator (or last attacker in spars) — cannot self-Brace',
     wounded: '-2 dice to all combat pools (24h or until healed)',
   }
   let text = `${label.value}: ${descriptions[props.type] ?? 'Unknown effect'}`
@@ -122,11 +128,13 @@ const effectClass = computed(() => `effect-${props.type}`)
 .effect-piercing { border-color: rgba(58, 123, 213, 0.5); color: #3a7bd5; }
 .effect-engaged { border-color: rgba(201, 168, 76, 0.3); color: var(--color-gold-dim); }
 .effect-protecting { border-color: rgba(58, 123, 213, 0.5); color: #3a7bd5; }
+.effect-protected { border-color: rgba(58, 123, 213, 0.5); color: #6fa8e0; }
 .effect-pressured { border-color: rgba(212, 143, 50, 0.5); color: #d48f32; }
 .effect-grappled { border-color: rgba(155, 50, 212, 0.5); color: #9b32d4; }
 .effect-grappling { border-color: rgba(155, 50, 212, 0.5); color: #9b32d4; }
 .effect-bracing { border-color: rgba(45, 138, 78, 0.5); color: #2d8a4e; }
 .effect-rallied { border-color: rgba(0, 172, 193, 0.5); color: #00acc1; }
 .effect-rally_cooldown { border-color: rgba(120, 120, 120, 0.5); color: #787878; }
+.effect-aggressor { border-color: rgba(196, 43, 43, 0.7); color: #c42b2b; background: rgba(60, 0, 0, 0.4); }
 .effect-wounded { border-color: rgba(196, 43, 43, 0.5); color: #c42b2b; }
 </style>
