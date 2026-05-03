@@ -4,8 +4,13 @@ import { useCombatStore } from '@/stores/combat'
 export function useCombat() {
   const combatStore = useCombatStore()
 
-  function createLobby(isSpar: boolean = false, isFfa: boolean = false): void {
-    getSocket()?.emit('lobby:create', { isSpar, isFfa })
+  function createLobby(isSpar: boolean = false, isFfa: boolean = false, narratorInLocalChat: boolean = false): void {
+    getSocket()?.emit('lobby:create', { isSpar, isFfa, narratorInLocalChat })
+  }
+
+  function setNarratorMode(enabled: boolean): void {
+    if (!combatStore.currentLobbyId) return
+    getSocket()?.emit('lobby:set-narrator-mode', { lobbyId: combatStore.currentLobbyId, enabled })
   }
 
   function joinLobby(lobbyId: number): void {
@@ -130,6 +135,7 @@ export function useCombat() {
     startCombat,
     cancelLobby,
     requestLobbies,
+    setNarratorMode,
     // Combat session
     submitAction,
     yieldCombat,

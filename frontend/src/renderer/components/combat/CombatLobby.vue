@@ -9,7 +9,7 @@ import { useDraggable } from '@/composables/useDraggable'
 const combatStore = useCombatStore()
 const hudStore = useHudStore()
 const characterStore = useCharacterStore()
-const { createLobby, joinLobby, leaveLobby, switchTeam, setReady, startCombat, cancelLobby, requestLobbies, toggleRetainers } = useCombat()
+const { createLobby, joinLobby, leaveLobby, switchTeam, setReady, startCombat, cancelLobby, requestLobbies, toggleRetainers, setNarratorMode } = useCombat()
 
 const panelRef = ref<HTMLElement | null>(null)
 const { isDragging, onDragStart } = useDraggable('combat-lobby', panelRef, { alwaysDraggable: true })
@@ -124,6 +124,11 @@ function onToggleRetainer(retainerId: number): void {
   }
   toggleRetainers(Array.from(updated))
 }
+
+function onToggleNarratorMode(): void {
+  if (!combatStore.lobbyState || !combatStore.isHost) return
+  setNarratorMode(!combatStore.lobbyState.narratorInLocalChat)
+}
 </script>
 
 <template>
@@ -206,6 +211,7 @@ function onToggleRetainer(retainerId: number): void {
             <span v-if="entry.isFfa" class="lobby-entry-tag tag-ffa">FFA</span>
             <span v-if="entry.isSpar" class="lobby-entry-tag tag-spar">SPAR</span>
             <span v-if="!entry.isSpar && !entry.isFfa" class="lobby-entry-tag tag-combat">COMBAT</span>
+            <span v-if="entry.narratorInLocalChat" class="lobby-entry-tag tag-narrator" title="Narrator speaks in SL local chat">NARR</span>
             <span class="lobby-entry-count">{{ entry.memberCount }}/{{ entry.maxPlayers }}</span>
           </span>
         </div>
@@ -218,6 +224,7 @@ function onToggleRetainer(retainerId: number): void {
           <div class="lobby-status-badges">
             <span v-if="combatStore.lobbyState.isFfa" class="ffa-badge">FFA</span>
             <span v-if="combatStore.lobbyState.isSpar" class="spar-badge">SPAR</span>
+            <span v-if="combatStore.lobbyState.narratorInLocalChat" class="narrator-badge" title="Combat narration is being spoken in SL local chat">NARR</span>
             <span class="lobby-status-badge" :class="`status-${combatStore.lobbyState.status}`">
               {{ combatStore.lobbyState.status }}
             </span>
@@ -283,6 +290,21 @@ function onToggleRetainer(retainerId: number): void {
               <span v-if="member.characterId === combatStore.lobbyState.hostCharacterId" class="host-badge">HOST</span>
               <span v-if="member.isRetainer" class="retainer-badge">RET</span>
             </div>
+          </div>
+        </div>
+
+        <!-- Narrator-in-local-chat Toggle (host only) -->
+        <div v-if="combatStore.isHost" class="narrator-section">
+          <div
+            class="narrator-toggle"
+            @click="onToggleNarratorMode"
+            :title="combatStore.lobbyState.narratorInLocalChat
+              ? 'Disable: combat actions will not be spoken in SL local chat'
+              : 'Enable: your HUD will speak combat actions in SL local chat'"
+          >
+            <span class="narrator-checkbox" :class="{ checked: combatStore.lobbyState.narratorInLocalChat }" />
+            <span class="narrator-toggle-label">Speak combat in local chat</span>
+            <span class="narrator-toggle-hint">{{ combatStore.lobbyState.narratorInLocalChat ? 'on' : 'off' }}</span>
           </div>
         </div>
 
@@ -493,6 +515,10 @@ function onToggleRetainer(retainerId: number): void {
   background: rgba(201, 168, 76, 0.2);
   color: var(--color-gold, #c9a84c);
 }
+.tag-narrator {
+  background: rgba(45, 138, 78, 0.2);
+  color: #4ec774;
+}
 
 .lobby-entry-count {
   font-size: var(--font-size-xs);
@@ -536,7 +562,7 @@ function onToggleRetainer(retainerId: number): void {
   align-items: center;
 }
 
-.spar-badge, .ffa-badge {
+.spar-badge, .ffa-badge, .narrator-badge {
   padding: 1px var(--space-xs);
   border-radius: var(--radius-sm);
   font-size: var(--font-size-xxs, 0.6rem);
@@ -550,6 +576,10 @@ function onToggleRetainer(retainerId: number): void {
 .ffa-badge {
   background: rgba(201, 168, 76, 0.2);
   color: var(--color-gold, #c9a84c);
+}
+.narrator-badge {
+  background: rgba(45, 138, 78, 0.2);
+  color: #4ec774;
 }
 
 .lobby-create-row {
@@ -720,6 +750,62 @@ function onToggleRetainer(retainerId: number): void {
 }
 
 /* Retainer toggle section */
+.narrator-section {
+  border-top: 1px solid var(--color-border-dim);
+  padding-top: var(--space-xs);
+}
+
+.narrator-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 2px var(--space-xs);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  transition: background 0.15s;
+}
+.narrator-toggle:hover {
+  background: rgba(201, 168, 76, 0.06);
+}
+
+.narrator-checkbox {
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  flex-shrink: 0;
+  position: relative;
+}
+.narrator-checkbox.checked {
+  border-color: var(--color-gold);
+  background: rgba(201, 168, 76, 0.2);
+}
+.narrator-checkbox.checked::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 0;
+  width: 5px;
+  height: 8px;
+  border: solid var(--color-gold);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.narrator-toggle-label {
+  color: var(--color-text);
+  flex: 1;
+}
+
+.narrator-toggle-hint {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 .retainer-section {
   border-top: 1px solid var(--color-border-dim);
   padding-top: var(--space-xs);

@@ -18,6 +18,7 @@ export interface LobbyStateView {
   region: string
   isSpar: boolean
   isFfa: boolean
+  narratorInLocalChat: boolean
   status: 'open' | 'starting' | 'started' | 'cancelled'
   maxPlayers: number
   members: LobbyMemberView[]
@@ -31,6 +32,7 @@ export interface LobbyListEntry {
   maxPlayers: number
   isSpar: boolean
   isFfa: boolean
+  narratorInLocalChat: boolean
 }
 
 // --- Combat session types ---
